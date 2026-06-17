@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — EduPulse Principal</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+  <style>
+    .live-feed { max-height: 400px; overflow-y: auto; }
+    .live-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); animation: fadeIn 0.3s ease; }
+    .live-item:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulseDot 1.5s ease-in-out infinite; flex-shrink: 0; }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .notification-badge { position: relative; }
+    .badge-count { position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="scroll-line" id="scrollProgress"></div>
+  <div id="toastContainer"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      EduPulse
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Principal</div>
+        <a href="dashboard.html" class="sidebar-link active"><span class="link-icon">◈</span> Overview</a>
+        <a href="../admin/reports.html" class="sidebar-link"><span class="link-icon">◈</span> Reports</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">P</div>
+        <div>
+          <div class="user-name" id="userName">Principal</div>
+          <div class="user-role">School Principal</div>
+        </div>
+      </div>
+      <a href="#" class="sidebar-link" id="logoutBtn" style="margin-top:0.5rem">
+        <span class="link-icon">↩</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <header class="top-header">
+    <div class="header-left">
+      <button class="btn btn-icon mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="realtime-clock" id="realtimeClock">--:--:--</div>
+    </div>
+    <div class="header-right">
+      <span style="font-size:0.8rem;color:var(--text-muted);font-family:var(--font-mono)" id="todayDate"></span>
+    </div>
+  </header>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Principal Overview</h1>
+        <p class="page-subtitle" id="schoolNameDisplay">EduPulse Academy</p>
+      </div>
+    </div>
+
+    <div class="dashboard-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.25rem;margin-bottom:2rem">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="princTotal">-</div>
+        <div class="stat-label">Total Students</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.2)">✓</div>
+        <div class="stat-value neon-text" id="princPresent">-</div>
+        <div class="stat-label">Present Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2)">✕</div>
+        <div class="stat-value" id="princAbsent" style="color:var(--danger)">-</div>
+        <div class="stat-label">Absent Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2)">◈</div>
+        <div class="stat-value" id="princPercent" style="color:var(--warning)">-</div>
+        <div class="stat-label">Attendance Rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(236,72,153,0.1);border-color:rgba(236,72,153,0.2)">◈</div>
+        <div class="stat-value" id="princLate" style="color:var(--accent-pink)">-</div>
+        <div class="stat-label">Late Today</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:1.5rem">
+      <div class="glass-panel-strong" style="padding:1.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h3 style="font-family:var(--font-display);font-size:0.9rem;color:var(--accent)">Live Attendance Feed</h3>
+          <span class="badge badge-success">● Live</span>
+        </div>
+        <div class="live-feed" id="liveFeed">
+          <div style="text-align:center;padding:2rem;color:var(--text-muted)">Waiting for scans...</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="glass-panel-strong" style="padding:1.5rem;margin-bottom:1.5rem">
+          <h3 style="font-family:var(--font-display);font-size:0.9rem;margin-bottom:1rem;color:var(--accent)">Notifications</h3>
+          <div id="notifications">
+            <div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem">No new notifications</div>
+          </div>
+        </div>
+
+        <div class="glass-panel-strong" style="padding:1.5rem">
+          <h3 style="font-family:var(--font-display);font-size:0.9rem;margin-bottom:1rem;color:var(--accent)">Class-wise Today</h3>
+          <div id="princClassAttendance">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../js/theme.js"></script>
+  <script>
+    var todayDate = getTodaysDate();
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    requireRole(['principal']);
+
+    var studentMap = {};
+    function loadStudentMap() {
+      return getStudents().then(function(students) {
+        students.forEach(function(s) { studentMap[s.id] = s; });
+      });
+    }
+
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
+      document.getElementById('userName').textContent = user.email.split('@')[0];
+      loadStudentMap().then(function() {
+        loadPrincipalDashboard();
+        startLiveFeed();
+      });
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    });
+
+    function loadPrincipalDashboard() {
+      getSettings().then(function(s) {
+        if (s.school_name) document.getElementById('schoolNameDisplay').textContent = s.school_name;
+      });
+
+      getAttendanceSummary(todayDate).then(function(d) {
+        document.getElementById('princTotal').textContent = d.total;
+        document.getElementById('princPresent').textContent = d.present;
+        document.getElementById('princAbsent').textContent = d.absent;
+        document.getElementById('princPercent').textContent = d.percentage + '%';
+        document.getElementById('princLate').textContent = d.late;
+
+        if (d.by_class && d.by_class.length) {
+          var html = '';
+          d.by_class.forEach(function(c) {
+            var pct = c.total > 0 ? Math.round((c.present / c.total) * 100) : 0;
+            html += '<div class="class-attendance-bar">' +
+              '<span style="font-size:0.8rem;min-width:80px;font-family:var(--font-mono)">Class ' + c.class + '</span>' +
+              '<span style="font-size:0.75rem;color:var(--text-muted);min-width:60px">' + c.present + '/' + c.total + '</span>' +
+              '<div class="class-bar-bg"><div class="class-bar-fill" style="width:' + pct + '%"></div></div>' +
+              '<span style="font-size:0.75rem;color:var(--accent);min-width:40px;text-align:right">' + pct + '%</span>' +
+              '</div>';
+          });
+          document.getElementById('princClassAttendance').innerHTML = html;
+        } else {
+          document.getElementById('princClassAttendance').innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem">No data</p>';
+        }
+      }).catch(function() {
+        document.getElementById('princTotal').textContent = 'N/A';
+      });
+
+      getRecentAttendance(5).then(function(data) {
+        if (!data.length) return;
+        var lateCount = data.filter(function(a) { return a.status === 'late'; }).length;
+        var notifications = document.getElementById('notifications');
+        var html = '';
+        if (lateCount > 0) {
+          html += '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:rgba(245,158,11,0.08);border-radius:8px;margin-bottom:0.5rem;font-size:0.85rem">' +
+            '<span style="color:var(--warning)">⚠</span>' +
+            '<span>' + lateCount + ' student(s) marked late today</span></div>';
+        }
+        if (data.length > 0) {
+          html += '<div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:rgba(34,197,94,0.08);border-radius:8px;font-size:0.85rem">' +
+            '<span style="color:var(--success)">✓</span>' +
+            '<span>' + data.length + ' recent scans recorded</span></div>';
+        }
+        notifications.innerHTML = html || '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem">No new notifications</div>';
+      });
+    }
+
+    function startLiveFeed() {
+      var feed = document.getElementById('liveFeed');
+
+      function poll() {
+        getRecentAttendance(10).then(function(data) {
+          if (!data.length) {
+            feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)">No scans yet today</div>';
+            return;
+          }
+          var html = '';
+          data.forEach(function(a) {
+            var s = studentMap[a.student_id];
+            var name = s ? s.name : 'Unknown';
+            var roll = s ? (s.roll_no || '') : '';
+            var cls = s ? (s.class || '') : '';
+            var badge = a.status === 'late' ? 'badge-warning' : 'badge-success';
+            var photoUrl = s && s.photo ? s.photo : null;
+            var img = photoUrl ? '<img src="' + photoUrl + '" class="photo-thumb">' : '<div class="photo-thumb" style="background:rgba(0,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.8rem">' + name[0] + '</div>';
+            html += '<div class="live-item">' +
+              '<div class="pulse-dot"></div>' +
+              img +
+              '<div style="flex:1;min-width:0">' +
+              '<div style="font-size:0.85rem;font-weight:500">' + name + '</div>' +
+              '<div style="font-size:0.7rem;color:var(--text-muted)">' + roll + ' · Class ' + cls + '</div>' +
+              '</div>' +
+              '<span class="badge ' + badge + '">' + a.status + '</span>' +
+              '<span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted)">' + (a.time ? a.time.slice(0,5) : '') + '</span>' +
+              '</div>';
+          });
+          feed.innerHTML = html;
+        }).catch(function() {
+          feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)">Could not load feed</div>';
+        });
+      }
+
+      poll();
+      setInterval(poll, 5000);
+    }
+  </script>
+</body>
+</html>

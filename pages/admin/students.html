@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Students — EduPulse Admin</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <style>
+    .photo-upload-area {
+      width: 120px; height: 120px;
+      border: 2px dashed var(--glass-border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      overflow: hidden;
+      background: rgba(0,0,0,0.2);
+    }
+    .photo-upload-area:hover { border-color: var(--accent); }
+    .photo-upload-area img { width: 100%; height: 100%; object-fit: cover; }
+    .id-card {
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 380px;
+      text-align: center;
+    }
+    .id-card img { border-radius: 12px; }
+    .bulk-import-area {
+      border: 2px dashed var(--glass-border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .bulk-import-area:hover { border-color: var(--accent); }
+    .modal select.input-field {
+      background: rgba(0,0,0,0.4);
+      color: #f8fafc;
+    }
+    .modal select.input-field option {
+      background: #1a1a1e;
+      color: #f8fafc;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="scroll-line" id="scrollProgress"></div>
+  <div id="toastContainer"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      EduPulse
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Main</div>
+        <a href="dashboard.html" class="sidebar-link"><span class="link-icon">◈</span> Dashboard</a>
+        <a href="students.html" class="sidebar-link active"><span class="link-icon">◉</span> Students</a>
+        <a href="attendance.html" class="sidebar-link"><span class="link-icon">◈</span> Attendance</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Reports</div>
+        <a href="reports.html" class="sidebar-link"><span class="link-icon">◈</span> Reports</a>
+        <a href="settings.html" class="sidebar-link"><span class="link-icon">⚙</span> Settings</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div>
+          <div class="user-name" id="userName">Admin</div>
+          <div class="user-role">Administrator</div>
+        </div>
+      </div>
+      <a href="#" class="sidebar-link" id="logoutBtn" style="margin-top:0.5rem">
+        <span class="link-icon">↩</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <header class="top-header">
+    <div class="header-left">
+      <button class="btn btn-icon mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="realtime-clock" id="realtimeClock">--:--:--</div>
+    </div>
+    <div class="header-right">
+      <input type="text" class="header-search" id="searchInput" placeholder="Search students..." oninput="loadStudents()">
+    </div>
+  </header>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Students</h1>
+        <p class="page-subtitle">Manage student records and ID cards</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" onclick="openModal('bulkModal')">📁 Bulk Import</button>
+        <button class="btn btn-primary" onclick="openStudentModal()">+ Add Student</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <select class="input-field" id="classFilter" onchange="loadStudents()" style="min-width:140px">
+        <option value="">All Classes</option>
+        <option value="10">Class 10</option>
+        <option value="11">Class 11</option>
+        <option value="12">Class 12</option>
+        <option value="9">Class 9</option>
+        <option value="8">Class 8</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="loadStudents()">⟳ Refresh</button>
+      <span style="font-size:0.8rem;color:var(--text-muted)" id="studentCount"></span>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Photo</th>
+            <th>Name</th>
+            <th>Roll No</th>
+            <th>Class</th>
+            <th>Section</th>
+            <th>QR Code</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentsTableBody">
+          <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted)">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Student Modal -->
+  <div class="modal-overlay" id="studentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="studentModalTitle">Add Student</h2>
+        <button class="modal-close" onclick="closeModal('studentModal')">✕</button>
+      </div>
+      <form id="studentForm" autocomplete="off">
+        <input type="hidden" id="editStudentId">
+        <div class="form-row">
+          <div class="input-group">
+            <label>Full Name *</label>
+            <input type="text" class="input-field" id="sName" required>
+          </div>
+          <div class="input-group">
+            <label>Roll Number *</label>
+            <input type="text" class="input-field" id="sRollNo" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="input-group">
+            <label>Class *</label>
+            <select class="input-field" id="sClass" required>
+              <option value="">Select</option>
+              <option value="8">Class 8</option>
+              <option value="9">Class 9</option>
+              <option value="10">Class 10</option>
+              <option value="11">Class 11</option>
+              <option value="12">Class 12</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Section</label>
+            <input type="text" class="input-field" id="sSection" placeholder="A">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="input-group">
+            <label>Email</label>
+            <input type="email" class="input-field" id="sEmail" placeholder="student@school.com">
+          </div>
+          <div class="input-group">
+            <label>Phone</label>
+            <input type="text" class="input-field" id="sPhone" placeholder="+91 98765 43210">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Photo</label>
+          <div class="photo-upload-area" id="photoUploadArea" onclick="document.getElementById('photoInput').click()">
+            <span id="photoPlaceholder" style="font-size:2rem;opacity:0.4">📷</span>
+            <span style="font-size:0.75rem;color:var(--text-muted)">Click to upload</span>
+            <img id="photoPreview" style="display:none">
+          </div>
+          <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="previewPhoto(event)">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('studentModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveStudentBtn">💾 Save Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- QR Modal -->
+  <div class="modal-overlay" id="qrModal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h2 class="modal-title">QR Code</h2>
+        <button class="modal-close" onclick="closeModal('qrModal')">✕</button>
+      </div>
+      <div class="qr-display" id="qrDisplay">
+        <img id="qrImage" src="" alt="QR Code" style="width:280px;height:280px;image-rendering:pixelated">
+        <div style="text-align:center">
+          <div id="qrStudentName" style="font-weight:600"></div>
+          <div id="qrStudentInfo" style="font-size:0.8rem;color:var(--text-muted)"></div>
+        </div>
+        <div style="display:flex;gap:0.75rem">
+          <button class="btn btn-primary btn-sm" onclick="printQR()">🖨 Print</button>
+          <a id="qrDownloadLink" download="qrcode.png" class="btn btn-secondary btn-sm">⬇ Download</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ID Card Modal -->
+  <div class="modal-overlay" id="idCardModal">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-header">
+        <h2 class="modal-title">ID Card</h2>
+        <button class="modal-close" onclick="closeModal('idCardModal')">✕</button>
+      </div>
+      <div id="idCardContent" class="id-card" style="margin:0 auto">
+        <div style="font-family:var(--font-display);font-size:1.2rem;color:var(--accent);margin-bottom:1rem">⚡ EDUPULSE</div>
+        <img id="idCardPhoto" src="" alt="Photo" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);margin-bottom:0.75rem">
+        <div id="idCardName" style="font-size:1.1rem;font-weight:600"></div>
+        <div id="idCardRoll" style="font-size:0.85rem;color:var(--text-muted)"></div>
+        <div id="idCardClass" style="font-size:0.85rem;color:var(--text-muted)"></div>
+        <img id="idCardQR" src="" alt="QR" style="width:120px;height:120px;margin-top:1rem;border-radius:8px">
+      </div>
+      <div style="display:flex;gap:0.75rem;justify-content:center;margin-top:1.5rem">
+        <button class="btn btn-primary btn-sm" onclick="printIDCard()">🖨 Print Card</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Import Modal -->
+  <div class="modal-overlay" id="bulkModal">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <h2 class="modal-title">Bulk Import</h2>
+        <button class="modal-close" onclick="closeModal('bulkModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem">
+          Upload a JSON file with an array of students. Format:
+        </p>
+        <pre style="background:rgba(0,0,0,0.3);padding:1rem;border-radius:8px;font-size:0.75rem;color:var(--text-muted);overflow-x:auto;margin-bottom:1rem">[
+  {"name":"John Doe","roll_no":"101","class":"10","section":"A","email":"john@..."},
+  {"name":"Jane Doe","roll_no":"102","class":"10","section":"A"}
+]</pre>
+        <div class="bulk-import-area" onclick="document.getElementById('bulkFileInput').click()">
+          <span style="font-size:2rem;opacity:0.4">📁</span>
+          <p style="font-size:0.85rem;color:var(--text-muted)">Click to select JSON file</p>
+          <input type="file" id="bulkFileInput" accept=".json" style="display:none" onchange="handleBulkImport(event)">
+        </div>
+        <div id="bulkResults" style="margin-top:1rem"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('bulkModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../js/theme.js"></script>
+  <script>
+    requireAuth();
+
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
+      document.getElementById('userName').textContent = user.email.split('@')[0];
+      loadStudents();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    });
+
+    var studentsData = [];
+
+    function loadStudents() {
+      var search = document.getElementById('searchInput').value.toLowerCase();
+      var cls = document.getElementById('classFilter').value;
+
+      document.getElementById('studentsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem"><div class="loading-spinner" style="margin:0 auto"></div></td></tr>';
+
+      getStudents().then(function(data) {
+        if (search) data = data.filter(function(s) { return s.name.toLowerCase().includes(search) || s.roll_no.toLowerCase().includes(search); });
+        if (cls) data = data.filter(function(s) { return s.class === cls; });
+        studentsData = data;
+        renderStudents(data);
+      }).catch(function() {
+        document.getElementById('studentsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted)">Could not load students</td></tr>';
+      });
+    }
+
+    function renderStudents(data) {
+      var tbody = document.getElementById('studentsTableBody');
+      document.getElementById('studentCount').textContent = data.length + ' student(s)';
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted)">No students found</td></tr>';
+        return;
+      }
+      var html = '';
+      data.forEach(function(s) {
+        var photoHtml = s.photo
+          ? '<img src="' + s.photo + '" class="photo-thumb" onerror="this.style.display=\'none\'">'
+          : '<div class="photo-thumb" style="background:rgba(0,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.8rem">' + s.name[0] + '</div>';
+        html += '<tr>' +
+          '<td>' + photoHtml + '</td>' +
+          '<td><strong>' + s.name + '</strong></td>' +
+          '<td>' + s.roll_no + '</td>' +
+          '<td>' + s.class + '</td>' +
+          '<td>' + (s.section || '-') + '</td>' +
+          '<td><button class="btn btn-secondary btn-sm" onclick="showQR(\'' + s.id + '\')">◈ QR</button></td>' +
+          '<td>' +
+          '<div style="display:flex;gap:0.35rem">' +
+          '<button class="btn btn-secondary btn-sm" onclick="editStudent(\'' + s.id + '\')">✎</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="showIDCard(\'' + s.id + '\')">🪪</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="deleteStudent(\'' + s.id + '\',\'' + s.name.replace(/'/g, "\\'") + '\')">✕</button>' +
+          '</div>' +
+          '</td>' +
+          '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function previewPhoto(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var img = document.getElementById('photoPreview');
+        img.src = ev.target.result;
+        img.style.display = 'block';
+        document.getElementById('photoPlaceholder').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Student form submit — uses Firebase RTDB
+    document.getElementById('studentForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var id = document.getElementById('editStudentId').value;
+      var name = document.getElementById('sName').value;
+      var roll = document.getElementById('sRollNo').value;
+      var cls = document.getElementById('sClass').value;
+      var section = document.getElementById('sSection').value;
+      var email = document.getElementById('sEmail').value;
+      var phone = document.getElementById('sPhone').value;
+      var photoFile = document.getElementById('photoInput').files[0];
+
+      var btn = document.getElementById('saveStudentBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Saving...';
+
+      var studentData = { name: name, roll_no: roll, class: cls, section: section || '', email: email || '', phone: phone || '' };
+
+      function save(photoUrl) {
+        if (photoUrl) studentData.photo = photoUrl;
+        var promise = id ? updateStudent(id, studentData) : addStudent(studentData);
+        return promise.then(function() {
+          showToast(id ? 'Student updated' : 'Student added', 'success');
+          closeModal('studentModal');
+          resetStudentForm();
+          loadStudents();
+        });
+      }
+
+      if (photoFile) {
+        var uploadPath = 'students/' + (id || Date.now()) + '_' + photoFile.name;
+        uploadPhoto(photoFile, uploadPath).then(save).catch(function(err) {
+          showToast('Photo upload failed: ' + err.message, 'error');
+          save(null);
+        });
+      } else {
+        save(null).catch(function(err) {
+          showToast(err.message, 'error');
+          btn.disabled = false;
+          btn.textContent = '💾 Save Student';
+        });
+      }
+    });
+
+    function openStudentModal(data) {
+      document.getElementById('studentModalTitle').textContent = data ? 'Edit Student' : 'Add Student';
+      if (data) {
+        document.getElementById('editStudentId').value = data.id;
+        document.getElementById('sName').value = data.name;
+        document.getElementById('sRollNo').value = data.roll_no;
+        document.getElementById('sClass').value = data.class;
+        document.getElementById('sSection').value = data.section || '';
+        document.getElementById('sEmail').value = data.email || '';
+        document.getElementById('sPhone').value = data.phone || '';
+        if (data.photo) {
+          document.getElementById('photoPreview').src = data.photo;
+          document.getElementById('photoPreview').style.display = 'block';
+          document.getElementById('photoPlaceholder').style.display = 'none';
+        }
+      }
+      openModal('studentModal');
+    }
+
+    function resetStudentForm() {
+      document.getElementById('editStudentId').value = '';
+      document.getElementById('sName').value = '';
+      document.getElementById('sRollNo').value = '';
+      document.getElementById('sClass').value = '';
+      document.getElementById('sSection').value = '';
+      document.getElementById('sEmail').value = '';
+      document.getElementById('sPhone').value = '';
+      document.getElementById('photoPreview').style.display = 'none';
+      document.getElementById('photoPlaceholder').style.display = 'block';
+      document.getElementById('photoInput').value = '';
+    }
+
+    function editStudent(id) {
+      var s = studentsData.find(function(x) { return x.id === id; });
+      if (s) openStudentModal(s);
+    }
+
+    function deleteStudent(id, name) {
+      if (!confirm('Deactivate student "' + name + '"?')) return;
+      deactivateStudent(id).then(function() {
+        showToast('Student deactivated', 'success');
+        loadStudents();
+      }).catch(function(e) { showToast(e.message, 'error'); });
+    }
+
+    function showQR(id) {
+      var s = studentsData.find(function(x) { return x.id === id; });
+      if (!s) return;
+      var qrUrl = getQRImageUrl(s);
+      document.getElementById('qrImage').src = qrUrl;
+      document.getElementById('qrStudentName').textContent = s.name;
+      document.getElementById('qrStudentInfo').textContent = s.roll_no + ' · Class ' + s.class;
+      document.getElementById('qrDownloadLink').href = qrUrl;
+      openModal('qrModal');
+    }
+
+    function printQR() {
+      var img = document.getElementById('qrImage').src;
+      var win = window.open('', '_blank');
+      win.document.write('<style>body{text-align:center;padding:2rem;font-family:sans-serif}img{max-width:300px;border-radius:12px}</style>');
+      win.document.write('<img src="' + img + '" onload="window.print()">');
+    }
+
+    function showIDCard(id) {
+      var s = studentsData.find(function(x) { return x.id === id; });
+      if (!s) return;
+      document.getElementById('idCardName').textContent = s.name;
+      document.getElementById('idCardRoll').textContent = 'Roll No: ' + s.roll_no;
+      document.getElementById('idCardClass').textContent = 'Class ' + s.class + (s.section ? ' · Section ' + s.section : '');
+      document.getElementById('idCardPhoto').src = s.photo || '';
+      document.getElementById('idCardQR').src = getQRImageUrl(s);
+      openModal('idCardModal');
+    }
+
+    function printIDCard() {
+      var content = document.getElementById('idCardContent').cloneNode(true);
+      content.style.margin = '2rem auto';
+      var win = window.open('', '_blank');
+      win.document.write('<style>body{background:#0a0a0b;color:#f8fafc;font-family:sans-serif;display:flex;justify-content:center;padding:2rem}img{border-radius:12px}</style>');
+      win.document.write(content.outerHTML);
+      win.document.write('<script>window.onload=function(){window.print()}<\/script>');
+    }
+
+    function handleBulkImport(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var students = JSON.parse(e.target.result);
+          if (!Array.isArray(students)) throw new Error('Must be an array');
+          var results = document.getElementById('bulkResults');
+          results.innerHTML = '<p style="color:var(--accent)">Importing ' + students.length + ' students...</p>';
+
+          var promises = students.map(function(s) {
+            return addStudent({
+              name: s.name, roll_no: s.roll_no, class: s.class,
+              section: s.section || '', email: s.email || '', phone: s.phone || ''
+            }).then(function() { return true; }).catch(function() { return false; });
+          });
+          Promise.all(promises).then(function(resultsArr) {
+            var ok = resultsArr.filter(function(r) { return r; }).length;
+            results.innerHTML = '<p style="color:var(--success)">✓ Imported ' + ok + '/' + students.length + ' students</p>';
+            loadStudents();
+          });
+        } catch (err) {
+          document.getElementById('bulkResults').innerHTML = '<p style="color:var(--danger)">✕ Invalid JSON: ' + err.message + '</p>';
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>

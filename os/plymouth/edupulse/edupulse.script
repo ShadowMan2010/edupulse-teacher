@@ -1,0 +1,92 @@
+/* EduPulse Cyberpunk Boot Theme for Plymouth */
+
+// Global
+bg_image = Image("background.png");
+logo_image = Image("logo.png");
+progress_bar_bg = Image("progress-bar.png");
+bullet = Image("bullet.png");
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+// ── Background ──
+bg_sprite = Sprite();
+bg_sprite.SetImage(bg_image);
+bg_sprite.SetPosition(screen_width / 2, screen_height / 2, 0);
+bg_sprite.SetOpacity(0.85);
+
+// ── Scan line animation ──
+scan_line = Sprite();
+scan_line.SetPosition(screen_width / 2, 0, 1);
+scan_line.SetColor(0.0, 1.0, 1.0, 0.12);
+scan_line.SetSize(screen_width, 4);
+
+// ── Logo / brand text area ──
+logo_sprite = Sprite();
+logo_sprite.SetImage(logo_image);
+logo_sprite.SetPosition(screen_width / 2, screen_height / 2 - 80, 1);
+logo_sprite.SetOpacity(0.9);
+
+// ── Progress bar ──
+bar_bg = Sprite();
+bar_bg.SetImage(progress_bar_bg);
+bar_bg.SetPosition(screen_width / 2, screen_height / 2 + 60, 1);
+bar_bg.SetOpacity(0.6);
+
+// Progress fill (built dynamically)
+progress_sprite = null;
+progress_value = 0.0;
+
+// ── Watermark ──
+watermark = Sprite();
+watermark.SetPosition(screen_width / 2, screen_height - 30, 1);
+watermark.SetColor(0.3, 0.4, 0.5, 0.3);
+watermark.SetSize(200, 12);
+
+fun refresh_callback()
+{
+    // Update scan line position (bouncing)
+    line_y = Math.Abs(Math.Sin(progress_value * 3.14159 * 4)) * screen_height;
+    scan_line.SetY(line_y);
+
+    // Update progress bar fill
+    if (progress_sprite != null) {
+        progress_sprite.SetX(screen_width / 2 - 198 + progress_value * 396 / 100);
+    }
+
+    return true;
+}
+
+// Called when progress changes
+fun progress_callback (progress, duration)
+{
+    progress_value = progress;
+    if (progress_sprite == null && progress > 0) {
+        progress_sprite = Sprite();
+        progress_sprite.SetColor(0.0, 1.0, 1.0, 0.7);
+        progress_sprite.SetPosition(screen_width / 2 - 198, screen_height / 2 + 60, 2);
+        progress_sprite.SetSize(4, 6);
+    }
+    if (progress >= 1.0) {
+        // Boot complete - fade out effect after delay
+        bg_sprite.SetOpacity(0.0);
+        logo_sprite.SetOpacity(0.0);
+        bar_bg.SetOpacity(0.0);
+        if (progress_sprite != null)
+            progress_sprite.SetOpacity(0.0);
+        scan_line.SetOpacity(0.0);
+    }
+    return refresh_callback();
+}
+
+// Boot message display (shows status text)
+fun display_message_callback (message, progress)
+{
+    // Could show message text, but we keep it minimal
+    return refresh_callback();
+}
+
+// No password prompting for kiosk mode
+fun display_password_callback (prompt, bullets)
+{
+    return refresh_callback();
+}
