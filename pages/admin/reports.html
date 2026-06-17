@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports — EduPulse Admin</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="scroll-line" id="scrollProgress"></div>
+  <div id="toastContainer"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      EduPulse
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Main</div>
+        <a href="dashboard.html" class="sidebar-link"><span class="link-icon">◈</span> Dashboard</a>
+        <a href="students.html" class="sidebar-link"><span class="link-icon">◉</span> Students</a>
+        <a href="attendance.html" class="sidebar-link"><span class="link-icon">◈</span> Attendance</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Reports</div>
+        <a href="reports.html" class="sidebar-link active"><span class="link-icon">◈</span> Reports</a>
+        <a href="settings.html" class="sidebar-link"><span class="link-icon">⚙</span> Settings</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div>
+          <div class="user-name" id="userName">Admin</div>
+          <div class="user-role">Administrator</div>
+        </div>
+      </div>
+      <a href="#" class="sidebar-link" id="logoutBtn" style="margin-top:0.5rem">
+        <span class="link-icon">↩</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <header class="top-header">
+    <div class="header-left">
+      <button class="btn btn-icon mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="realtime-clock" id="realtimeClock">--:--:--</div>
+    </div>
+    <div class="header-right"></div>
+  </header>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Reports</h1>
+        <p class="page-subtitle">Export attendance data as Excel or PDF</p>
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <div class="glass-panel-strong" style="padding:2rem">
+        <div style="font-size:2rem;margin-bottom:1rem">📊</div>
+        <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:1.5rem">Excel Export</h3>
+        <form id="excelForm" style="display:flex;flex-direction:column;gap:1rem">
+          <div class="form-row">
+            <div class="input-group">
+              <label>From Date</label>
+              <input type="date" class="input-field" id="excelFrom" required>
+            </div>
+            <div class="input-group">
+              <label>To Date</label>
+              <input type="date" class="input-field" id="excelTo" required>
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Class (optional)</label>
+            <select class="input-field" id="excelClass">
+              <option value="">All Classes</option>
+              <option value="8">Class 8</option>
+              <option value="9">Class 9</option>
+              <option value="10">Class 10</option>
+              <option value="11">Class 11</option>
+              <option value="12">Class 12</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">⬇ Download Excel</button>
+        </form>
+      </div>
+
+      <div class="glass-panel-strong" style="padding:2rem">
+        <div style="font-size:2rem;margin-bottom:1rem">📄</div>
+        <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:1.5rem">PDF Report</h3>
+        <form id="pdfForm" style="display:flex;flex-direction:column;gap:1rem">
+          <div class="form-row">
+            <div class="input-group">
+              <label>From Date</label>
+              <input type="date" class="input-field" id="pdfFrom" required>
+            </div>
+            <div class="input-group">
+              <label>To Date</label>
+              <input type="date" class="input-field" id="pdfTo" required>
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Class (optional)</label>
+            <select class="input-field" id="pdfClass">
+              <option value="">All Classes</option>
+              <option value="8">Class 8</option>
+              <option value="9">Class 9</option>
+              <option value="10">Class 10</option>
+              <option value="11">Class 11</option>
+              <option value="12">Class 12</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-outline">⬇ Download PDF</button>
+        </form>
+      </div>
+
+      <div class="glass-panel-strong" style="padding:2rem">
+        <div style="font-size:2rem;margin-bottom:1rem">📈</div>
+        <h3 style="font-family:var(--font-display);font-size:1rem;margin-bottom:1.5rem">Daily Summary</h3>
+        <form id="summaryForm" style="display:flex;flex-direction:column;gap:1rem">
+          <div class="input-group">
+            <label>Date</label>
+            <input type="date" class="input-field" id="summaryDate" required>
+          </div>
+          <button type="submit" class="btn btn-secondary">◈ View Summary</button>
+        </form>
+        <div id="summaryResult" style="margin-top:1rem"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../js/theme.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    requireAuth();
+
+    var today = getTodaysDate();
+    document.getElementById('excelFrom').value = today;
+    document.getElementById('excelTo').value = today;
+    document.getElementById('pdfFrom').value = today;
+    document.getElementById('pdfTo').value = today;
+    document.getElementById('summaryDate').value = today;
+
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
+      document.getElementById('userName').textContent = user.email.split('@')[0];
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    });
+
+    var studentMap = {};
+    function loadStudentMap() {
+      return getStudents().then(function(students) {
+        students.forEach(function(s) { studentMap[s.id] = s; });
+      });
+    }
+
+    document.getElementById('excelForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var from = document.getElementById('excelFrom').value;
+      var to = document.getElementById('excelTo').value;
+      var cls = document.getElementById('excelClass').value;
+
+      getAttendance({from: from, to: to}).then(function(data) {
+        if (cls) {
+          return getStudents().then(function(students) {
+            var classStudentIds = {};
+            students.forEach(function(s) { if (s.class === cls) classStudentIds[s.id] = true; });
+            return data.filter(function(a) { return classStudentIds[a.student_id]; });
+          });
+        }
+        return data;
+      }).then(function(data) {
+        return generateAttendanceData({from: from, to: to}).then(function(rows) {
+          if (cls) rows = rows.filter(function(r) { return r.class === cls; });
+
+          var wsData = [['Name', 'Roll No', 'Class', 'Section', 'Date', 'Time', 'Status']];
+          rows.forEach(function(r) {
+            wsData.push([r.name, r.roll_no, r.class, r.section, r.date || '-', r.time ? r.time.slice(0,5) : '-', r.status || 'absent']);
+          });
+
+          var wb = XLSX.utils.book_new();
+          var ws = XLSX.utils.aoa_to_sheet(wsData);
+          ws['!cols'] = [{ wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }];
+          XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+          XLSX.writeFile(wb, 'attendance_' + from + '.xlsx');
+        });
+      }).catch(function(e) { showToast(e.message, 'error'); });
+    });
+
+    document.getElementById('pdfForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var from = document.getElementById('pdfFrom').value;
+      var to = document.getElementById('pdfTo').value;
+      var cls = document.getElementById('pdfClass').value;
+
+      getAttendanceSummary(from).then(function(summary) {
+        var doc = new jspdf.jsPDF();
+        doc.setFontSize(18);
+        doc.setTextColor(0, 255, 255);
+        doc.text('EduPulse Attendance Report', 105, 20, { align: 'center' });
+        doc.setFontSize(11);
+        doc.setTextColor(150);
+        doc.text('Period: ' + from + ' to ' + to, 105, 30, { align: 'center' });
+        doc.setFontSize(13);
+        doc.setTextColor(0, 255, 255);
+        doc.text('Class-wise Summary', 20, 45);
+
+        if (summary.by_class) {
+          var y = 55;
+          summary.by_class.forEach(function(c) {
+            if (cls && c.class !== cls) return;
+            var pct = c.total > 0 ? Math.round((c.present / c.total) * 100) : 0;
+            doc.setFontSize(10);
+            doc.setTextColor(200);
+            doc.text('Class ' + c.class + ': ' + c.present + '/' + c.total + ' present (' + pct + '%)', 25, y);
+            y += 8;
+          });
+        }
+        doc.save('report_' + from + '.pdf');
+      }).catch(function(e) { showToast(e.message, 'error'); });
+    });
+
+    document.getElementById('summaryForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var date = document.getElementById('summaryDate').value;
+      var el = document.getElementById('summaryResult');
+      el.innerHTML = '<div class="loading-spinner" style="margin:1rem auto"></div>';
+
+      getAttendanceSummary(date).then(function(d) {
+        var html = '<div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:1rem">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">' +
+          '<span style="color:var(--text-muted)">Total:</span><span style="font-weight:600">' + d.total + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">' +
+          '<span style="color:var(--success)">Present:</span><span style="font-weight:600">' + d.present + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">' +
+          '<span style="color:var(--warning)">Late:</span><span style="font-weight:600">' + d.late + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">' +
+          '<span style="color:var(--danger)">Absent:</span><span style="font-weight:600">' + d.absent + '</span></div>' +
+          '<div style="display:flex;justify-content:space-between;padding-top:0.5rem;border-top:1px solid var(--glass-border)">' +
+          '<span style="color:var(--accent)">Percentage:</span><span style="font-weight:700;color:var(--accent)">' + d.percentage + '%</span></div>';
+        if (d.by_class && d.by_class.length) {
+          html += '<div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--glass-border)">';
+          d.by_class.forEach(function(c) {
+            var pct = c.total > 0 ? Math.round((c.present / c.total) * 100) : 0;
+            html += '<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem">' +
+              '<span>Class ' + c.class + '</span><span>' + c.present + '/' + c.total + ' (' + pct + '%)</span></div>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+        el.innerHTML = html;
+      }).catch(function() { el.innerHTML = '<p style="color:var(--text-muted)">Could not load summary</p>'; });
+    });
+  </script>
+</body>
+</html>

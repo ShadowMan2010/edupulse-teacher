@@ -1,0 +1,41 @@
+# EduPulse GRUB Theme
+title-text: ""
+title-font: "Orbitron Regular 12"
+title-color: "#00ffff"
+desktop-image: "background.png"
+desktop-color: "#0a0a0b"
+terminal-font: "Terminus 12"
+
++ boot_menu {
+    left = 30%
+    top = 25%
+    width = 40%
+    height = 50%
+    item_color = "#94a3b8"
+    selected_item_color = "#00ffff"
+    item_height = 32
+    item_padding = 8
+    item_spacing = 4
+    item_font = "Orbitron Regular 12"
+    selected_item_font = "Orbitron Bold 14"
+    selected_item_pixmap_style = "select_*.png"
+    scrollbar = true
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 30%
+    top = 78%
+    width = 40%
+    height = 4
+    thumb_color = "#00ffff"
+    thumb_style = "progress-bar.png"
+}
+
++ label {
+    text = "EduPulse Attendance Kiosk"
+    font = "Orbitron Regular 10"
+    color = "#475569"
+    left = 30%
+    top = 85%
+}

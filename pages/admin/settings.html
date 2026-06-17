@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — EduPulse Admin</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="scroll-line" id="scrollProgress"></div>
+  <div id="toastContainer"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      EduPulse
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Main</div>
+        <a href="dashboard.html" class="sidebar-link"><span class="link-icon">◈</span> Dashboard</a>
+        <a href="students.html" class="sidebar-link"><span class="link-icon">◉</span> Students</a>
+        <a href="attendance.html" class="sidebar-link"><span class="link-icon">◈</span> Attendance</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Reports</div>
+        <a href="reports.html" class="sidebar-link"><span class="link-icon">◈</span> Reports</a>
+        <a href="settings.html" class="sidebar-link active"><span class="link-icon">⚙</span> Settings</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div>
+          <div class="user-name" id="userName">Admin</div>
+          <div class="user-role">Administrator</div>
+        </div>
+      </div>
+      <a href="#" class="sidebar-link" id="logoutBtn" style="margin-top:0.5rem">
+        <span class="link-icon">↩</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <header class="top-header">
+    <div class="header-left">
+      <button class="btn btn-icon mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="realtime-clock" id="realtimeClock">--:--:--</div>
+    </div>
+    <div class="header-right"></div>
+  </header>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Configure attendance system parameters</p>
+      </div>
+    </div>
+
+    <div class="glass-panel-strong" style="padding:2rem;max-width:640px">
+      <form id="settingsForm" style="display:flex;flex-direction:column;gap:1.25rem">
+        <div class="input-group">
+          <label>School Name</label>
+          <input type="text" class="input-field" id="setSchoolName" placeholder="EduPulse Academy">
+        </div>
+        <div class="form-row">
+          <div class="input-group">
+            <label>Duplicate Scan Window (minutes)</label>
+            <input type="number" class="input-field" id="setDupWindow" placeholder="60" min="1">
+          </div>
+          <div class="input-group">
+            <label>Late Threshold (minutes after start)</label>
+            <input type="number" class="input-field" id="setLateThreshold" placeholder="30" min="1">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>School Start Time</label>
+          <input type="time" class="input-field" id="setStartTime">
+        </div>
+        <button type="submit" class="btn btn-primary" style="align-self:flex-start">Save Settings</button>
+        <div id="settingsStatus" style="font-size:0.85rem"></div>
+      </form>
+    </div>
+
+    <div class="glass-panel-strong" style="padding:2rem;max-width:640px;margin-top:1.5rem">
+      <h3 style="font-family:var(--font-display);font-size:0.9rem;color:var(--accent);margin-bottom:1rem">System Info</h3>
+      <div style="font-size:0.85rem;color:var(--text-muted);line-height:1.8">
+        <div>API: <span id="apiStatus" style="color:var(--warning)">Checking...</span></div>
+        <div>Version: 1.0.0</div>
+        <div>Database: SQLite (local) + Firebase Realtime</div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../js/theme.js"></script>
+  <script>
+    requireAuth();
+
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
+      document.getElementById('userName').textContent = user.email.split('@')[0];
+      loadSettings();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    });
+
+    function loadSettings() {
+      getSettings().then(function(s) {
+        if (s.school_name) document.getElementById('setSchoolName').value = s.school_name;
+        if (s.duplicate_window_minutes) document.getElementById('setDupWindow').value = s.duplicate_window_minutes;
+        if (s.late_threshold_minutes) document.getElementById('setLateThreshold').value = s.late_threshold_minutes;
+        if (s.school_start_time) document.getElementById('setStartTime').value = s.school_start_time;
+      });
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var body = {
+        school_name: document.getElementById('setSchoolName').value,
+        duplicate_window_minutes: document.getElementById('setDupWindow').value,
+        late_threshold_minutes: document.getElementById('setLateThreshold').value,
+        school_start_time: document.getElementById('setStartTime').value
+      };
+      saveSettings(body).then(function() {
+        document.getElementById('settingsStatus').textContent = 'Settings saved!';
+        document.getElementById('settingsStatus').style.color = 'var(--success)';
+      }).catch(function(e) {
+        document.getElementById('settingsStatus').textContent = 'Error: ' + e.message;
+        document.getElementById('settingsStatus').style.color = 'var(--danger)';
+      });
+    });
+  </script>
+</body>
+</html>

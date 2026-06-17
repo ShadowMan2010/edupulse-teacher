@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — EduPulse Admin</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+  <style>
+    .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+    .main-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.5rem; }
+    @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+    .recent-scan-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .recent-scan-item:last-child { border-bottom: none; }
+    .scan-time { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+    .class-attendance-bar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .class-bar-bg { flex: 1; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+    .class-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent-purple)); transition: width 0.5s ease; }
+    .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="scroll-line" id="scrollProgress"></div>
+  <div id="toastContainer"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      EduPulse
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Main</div>
+        <a href="dashboard.html" class="sidebar-link active"><span class="link-icon">◈</span> Dashboard</a>
+        <a href="students.html" class="sidebar-link"><span class="link-icon">◉</span> Students</a>
+        <a href="attendance.html" class="sidebar-link"><span class="link-icon">◈</span> Attendance</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Reports</div>
+        <a href="reports.html" class="sidebar-link"><span class="link-icon">◈</span> Reports</a>
+        <a href="settings.html" class="sidebar-link"><span class="link-icon">⚙</span> Settings</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div>
+          <div class="user-name" id="userName">Admin</div>
+          <div class="user-role">Administrator</div>
+        </div>
+      </div>
+      <a href="#" class="sidebar-link" id="logoutBtn" style="margin-top:0.5rem">
+        <span class="link-icon">↩</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <header class="top-header">
+    <div class="header-left">
+      <button class="btn btn-icon mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="realtime-clock" id="realtimeClock">--:--:--</div>
+    </div>
+    <div class="header-right">
+      <span style="font-size:0.8rem;color:var(--text-muted);font-family:var(--font-mono)" id="todayDate"></span>
+    </div>
+  </header>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Real-time attendance overview</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="window.location.href='students.html'">+ Add Student</button>
+        <button class="btn btn-outline" onclick="window.location.href='reports.html'">📊 Reports</button>
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <button class="btn btn-secondary" onclick="window.location.href='attendance.html'">◈ View Attendance</button>
+      <button class="btn btn-secondary" onclick="window.location.href='students.html'">◉ Manage Students</button>
+      <button class="btn btn-secondary" onclick="window.location.href='reports.html'">📊 Export Reports</button>
+    </div>
+
+    <div class="dashboard-stats" id="statCards">
+      <div class="stat-card tilt-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="statTotal">-</div>
+        <div class="stat-label">Total Students</div>
+      </div>
+      <div class="stat-card tilt-card">
+        <div class="stat-icon" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.2)">✓</div>
+        <div class="stat-value neon-text" id="statPresent">-</div>
+        <div class="stat-label">Present Today</div>
+      </div>
+      <div class="stat-card tilt-card">
+        <div class="stat-icon" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2)">✕</div>
+        <div class="stat-value" id="statAbsent" style="color:var(--danger)">-</div>
+        <div class="stat-label">Absent Today</div>
+      </div>
+      <div class="stat-card tilt-card">
+        <div class="stat-icon" style="background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2)">◈</div>
+        <div class="stat-value" id="statPercent" style="color:var(--warning)">-</div>
+        <div class="stat-label">Attendance %</div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div>
+        <div class="glass-panel-strong" style="padding:1.5rem;margin-bottom:1.5rem">
+          <h3 style="font-family:var(--font-display);font-size:0.9rem;margin-bottom:1rem;color:var(--accent)">
+            ◈ Class-wise Attendance
+          </h3>
+          <div id="classAttendance">Loading...</div>
+        </div>
+
+        <div class="glass-panel-strong" style="padding:1.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <h3 style="font-family:var(--font-display);font-size:0.9rem;color:var(--accent)">◈ Recent Scans</h3>
+            <a href="attendance.html" style="font-size:0.8rem;color:var(--accent)">View All →</a>
+          </div>
+          <div id="recentScans">Loading...</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="glass-panel-strong" style="padding:1.5rem">
+          <h3 style="font-family:var(--font-display);font-size:0.9rem;margin-bottom:1rem;color:var(--accent)">
+            ◈ Daily Activity
+          </h3>
+          <canvas id="activityChart" height="250" style="width:100%"></canvas>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../../js/theme.js"></script>
+  <script>
+    var today = getTodaysDate();
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    requireAuth();
+
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
+      document.getElementById('userName').textContent = user.email.split('@')[0];
+      loadDashboard();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    });
+
+    function loadDashboard() {
+      getAttendanceSummary(today).then(function(d) {
+        document.getElementById('statTotal').textContent = d.total;
+        document.getElementById('statPresent').textContent = d.present;
+        document.getElementById('statAbsent').textContent = d.absent;
+        document.getElementById('statPercent').textContent = d.percentage + '%';
+
+        // Class-wise attendance
+        var html = '';
+        d.by_class.forEach(function(c) {
+          var pct = c.total > 0 ? Math.round((c.present / c.total) * 100) : 0;
+          html += '<div class="class-attendance-bar">' +
+            '<span style="font-size:0.8rem;min-width:80px;font-family:var(--font-mono)">Class ' + c.class + '</span>' +
+            '<span style="font-size:0.75rem;color:var(--text-muted);min-width:60px">' + c.present + '/' + c.total + '</span>' +
+            '<div class="class-bar-bg"><div class="class-bar-fill" style="width:' + pct + '%"></div></div>' +
+            '<span style="font-size:0.75rem;color:var(--accent);min-width:40px;text-align:right">' + pct + '%</span>' +
+            '</div>';
+        });
+        document.getElementById('classAttendance').innerHTML = html || '<div class="empty-state"><p>No classes found</p></div>';
+      }).catch(function() {
+        document.getElementById('statTotal').textContent = 'N/A';
+      });
+
+      // Recent scans
+      getRecentAttendance(15).then(function(data) {
+        var html = '';
+        data.forEach(function(s) {
+          var badge = s.status === 'late' ? 'badge-warning' : 'badge-success';
+          html += '<div class="recent-scan-item">' +
+            '<div class="photo-thumb" style="background:rgba(0,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.8rem">' + (s.student_name ? s.student_name[0] : '?') + '</div>' +
+            '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:0.85rem;font-weight:500">' + (s.student_name || 'Unknown') + '</div>' +
+            '<div style="font-size:0.7rem;color:var(--text-muted)">' + (s.roll_no || '') + ' · Class ' + (s.class_name || '') + '</div>' +
+            '</div>' +
+            '<span class="badge ' + badge + '">' + s.status + '</span>' +
+            '<span class="scan-time">' + (s.time ? s.time.slice(0,5) : '') + '</span>' +
+            '</div>';
+        });
+        document.getElementById('recentScans').innerHTML = html || '<div class="empty-state"><p>No recent scans</p></div>';
+      }).catch(function() {
+        document.getElementById('recentScans').innerHTML = '<p style="color:var(--text-muted)">Could not load</p>';
+      });
+
+      drawActivityChart();
+    }
+
+    // Override getRecentAttendance to include student names
+    var _origGetRecent = getRecentAttendance;
+    getRecentAttendance = function(limit) {
+      return getAttendance({}).then(function(arr) {
+        arr = arr.slice(0, limit || 20);
+        return Promise.all(arr.map(function(r) {
+          return getStudent(r.student_id).then(function(s) {
+            return Object.assign(r, { student_name: s ? s.name : 'Unknown', roll_no: s ? s.roll_no : '', class_name: s ? s.class : '' });
+          });
+        }));
+      });
+    };
+
+    function drawActivityChart() {
+      var canvas = document.getElementById('activityChart');
+      var ctx = canvas.getContext('2d');
+      var W = canvas.parentElement.clientWidth - 48;
+      var H = 250;
+      canvas.width = W * 2;
+      canvas.height = H * 2;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.scale(2, 2);
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Get last 7 days of data for chart
+      var days = [];
+      for (var i = 6; i >= 0; i--) {
+        var d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push(d.toLocaleDateString('en', { weekday: 'short' }));
+      }
+
+      // Get counts per day
+      var promises = [];
+      for (var i = 6; i >= 0; i--) {
+        var d = new Date();
+        d.setDate(d.getDate() - i);
+        var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        promises.push(getAttendance({date: ds}).then(function(r) { return r.length; }));
+      }
+      Promise.all(promises).then(function(values) {
+        var maxVal = Math.max.apply(null, values) || 10;
+        var pad = { t: 20, r: 20, b: 30, l: 30 };
+        var chartW = W - pad.l - pad.r;
+        var chartH = H - pad.t - pad.b;
+        var barW = chartW / days.length * 0.6;
+        var gap = chartW / days.length;
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1;
+        for (var i = 0; i <= 4; i++) {
+          var y = pad.t + (chartH / 4) * i;
+          ctx.beginPath();
+          ctx.moveTo(pad.l, y);
+          ctx.lineTo(W - pad.r, y);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(148,163,184,0.4)';
+          ctx.font = '9px JetBrains Mono, monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText(Math.round(maxVal - (maxVal / 4) * i), pad.l - 5, y + 3);
+        }
+
+        values.forEach(function(v, i) {
+          var x = pad.l + gap * i + (gap - barW) / 2;
+          var barH = (v / maxVal) * chartH;
+          var y = pad.t + chartH - barH;
+
+          var grad = ctx.createLinearGradient(x, y, x, pad.t + chartH);
+          grad.addColorStop(0, '#00ffff');
+          grad.addColorStop(1, 'rgba(0,255,255,0.1)');
+          ctx.fillStyle = grad;
+
+          ctx.beginPath();
+          ctx.roundRect(x, y, barW, barH, [3, 3, 0, 0]);
+          ctx.fill();
+
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '9px JetBrains Mono, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(days[i], x + barW / 2, pad.t + chartH + 14);
+          ctx.fillStyle = 'rgba(0,255,255,0.6)';
+          ctx.fillText(v, x + barW / 2, y - 5);
+        });
+      });
+    }
+
+    window.addEventListener('resize', drawActivityChart);
+  </script>
+</body>
+</html>

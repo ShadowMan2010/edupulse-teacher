@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance — EduPulse Admin</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="scroll-line" id="scrollProgress"></div>
+  <div id="toastContainer"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚡</div>
+      EduPulse
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Main</div>
+        <a href="dashboard.html" class="sidebar-link"><span class="link-icon">◈</span> Dashboard</a>
+        <a href="students.html" class="sidebar-link"><span class="link-icon">◉</span> Students</a>
+        <a href="attendance.html" class="sidebar-link active"><span class="link-icon">◈</span> Attendance</a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Reports</div>
+        <a href="reports.html" class="sidebar-link"><span class="link-icon">◈</span> Reports</a>
+        <a href="settings.html" class="sidebar-link"><span class="link-icon">⚙</span> Settings</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div>
+          <div class="user-name" id="userName">Admin</div>
+          <div class="user-role">Administrator</div>
+        </div>
+      </div>
+      <a href="#" class="sidebar-link" id="logoutBtn" style="margin-top:0.5rem">
+        <span class="link-icon">↩</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <header class="top-header">
+    <div class="header-left">
+      <button class="btn btn-icon mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="realtime-clock" id="realtimeClock">--:--:--</div>
+    </div>
+    <div class="header-right">
+      <span style="font-size:0.8rem;color:var(--text-muted);font-family:var(--font-mono)"><span id="recordCount">0</span> records</span>
+    </div>
+  </header>
+
+  <main class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Attendance Records</h1>
+        <p class="page-subtitle">View and filter attendance logs</p>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="date" class="input-field" id="filterDate" onchange="loadAttendance()">
+      <select class="input-field" id="filterClass" onchange="loadAttendance()" style="min-width:140px">
+        <option value="">All Classes</option>
+        <option value="8">Class 8</option>
+        <option value="9">Class 9</option>
+        <option value="10">Class 10</option>
+        <option value="11">Class 11</option>
+        <option value="12">Class 12</option>
+      </select>
+      <select class="input-field" id="filterStatus" onchange="loadAttendance()" style="min-width:120px">
+        <option value="">All Status</option>
+        <option value="present">Present</option>
+        <option value="late">Late</option>
+        <option value="absent">Absent</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="loadAttendance()">⟳ Refresh</button>
+      <button class="btn btn-outline btn-sm" onclick="markAbsentees()">✕ Mark Absent</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Roll No</th>
+            <th>Class</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceBody">
+          <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted)">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="../../js/theme.js"></script>
+  <script>
+    requireAuth();
+
+    document.getElementById('filterDate').valueAsDate = new Date();
+
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
+      document.getElementById('userName').textContent = user.email.split('@')[0];
+      loadAttendance();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    });
+
+    function loadAttendance() {
+      var date = document.getElementById('filterDate').value;
+      var cls = document.getElementById('filterClass').value;
+      var status = document.getElementById('filterStatus').value;
+
+      document.getElementById('attendanceBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem"><div class="loading-spinner" style="margin:0 auto"></div></td></tr>';
+
+      getAttendance({date: date}).then(function(data) {
+        if (status) data = data.filter(function(a) { return a.status === status; });
+        // Attach student info
+        return getStudents().then(function(students) {
+          var studentMap = {};
+          students.forEach(function(s) { studentMap[s.id] = s; });
+          data = data.map(function(a) {
+            var s = studentMap[a.student_id];
+            return Object.assign(a, { student_name: s ? s.name : 'Unknown', roll_no: s ? s.roll_no : '', class_name: s ? s.class : '' });
+          });
+          // Filter by class if needed
+          if (cls) data = data.filter(function(a) { return a.class_name === cls; });
+          document.getElementById('recordCount').textContent = data.length;
+          renderAttendance(data);
+        });
+      }).catch(function() {
+        document.getElementById('attendanceBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted)">Could not load records</td></tr>';
+      });
+    }
+
+    function renderAttendance(data) {
+      var tbody = document.getElementById('attendanceBody');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted)">No attendance records found</td></tr>';
+        return;
+      }
+      var html = '';
+      data.forEach(function(a) {
+        var badge = a.status === 'late' ? 'badge-warning' : a.status === 'present' ? 'badge-success' : 'badge-danger';
+        html += '<tr>' +
+          '<td><strong>' + (a.student_name || 'Unknown') + '</strong></td>' +
+          '<td>' + (a.roll_no || '') + '</td>' +
+          '<td>' + (a.class_name || '') + '</td>' +
+          '<td>' + a.date + '</td>' +
+          '<td>' + (a.time ? a.time.slice(0,5) : '-') + '</td>' +
+          '<td><span class="badge ' + badge + '">' + a.status + '</span></td>' +
+          '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function markAbsentees() {
+      var date = document.getElementById('filterDate').value;
+      if (!date) { showToast('Select a date first', 'warning'); return; }
+      if (!confirm('Mark all active students without a scan today as absent?')) return;
+
+      Promise.all([getStudents(), getAttendance({date: date})]).then(function(results) {
+        var students = results[0];
+        var records = results[1];
+        var scanned = {};
+        records.forEach(function(r) { scanned[r.student_id] = true; });
+        var absent = students.filter(function(s) { return !scanned[s.id]; });
+
+        if (!absent.length) { showToast('All students already scanned', 'info'); return; }
+
+        var count = 0;
+        var promises = absent.map(function(s) {
+          return scanAttendance(s.id).then(function(r) {
+            if (r.success) count++;
+          }).catch(function() {});
+        });
+        Promise.all(promises).then(function() {
+          showToast('Marked ' + count + ' students', 'success');
+          loadAttendance();
+        });
+      }).catch(function(e) { showToast(e.message, 'error'); });
+    }
+  </script>
+</body>
+</html>

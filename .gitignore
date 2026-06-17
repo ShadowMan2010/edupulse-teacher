@@ -1,0 +1,16 @@
+node_modules/
+edupulse.db
+uploads/*
+qrcodes/*
+!uploads/.gitkeep
+!qrcodes/.gitkeep
+*.log
+.env
+__pycache__/
+*.pyc
+.firebase/
+os/_build/
+os/output/
+*.iso
+*.img
+*.img.xz

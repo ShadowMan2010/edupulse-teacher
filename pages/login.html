@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — EduPulse</title>
+  <link rel="stylesheet" href="../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <style>
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 2rem;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 2.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      position: relative;
+      z-index: 10;
+      backdrop-filter: blur(24px);
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-logo {
+      width: 56px; height: 56px;
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin: 0 auto 1rem;
+      box-shadow: 0 0 20px rgba(0,255,255,0.3);
+    }
+    .login-title {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .login-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .login-form { display: flex; flex-direction: column; gap: 1.25rem; }
+    .login-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      display: none;
+    }
+    .login-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .login-footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .password-toggle {
+      position: relative;
+    }
+    .password-toggle .toggle-btn {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-login {
+      width: 100%;
+      padding: 0.85rem;
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="glow-blob" id="glowBlob"></div>
+
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">⚡</div>
+        <h1 class="login-title">Welcome Back</h1>
+        <p class="login-subtitle">Sign in to EduPulse attendance system</p>
+      </div>
+
+      <div class="login-error" id="loginError"></div>
+
+      <form class="login-form" id="loginForm" autocomplete="off">
+        <div class="input-group">
+          <label>Email Address</label>
+          <input type="email" class="input-field" id="emailInput" placeholder="admin@edupulse.dev" required>
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <div class="password-toggle">
+            <input type="password" class="input-field" id="passwordInput" placeholder="••••••••" required>
+            <button type="button" class="toggle-btn" id="togglePassword">👁</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-login" id="loginBtn">
+          ⚡ SIGN IN
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <p>Demo: admin@edupulse.dev / password123</p>
+        <p style="margin-top:0.5rem"><a href="/">← Back to home</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var email = document.getElementById('emailInput').value.trim();
+      var password = document.getElementById('passwordInput').value;
+      var errorEl = document.getElementById('loginError');
+      var btn = document.getElementById('loginBtn');
+
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = '⏳ SIGNING IN...';
+
+      loginWithEmail(email, password)
+        .then(function(cred) {
+          var uid = cred.user.uid;
+          dbGet('users/' + uid + '/role').then(function(role) {
+            if (role === 'admin') window.location.href = 'admin/dashboard.html';
+            else if (role === 'principal') window.location.href = 'principal/dashboard.html';
+            else window.location.href = '../index.html';
+          }).catch(function() {
+            window.location.href = '../index.html';
+          });
+        })
+        .catch(function(err) {
+          errorEl.textContent = err.message;
+          errorEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = '⚡ SIGN IN';
+        });
+    });
+
+    document.getElementById('togglePassword').addEventListener('click', function() {
+      var pwd = document.getElementById('passwordInput');
+      pwd.type = pwd.type === 'password' ? 'text' : 'password';
+    });
+  </script>
+</body>
+</html>
