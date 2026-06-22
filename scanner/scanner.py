@@ -54,7 +54,7 @@ DUPLICATE_COOLDOWN = 2  # Seconds before allowing same student re-scan
 # Camera source: 0 for built-in webcam, or IP camera URL:
 # DroidCam: "http://<phone-ip>:4747/video"
 # IP Webcam: "http://<phone-ip>:8080/video"
-CAMERA_SOURCE = os.environ.get('EDUPULSE_CAMERA', "http://10.187.209.67:4747/video")
+CAMERA_SOURCE = os.environ.get('EDUPULSE_CAMERA', "0")
 # Display rotation: 0, 90, 180, 270 (set for portrait/landscape)
 DISPLAY_ROTATION = int(os.environ.get('EDUPULSE_ROTATION', '0'))
 
@@ -276,9 +276,11 @@ class Card3DWidget(QWidget):
         self._timer.start(16)
         self.hide()
 
-    def flip_in(self, student, status):
+    def flip_in(self, student, status, timing=None):
         self.student = student
         self.status = status
+        self.timing = timing or {}
+        self.scan_time = datetime.now().strftime("%H:%M:%S")
         self.angle = 0.0
         self.target_angle = 180.0
         self.glow_intensity = 1.0
@@ -427,15 +429,15 @@ class Card3DWidget(QWidget):
 
         # Status badge
         if self.status:
-            if self.status == 'present':
-                bc, fc = QColor(34, 197, 94, 40), QColor(34, 197, 94)
-                txt = "✓ ATTENDANCE MARKED"
-            elif self.status == 'late':
-                bc, fc = QColor(245, 158, 11, 40), QColor(245, 158, 11)
-                txt = "⚠ MARKED LATE"
-            else:
-                bc, fc = QColor(239, 68, 68, 40), QColor(239, 68, 68)
-                txt = f"✕ {self.status.upper()}"
+            status_colors = {
+                'present':  (QColor(34, 197, 94, 40),  QColor(34, 197, 94),  "✓ ON TIME"),
+                'late':     (QColor(245, 158, 11, 40), QColor(245, 158, 11), "⚠ MARKED LATE"),
+                'half-day': (QColor(255, 193, 7, 40),  QColor(255, 193, 7),  "◐ HALF DAY"),
+                'early':    (QColor(96, 165, 250, 40), QColor(96, 165, 250), "◈ EARLY"),
+                'absent':   (QColor(239, 68, 68, 40),  QColor(239, 68, 68),  "✕ ABSENT"),
+                'duplicate':(QColor(148, 163, 184, 40),QColor(148, 163, 184),"◈ ALREADY SCANNED"),
+            }
+            bc, fc, txt = status_colors.get(self.status, (QColor(239, 68, 68, 40), QColor(239, 68, 68), f"✕ {self.status.upper()}"))
             fp.setBrush(bc)
             fp.setPen(QPen(fc, 1))
             fp.drawRoundedRect(60, 288, w-120, 36, 18, 18)
@@ -444,11 +446,25 @@ class Card3DWidget(QWidget):
             fp.setFont(f5)
             fp.drawText(QRect(60, 288, w-120, 36), Qt.AlignCenter, txt)
 
+        # Scan time
+        fp.setPen(QColor(148, 163, 184, 160))
+        f6 = QFont("Segoe UI", 10)
+        fp.setFont(f6)
+        fp.drawText(QRect(60, 330, w-120, 20), Qt.AlignCenter, f"Scanned at {self.scan_time}")
+
+        # Timing message
+        timing_msg = self.timing.get('message', '')
+        if timing_msg:
+            fp.setPen(QColor(148, 163, 184, 100))
+            f7 = QFont("Segoe UI", 9)
+            fp.setFont(f7)
+            fp.drawText(QRect(60, 350, w-120, 18), Qt.AlignCenter, timing_msg)
+
         # Footer
         fp.setPen(QColor(0, 255, 255, 40))
         fp.drawLine(60, h-50, w-60, h-50)
-        f6 = QFont("Orbitron", 7)
-        fp.setFont(f6)
+        f8 = QFont("Orbitron", 7)
+        fp.setFont(f8)
         fp.setPen(QColor(148, 163, 184, 80))
         fp.drawText(QRect(0, h-44, w, 20), Qt.AlignCenter, "EDUPULSE ATTENDANCE SYSTEM v1.0")
         fp.end()
@@ -620,6 +636,7 @@ class Desktop(QWidget):
         self._init_ui()
         self._start_clock()
         self._check_api()
+        self._fetch_settings()
         self._start_camera()
         init_sound()
 
@@ -668,6 +685,10 @@ class Desktop(QWidget):
         tb.addWidget(self.clock_label, alignment=Qt.AlignCenter)
 
         # Right: statuses
+        self.timing_label = QLabel()
+        self.timing_label.setStyleSheet("font-size: 10px; font-family: monospace; color: #94a3b8; padding: 0 12px;")
+        tb.addWidget(self.timing_label, alignment=Qt.AlignRight)
+
         self.api_status = QLabel()
         self.api_status.setStyleSheet("font-size: 10px; font-family: monospace; padding: 3px 10px; border-radius: 8px; background: rgba(239,68,68,0.12); color: #ef4444;")
         tb.addWidget(self.api_status, alignment=Qt.AlignRight)
@@ -829,6 +850,24 @@ class Desktop(QWidget):
         thread = threading.Thread(target=check, daemon=True)
         thread.start()
 
+    def _fetch_settings(self):
+        def do_fetch():
+            try:
+                r = requests.get(f"{API_BASE}/settings", timeout=3)
+                if r.status_code == 200:
+                    data = r.json().get('data', {})
+                    start = data.get('school_start_time', '08:30')
+                    end = data.get('entry_end_time', '16:00')
+                    late = data.get('late_threshold_minutes', '30')
+                    half = data.get('half_day_cutoff', '12:00')
+                    msg = f"⏰ {start}–{end}  |  Late >{late}min  |  Half >{half}"
+                    self.timing_label.setText(msg)
+            except:
+                pass
+
+        threading.Thread(target=do_fetch, daemon=True).start()
+        QTimer.singleShot(30000, self._fetch_settings)  # Refresh every 30s
+
     def _start_camera(self):
         if cv2 is None:
             self.status_msg.setText("✕ OpenCV not installed — no camera available")
@@ -886,11 +925,12 @@ class Desktop(QWidget):
                 if data.get('success'):
                     student = data.get('student', {})
                     status = data.get('attendance', {}).get('status', 'present')
+                    timing = data.get('timing', {})
                     play_sound('success.wav')
                     self.status_msg.setText(f"✓ {student.get('name', 'Unknown')}")
                     count = int(self.scan_count_label.text().split(':')[1]) + 1
                     self.scan_count_label.setText(f"SCANS: {count}")
-                    self.card_3d.flip_in(student, status)
+                    self.card_3d.flip_in(student, status, timing)
                 elif resp.status_code == 409:
                     student = data.get('student', {})
                     play_sound('error.wav')

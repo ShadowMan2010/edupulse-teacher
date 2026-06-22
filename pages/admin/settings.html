@@ -65,6 +65,7 @@
     </div>
 
     <div class="glass-panel-strong" style="padding:2rem;max-width:640px">
+      <h3 style="font-family:var(--font-display);font-size:0.9rem;color:var(--accent);margin-bottom:1rem">Attendance Timing</h3>
       <form id="settingsForm" style="display:flex;flex-direction:column;gap:1.25rem">
         <div class="input-group">
           <label>School Name</label>
@@ -72,17 +73,28 @@
         </div>
         <div class="form-row">
           <div class="input-group">
-            <label>Duplicate Scan Window (minutes)</label>
-            <input type="number" class="input-field" id="setDupWindow" placeholder="60" min="1">
+            <label>Entry Start Time</label>
+            <input type="time" class="input-field" id="setStartTime">
           </div>
           <div class="input-group">
-            <label>Late Threshold (minutes after start)</label>
+            <label>Entry End Time</label>
+            <input type="time" class="input-field" id="setEndTime">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="input-group">
+            <label>Half-Day Cutoff Time</label>
+            <input type="time" class="input-field" id="setHalfDayCutoff">
+            <small style="color:var(--text-muted);font-size:0.75rem">After this time, marked as half-day</small>
+          </div>
+          <div class="input-group">
+            <label>Late Threshold (min after start)</label>
             <input type="number" class="input-field" id="setLateThreshold" placeholder="30" min="1">
           </div>
         </div>
         <div class="input-group">
-          <label>School Start Time</label>
-          <input type="time" class="input-field" id="setStartTime">
+          <label>Duplicate Scan Window (minutes)</label>
+          <input type="number" class="input-field" id="setDupWindow" placeholder="60" min="1">
         </div>
         <button type="submit" class="btn btn-primary" style="align-self:flex-start">Save Settings</button>
         <div id="settingsStatus" style="font-size:0.85rem"></div>
@@ -121,6 +133,8 @@
         if (s.duplicate_window_minutes) document.getElementById('setDupWindow').value = s.duplicate_window_minutes;
         if (s.late_threshold_minutes) document.getElementById('setLateThreshold').value = s.late_threshold_minutes;
         if (s.school_start_time) document.getElementById('setStartTime').value = s.school_start_time;
+        if (s.entry_end_time) document.getElementById('setEndTime').value = s.entry_end_time;
+        if (s.half_day_cutoff) document.getElementById('setHalfDayCutoff').value = s.half_day_cutoff;
       });
     }
 
@@ -130,8 +144,16 @@
         school_name: document.getElementById('setSchoolName').value,
         duplicate_window_minutes: document.getElementById('setDupWindow').value,
         late_threshold_minutes: document.getElementById('setLateThreshold').value,
-        school_start_time: document.getElementById('setStartTime').value
+        school_start_time: document.getElementById('setStartTime').value,
+        entry_end_time: document.getElementById('setEndTime').value,
+        half_day_cutoff: document.getElementById('setHalfDayCutoff').value
       };
+      // Save to local API too
+      fetch('http://localhost:3000/api/settings', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      }).catch(function() { /* API may not be running */ });
       saveSettings(body).then(function() {
         document.getElementById('settingsStatus').textContent = 'Settings saved!';
         document.getElementById('settingsStatus').style.color = 'var(--success)';
