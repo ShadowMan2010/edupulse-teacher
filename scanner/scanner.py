@@ -501,6 +501,7 @@ class BootScreen(QWidget):
         self.progress = 0
         self.beam_y = -20
         self.dots = 0
+        self.hue_offset = 0.0
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._timer.start(30)
@@ -510,6 +511,7 @@ class BootScreen(QWidget):
         self.beam_y += 3
         if self.beam_y > self.height() + 20:
             self.beam_y = -20
+        self.hue_offset = (self.hue_offset + 0.008) % 1.0
         if self.progress < 100:
             self.dots = (self.dots + 1) % 4
         self.update()
@@ -548,10 +550,27 @@ class BootScreen(QWidget):
         glow.setColorAt(1, Qt.transparent)
         painter.fillRect(0, 0, w, h, glow)
 
-        # Logo / brand
-        painter.setPen(QColor(0, 255, 255, 180))
+        # Logo / brand — animated gradient coloring
         font_logo = QFont("Orbitron", 56, QFont.Bold)
         painter.setFont(font_logo)
+        tw = QFontMetrics(font_logo).horizontalAdvance("EduPulse")
+        tx = (w - tw) // 2
+        ty = h//2 - 40
+        # Gradient colors cycling through hue
+        from math import sin, pi
+        def hue_color(offset):
+            r = int(sin(offset * 2*pi) * 127 + 128)
+            g = int(sin((offset + 0.33) * 2*pi) * 127 + 128)
+            b = int(sin((offset + 0.67) * 2*pi) * 127 + 128)
+            return QColor(r, g, b)
+        grad = QLinearGradient(tx, ty, tx + tw, ty)
+        n_stops = 5
+        for i in range(n_stops):
+            t = i / (n_stops - 1)
+            c = hue_color(self.hue_offset + t * 0.5)
+            c.setAlpha(200)
+            grad.setColorAt(t, c)
+        painter.setPen(QPen(QBrush(grad), 1))
         painter.drawText(QRect(0, h//2 - 100, w, 80), Qt.AlignCenter, "EduPulse")
 
         # Tagline

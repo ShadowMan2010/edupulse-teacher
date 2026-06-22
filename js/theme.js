@@ -142,8 +142,27 @@ function requireRole(allowedRoles, redirectTo = '/pages/login.html') {
   });
 }
 
+// ── Splash Screen ──
+function showSplash() {
+  // Only on dashboard pages (has sidebar)
+  if (!document.querySelector('.sidebar')) return;
+  var splash = document.createElement('div');
+  splash.className = 'splash-overlay';
+  splash.innerHTML =
+    '<div class="splash-text">EduPulse</div>' +
+    '<div class="splash-sub">ATTENDANCE SYSTEM</div>' +
+    '<div class="splash-loader"></div>';
+  document.body.appendChild(splash);
+  // Fade out after content is ready
+  setTimeout(function() {
+    splash.classList.add('fade-out');
+    setTimeout(function() { splash.remove(); }, 700);
+  }, 1500);
+}
+
 // ── INIT ──
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+  showSplash();
   initClock();
   initScrollProgress();
   initGlowBlob();
