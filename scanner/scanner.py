@@ -2,7 +2,7 @@
 """
 EduPulse QR Scanner — PyQt5 Desktop App
 Full-screen kiosk mode with glassmorphism UI, camera QR scanning,
-and real-time attendance marking via local API.
+and Firebase Realtime Database integration.
 """
 
 import sys
@@ -42,20 +42,41 @@ try:
 except ImportError:
     qr_decode = None
 
+# ── Firebase Admin SDK ──
+USE_FIREBASE_DIRECT = True
+FIREBASE_CRED_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    'firebase-adminsdk-key.json'
+)
+firebase_admin = None
+firebase_db = None
+
+def init_firebase():
+    global firebase_admin, firebase_db
+    try:
+        import firebase_admin as fa
+        from firebase_admin import credentials, db
+        if not fa._apps:
+            cred = credentials.Certificate(FIREBASE_CRED_PATH)
+            fa.initialize_app(cred, {
+                'databaseURL': 'https://edupulse-attendance-qr-default-rtdb.asia-southeast1.firebasedatabase.app'
+            })
+        firebase_admin = fa
+        firebase_db = db
+        return True
+    except Exception as e:
+        print(f"Firebase init error: {e}")
+        return False
+
 # ── Config ──
-# Set CLOUD_API to True to use Firebase Cloud Functions, False for local server
 CLOUD_API = False
 CLOUD_URL = "https://us-central1-cyberpunk-attendance.cloudfunctions.net/api"
 LOCAL_URL = "http://localhost:3000/api"
 API_BASE = CLOUD_URL if CLOUD_API else LOCAL_URL
 SOUNDS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sounds')
-SCAN_INTERVAL_MS = 300  # Check for QR every 300ms
-DUPLICATE_COOLDOWN = 2  # Seconds before allowing same student re-scan
-# Camera source: 0 for built-in webcam, or IP camera URL:
-# DroidCam: "http://<phone-ip>:4747/video"
-# IP Webcam: "http://<phone-ip>:8080/video"
+SCAN_INTERVAL_MS = 300
+DUPLICATE_COOLDOWN = 2
 CAMERA_SOURCE = os.environ.get('EDUPULSE_CAMERA', "0")
-# Display rotation: 0, 90, 180, 270 (set for portrait/landscape)
 DISPLAY_ROTATION = int(os.environ.get('EDUPULSE_ROTATION', '0'))
 
 
@@ -288,7 +309,7 @@ class Card3DWidget(QWidget):
         photo = student.get('photo', '')
         if photo:
             try:
-                u = photo if not photo.startswith('/') else f"{API_BASE.replace('/api', '')}{photo}"
+                u = photo if (photo.startswith('http') or USE_FIREBASE_DIRECT) else f"{API_BASE.replace('/api', '')}{photo}"
                 self._photo_pix = QPixmap()
                 self._photo_pix.loadFromData(requests.get(u, timeout=3).content)
             except:
@@ -848,17 +869,27 @@ class Desktop(QWidget):
 
     def _check_api(self):
         def check():
-            try:
-                r = requests.get(f"{API_BASE}/health", timeout=3)
-                if r.status_code == 200:
-                    self.api_status.setText("● API Online")
-                    self.api_status.setStyleSheet(
-                        "font-size: 10px; font-family: monospace; padding: 3px 10px; border-radius: 8px; "
-                        "background: rgba(34,197,94,0.12); color: #22c55e;"
-                    )
-                else:
-                    raise Exception("Bad status")
-            except Exception:
+            ok = False
+            if USE_FIREBASE_DIRECT and firebase_db:
+                try:
+                    firebase_db.reference('settings').get()
+                    ok = True
+                except Exception:
+                    ok = False
+            if not ok:
+                try:
+                    r = requests.get(f"{API_BASE}/health", timeout=3)
+                    ok = r.status_code == 200
+                except Exception:
+                    ok = False
+            if ok:
+                label = "● Firebase Online" if USE_FIREBASE_DIRECT else "● API Online"
+                self.api_status.setText(label)
+                self.api_status.setStyleSheet(
+                    "font-size: 10px; font-family: monospace; padding: 3px 10px; border-radius: 8px; "
+                    "background: rgba(34,197,94,0.12); color: #22c55e;"
+                )
+            else:
                 self.api_status.setText("✕ API Offline")
                 self.api_status.setStyleSheet(
                     "font-size: 10px; font-family: monospace; padding: 3px 10px; border-radius: 8px; "
@@ -872,20 +903,25 @@ class Desktop(QWidget):
     def _fetch_settings(self):
         def do_fetch():
             try:
-                r = requests.get(f"{API_BASE}/settings", timeout=3)
-                if r.status_code == 200:
-                    data = r.json().get('data', {})
+                data = None
+                if USE_FIREBASE_DIRECT and firebase_db:
+                    data = firebase_db.reference('settings').get()
+                if not data:
+                    r = requests.get(f"{API_BASE}/settings", timeout=3)
+                    if r.status_code == 200:
+                        data = r.json().get('data', {})
+                if data:
                     start = data.get('school_start_time', '08:30')
                     end = data.get('entry_end_time', '16:00')
                     late = data.get('late_threshold_minutes', '30')
                     half = data.get('half_day_cutoff', '12:00')
                     msg = f"⏰ {start}–{end}  |  Late >{late}min  |  Half >{half}"
                     self.timing_label.setText(msg)
-            except:
+            except Exception:
                 pass
 
         threading.Thread(target=do_fetch, daemon=True).start()
-        QTimer.singleShot(30000, self._fetch_settings)  # Refresh every 30s
+        QTimer.singleShot(30000, self._fetch_settings)
 
     def _start_camera(self):
         if cv2 is None:
@@ -935,34 +971,135 @@ class Desktop(QWidget):
     def _mark_attendance(self, student_id):
         def do_mark():
             try:
-                resp = requests.post(
-                    f"{API_BASE}/attendance/scan",
-                    json={"student_id": student_id},
-                    timeout=5
-                )
-                data = resp.json()
-                if data.get('success'):
-                    student = data.get('student', {})
-                    status = data.get('attendance', {}).get('status', 'present')
-                    timing = data.get('timing', {})
+                if USE_FIREBASE_DIRECT and firebase_db:
+                    result = self._fb_mark(student_id)
+                else:
+                    result = self._api_mark(student_id)
+                if result.get('success'):
+                    student = result.get('student', {})
+                    status = result.get('attendance', {}).get('status', 'present')
+                    timing = result.get('timing', {})
                     play_sound('success.wav')
                     self.status_msg.setText(f"✓ {student.get('name', 'Unknown')}")
                     count = int(self.scan_count_label.text().split(':')[1]) + 1
                     self.scan_count_label.setText(f"SCANS: {count}")
                     self.card_3d.flip_in(student, status, timing)
-                elif resp.status_code == 409:
-                    student = data.get('student', {})
+                elif result.get('duplicate'):
+                    student = result.get('student', {})
                     play_sound('error.wav')
                     self.status_msg.setText(f"◈ Already: {student.get('name', 'Unknown')}")
                     self.card_3d.flip_in(student, "duplicate")
                 else:
-                    self.status_msg.setText(f"✕ {data.get('error', 'Unknown')}")
+                    self.status_msg.setText(f"✕ {result.get('error', 'Unknown')}")
             except requests.exceptions.ConnectionError:
                 self.status_msg.setText("✕ API unreachable")
             except Exception as e:
                 self.status_msg.setText(f"✕ {str(e)[:40]}")
 
         threading.Thread(target=do_mark, daemon=True).start()
+
+    def _fb_mark(self, student_id):
+        ref = firebase_db.reference
+        student = ref(f'students/{student_id}').get()
+        if not student:
+            return {'error': 'Student not found'}
+        if student.get('active') is False:
+            return {'error': 'Student inactive'}
+
+        settings = ref('settings').get() or {}
+        window_mins = int(settings.get('duplicate_window_minutes', 60))
+        start_time = settings.get('school_start_time', '08:30')
+        end_time = settings.get('entry_end_time', '16:00')
+        half_cutoff = settings.get('half_day_cutoff', '12:00')
+        late_thresh = int(settings.get('late_threshold_minutes', 30))
+
+        now = datetime.now()
+        date = now.strftime('%Y-%m-%d')
+        time_str = now.strftime('%H:%M:%S')
+
+        today = ref('attendance').order_by_child('date').equal_to(date).get() or {}
+        dup_window_ms = window_mins * 60 * 1000
+        now_ts = now.timestamp() * 1000
+        dups = []
+        for k, a in today.items():
+            if a.get('student_id') == student_id:
+                t = a.get('time', '00:00:00')
+                scan_ts = datetime.strptime(f"{date}T{t}", '%Y-%m-%dT%H:%M:%S').timestamp() * 1000
+                if now_ts - scan_ts < dup_window_ms:
+                    dups.append(a)
+        if dups:
+            return {'duplicate': True, 'message': 'Duplicate scan', 'student': student, 'last_scan': dups[0]}
+
+        # Timing logic
+        def to_min(t):
+            p = t.split(':')
+            return int(p[0]) * 60 + int(p[1])
+        now_min = now.hour * 60 + now.minute
+        start_min = to_min(start_time)
+        end_min = to_min(end_time)
+        half_min = to_min(half_cutoff)
+
+        if now_min < start_min:
+            status = 'early'
+            msg = 'Before entry time'
+        elif now_min > end_min:
+            status = 'absent'
+            msg = f'Attendance closed after {end_time}'
+        elif now_min > half_min:
+            status = 'half-day'
+            msg = f'Marked as half-day (after {half_cutoff})'
+        elif now_min > start_min + late_thresh:
+            status = 'late'
+            msg = f'Late by {now_min - start_min} min'
+        else:
+            status = 'present'
+            msg = 'On time'
+
+        record = {
+            'student_id': student_id,
+            'date': date,
+            'time': time_str,
+            'status': status,
+            'scanned_by': 'kiosk'
+        }
+        new_ref = ref('attendance').push(record)
+
+        timing = {
+            'start_time': start_time,
+            'end_time': end_time,
+            'half_day_cutoff': half_cutoff,
+            'status': status,
+            'message': msg
+        }
+        return {
+            'success': True,
+            'message': f'Attendance marked: {status}',
+            'student': student,
+            'attendance': dict(record, id=new_ref.key),
+            'timing': timing
+        }
+
+    def _api_mark(self, student_id):
+        resp = requests.post(
+            f"{API_BASE}/attendance/scan",
+            json={"student_id": student_id},
+            timeout=5
+        )
+        data = resp.json()
+        if data.get('success'):
+            return {
+                'success': True,
+                'student': data.get('student', {}),
+                'attendance': data.get('attendance', {}),
+                'timing': data.get('timing', {})
+            }
+        if resp.status_code == 409:
+            return {
+                'duplicate': True,
+                'student': data.get('student', {}),
+                'message': 'Already scanned'
+            }
+        return {'error': data.get('error', 'Unknown')}
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -1007,6 +1144,10 @@ def main():
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
     app = QApplication(sys.argv)
+
+    # Init Firebase Admin SDK
+    if USE_FIREBASE_DIRECT:
+        init_firebase()
 
     # Load Orbitron font
     font_db = QFontDatabase()
