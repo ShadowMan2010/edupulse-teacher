@@ -343,13 +343,38 @@ app.post('/api/attendance/scan', (req, res) => {
       });
     }
 
-    // Determine status (present/late)
+    // Determine status
     const startTime = getSetting('school_start_time') || '08:30';
+    const endTime = getSetting('entry_end_time') || '16:00';
+    const halfDayCutoff = getSetting('half_day_cutoff') || '12:00';
     const lateThreshold = parseInt(getSetting('late_threshold_minutes') || '30');
     const now = dayjs();
     const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const [hh, hm] = halfDayCutoff.split(':').map(Number);
     const schoolStart = dayjs().hour(sh).minute(sm).second(0);
-    const status = now.diff(schoolStart, 'minute') > lateThreshold ? 'late' : 'present';
+    const schoolEnd = dayjs().hour(eh).minute(em).second(0);
+    const halfDay = dayjs().hour(hh).minute(hm).second(0);
+
+    let status;
+    let timing_msg = '';
+
+    if (now.isBefore(schoolStart)) {
+      status = 'early';
+      timing_msg = `Attendance opens at ${startTime}`;
+    } else if (now.isAfter(schoolEnd)) {
+      status = 'absent';
+      timing_msg = `Attendance closed after ${endTime}`;
+    } else if (now.isAfter(halfDay)) {
+      status = 'half-day';
+      timing_msg = `Marked half-day (after ${halfDayCutoff})`;
+    } else if (now.diff(schoolStart, 'minute') > lateThreshold) {
+      status = 'late';
+      timing_msg = `Late by ${now.diff(schoolStart, 'minute')} min`;
+    } else {
+      status = 'present';
+      timing_msg = 'On time';
+    }
 
     const id = uuidv4();
     const time = now.format('HH:mm:ss');
@@ -363,7 +388,14 @@ app.post('/api/attendance/scan', (req, res) => {
       success: true,
       message: `Attendance marked: ${status}`,
       student: student[0],
-      attendance: { id, student_id: sid, date: today, time, status }
+      attendance: { id, student_id: sid, date: today, time, status },
+      timing: {
+        start_time: startTime,
+        end_time: endTime,
+        half_day_cutoff: halfDayCutoff,
+        status,
+        message: timing_msg
+      }
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
