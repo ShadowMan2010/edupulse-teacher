@@ -401,8 +401,17 @@
 
       if (photoFile) {
         var uploadPath = 'students/' + (id || Date.now()) + '_' + photoFile.name;
-        uploadPhoto(photoFile, uploadPath).then(save).catch(function(err) {
-          showToast('Photo upload failed: ' + err.message, 'error');
+        // Timeout photo upload after 10s in case Storage isn't configured
+        var uploadTimeout = setTimeout(function() {
+          showToast('Photo upload timed out — saving without photo', 'warning');
+          save(null);
+        }, 10000);
+        uploadPhoto(photoFile, uploadPath).then(function(url) {
+          clearTimeout(uploadTimeout);
+          save(url);
+        }).catch(function(err) {
+          clearTimeout(uploadTimeout);
+          showToast('Photo upload failed: ' + err.message + ' — saving without photo', 'warning');
           save(null);
         });
       } else {

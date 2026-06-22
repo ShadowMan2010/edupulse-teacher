@@ -14,3 +14,4 @@ os/output/
 *.iso
 *.img
 *.img.xz
+scanner/*-key.json
