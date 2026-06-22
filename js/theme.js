@@ -124,6 +124,9 @@ function setActiveNav() {
 
 // ── FIREBASE AUTH REDIRECT GUARD ──
 function requireAuth(redirectTo = '/pages/login.html') {
+  // Demo mode bypass
+  var demo = sessionStorage.getItem('edupulse_demo');
+  if (demo) return;
   firebase.auth().onAuthStateChanged(user => {
     if (!user) window.location.href = redirectTo;
   });
