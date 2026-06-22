@@ -82,16 +82,42 @@ function getCurrentUserRole() {
 
 // ── STUDENT CRUD ──
 function getStudents() {
+  // Try local API first, fall back to Firebase
+  return fetch('http://localhost:3000/api/students', {signal: AbortSignal.timeout(3000)})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success && Array.isArray(d.data)) return d.data.filter(function(s) { return s.active !== false; });
+      return fbGetStudents();
+    })
+    .catch(function() { return fbGetStudents(); });
+}
+
+function fbGetStudents() {
   return dbList('students').then(function(arr) {
     return arr.filter(function(s) { return s.active !== false; });
   });
 }
 
 function getStudent(id) {
-  return dbGet('students/' + id);
+  return fetch('http://localhost:3000/api/students/' + id, {signal: AbortSignal.timeout(3000)})
+    .then(function(r) { return r.json(); })
+    .then(function(d) { return d.success ? d.data : dbGet('students/' + id); })
+    .catch(function() { return dbGet('students/' + id); });
 }
 
 function addStudent(data) {
+  return fetch('http://localhost:3000/api/students', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+    signal: AbortSignal.timeout(3000)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) return d.data;
+    return fbAddStudent(data);
+  }).catch(function() { return fbAddStudent(data); });
+}
+
+function fbAddStudent(data) {
   var ref = db.ref('students').push();
   data.active = true;
   data.created_at = firebase.database.ServerValue.TIMESTAMP;
@@ -99,11 +125,25 @@ function addStudent(data) {
 }
 
 function updateStudent(id, data) {
-  return db.ref('students/' + id).update(data);
+  return fetch('http://localhost:3000/api/students/' + id, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+    signal: AbortSignal.timeout(3000)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) return d.data;
+    return db.ref('students/' + id).update(data);
+  }).catch(function() { return db.ref('students/' + id).update(data); });
 }
 
 function deactivateStudent(id) {
-  return db.ref('students/' + id).update({active: false});
+  return fetch('http://localhost:3000/api/students/' + id, {
+    method: 'DELETE',
+    signal: AbortSignal.timeout(3000)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) return;
+    return db.ref('students/' + id).update({active: false});
+  }).catch(function() { return db.ref('students/' + id).update({active: false}); });
 }
 
 // ── ATTENDANCE ──
@@ -118,6 +158,16 @@ function getTimeStr() {
 }
 
 function getSettings() {
+  return fetch('http://localhost:3000/api/settings', {signal: AbortSignal.timeout(3000)})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success && d.data) return d.data;
+      return fbGetSettings();
+    })
+    .catch(function() { return fbGetSettings(); });
+}
+
+function fbGetSettings() {
   return dbGet('settings').then(function(s) {
     return s || { duplicate_window_minutes: 60, school_name: 'EduPulse Academy', late_threshold_minutes: 30, school_start_time: '08:30' };
   });
@@ -127,8 +177,21 @@ function recordAttendance(studentId, status, scannedBy) {
   scannedBy = scannedBy || 'kiosk';
   var date = getTodaysDate();
   var time = getTimeStr();
-  var ref = db.ref('attendance').push();
   var data = { student_id: studentId, date: date, time: time, status: status || 'present', scanned_by: scannedBy };
+  return fetch('http://localhost:3000/api/attendance/scan', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+    signal: AbortSignal.timeout(3000)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) return d.data || d.attendance;
+    return fbRecordAttendance(studentId, status, scannedBy);
+  }).catch(function() { return fbRecordAttendance(studentId, status, scannedBy); });
+}
+
+function fbRecordAttendance(studentId, status, scannedBy) {
+  var ref = db.ref('attendance').push();
+  var data = { student_id: studentId, date: getTodaysDate(), time: getTimeStr(), status: status || 'present', scanned_by: scannedBy || 'kiosk' };
   return ref.set(data).then(function() { return Object.assign({id: ref.key}, data); });
 }
 
@@ -179,6 +242,23 @@ function scanAttendance(studentId) {
 
 function getAttendance(filters) {
   filters = filters || {};
+  return fetch('http://localhost:3000/api/attendance', {signal: AbortSignal.timeout(3000)})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success && Array.isArray(d.data)) {
+        var arr = d.data;
+        if (filters.date) arr = arr.filter(function(a) { return a.date === filters.date; });
+        if (filters.student_id) arr = arr.filter(function(a) { return a.student_id === filters.student_id; });
+        if (filters.status) arr = arr.filter(function(a) { return a.status === filters.status; });
+        arr.sort(function(a, b) { return b.date.localeCompare(a.date) || b.time.localeCompare(a.time); });
+        return arr;
+      }
+      return fbGetAttendance(filters);
+    })
+    .catch(function() { return fbGetAttendance(filters); });
+}
+
+function fbGetAttendance(filters) {
   return dbGet('attendance').then(function(all) {
     var arr = [];
     for (var k in all) {
