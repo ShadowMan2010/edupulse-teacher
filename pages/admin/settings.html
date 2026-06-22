@@ -120,22 +120,48 @@
       document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
       document.getElementById('userName').textContent = user.email.split('@')[0];
       loadSettings();
+      checkApiStatus();
     });
 
     document.getElementById('logoutBtn').addEventListener('click', function(e) {
       e.preventDefault();
+      sessionStorage.removeItem('edupulse_demo');
       logoutUser().then(function() { window.location.href = '../login.html'; });
     });
 
+    function checkApiStatus() {
+      fetch('http://localhost:3000/api/health', {signal: AbortSignal.timeout(3000)})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          document.getElementById('apiStatus').textContent = '● Online';
+          document.getElementById('apiStatus').style.color = 'var(--success)';
+        })
+        .catch(function() {
+          document.getElementById('apiStatus').textContent = '✕ Offline';
+          document.getElementById('apiStatus').style.color = 'var(--danger)';
+        });
+    }
+
     function loadSettings() {
-      getSettings().then(function(s) {
-        if (s.school_name) document.getElementById('setSchoolName').value = s.school_name;
-        if (s.duplicate_window_minutes) document.getElementById('setDupWindow').value = s.duplicate_window_minutes;
-        if (s.late_threshold_minutes) document.getElementById('setLateThreshold').value = s.late_threshold_minutes;
-        if (s.school_start_time) document.getElementById('setStartTime').value = s.school_start_time;
-        if (s.entry_end_time) document.getElementById('setEndTime').value = s.entry_end_time;
-        if (s.half_day_cutoff) document.getElementById('setHalfDayCutoff').value = s.half_day_cutoff;
-      });
+      // Load from local API first, fallback to Firebase
+      fetch('http://localhost:3000/api/settings', {signal: AbortSignal.timeout(3000)})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success && d.data) applySettings(d.data);
+          else return getSettings().then(applySettings);
+        })
+        .catch(function() {
+          getSettings().then(applySettings);
+        });
+    }
+
+    function applySettings(s) {
+      if (s.school_name) document.getElementById('setSchoolName').value = s.school_name;
+      if (s.duplicate_window_minutes) document.getElementById('setDupWindow').value = s.duplicate_window_minutes;
+      if (s.late_threshold_minutes) document.getElementById('setLateThreshold').value = s.late_threshold_minutes;
+      if (s.school_start_time) document.getElementById('setStartTime').value = s.school_start_time;
+      if (s.entry_end_time) document.getElementById('setEndTime').value = s.entry_end_time;
+      if (s.half_day_cutoff) document.getElementById('setHalfDayCutoff').value = s.half_day_cutoff;
     }
 
     document.getElementById('settingsForm').addEventListener('submit', function(e) {
@@ -148,12 +174,13 @@
         entry_end_time: document.getElementById('setEndTime').value,
         half_day_cutoff: document.getElementById('setHalfDayCutoff').value
       };
-      // Save to local API too
+      // Save to local API
       fetch('http://localhost:3000/api/settings', {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body)
-      }).catch(function() { /* API may not be running */ });
+      }).catch(function() {});
+      // Save to Firebase
       saveSettings(body).then(function() {
         document.getElementById('settingsStatus').textContent = 'Settings saved!';
         document.getElementById('settingsStatus').style.color = 'var(--success)';
