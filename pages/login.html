@@ -131,7 +131,7 @@
       </form>
 
       <div class="login-footer">
-        <p>Demo: admin@edupulse.dev / password123</p>
+        <p>Demo: admin@edupulse.dev / admin123</p>
         <p style="margin-top:0.5rem"><a href="/">← Back to home</a></p>
       </div>
     </div>
@@ -153,6 +153,10 @@
       loginWithEmail(email, password)
         .then(function(cred) {
           var uid = cred.user.uid;
+          if (uid === 'demo-admin') {
+            window.location.href = 'admin/dashboard.html';
+            return;
+          }
           dbGet('users/' + uid + '/role').then(function(role) {
             if (role === 'admin') window.location.href = 'admin/dashboard.html';
             else if (role === 'principal') window.location.href = 'principal/dashboard.html';
