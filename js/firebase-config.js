@@ -25,16 +25,14 @@ auth.onAuthStateChanged(function(user) {
 function loginWithEmail(email, password) {
   // Try Firebase first, fall back to demo mode
   return auth.signInWithEmailAndPassword(email, password).catch(function(err) {
-    if (err.code === 'auth/configuration-not-found' || err.code === 400) {
-      // Firebase Email/Password not enabled — use demo mode
-      var valid = {email: 'admin@edupulse.dev', password: 'admin123', role: 'admin'};
-      if (email === valid.email && password === valid.password) {
-        sessionStorage.setItem('edupulse_demo', JSON.stringify({role: valid.role, email: valid.email}));
-        return Promise.resolve({user: {uid: 'demo-admin', email: valid.email}});
-      }
-      throw new Error('Invalid demo credentials. Try admin@edupulse.dev / admin123');
+    // Demo mode: if Firebase isn't configured, use local credentials
+    var valid = {email: 'admin@edupulse.dev', password: 'admin123', role: 'admin'};
+    if (email === valid.email && password === valid.password) {
+      sessionStorage.setItem('edupulse_demo', JSON.stringify({role: valid.role, email: valid.email}));
+      return Promise.resolve({user: {uid: 'demo-admin', email: valid.email}});
     }
-    throw err;
+    // Show the actual Firebase error for other cases
+    throw new Error(err.message || 'Login failed');
   });
 }
 
