@@ -111,15 +111,26 @@
 
     document.getElementById('filterDate').valueAsDate = new Date();
 
+    function initPage(user) {
+      if (document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
+      if (document.getElementById('userName')) document.getElementById('userName').textContent = user.email.split('@')[0];
+      loadAttendance();
+    }
+
+    // Handle both real Firebase auth and demo mode
+    var _demoUser = sessionStorage.getItem('edupulse_demo');
+    if (_demoUser) {
+      var demo = JSON.parse(_demoUser);
+      initPage({email: demo.email});
+    }
     auth.onAuthStateChanged(function(user) {
       if (!user) return;
-      document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
-      document.getElementById('userName').textContent = user.email.split('@')[0];
-      loadAttendance();
+      initPage(user);
     });
 
     document.getElementById('logoutBtn').addEventListener('click', function(e) {
       e.preventDefault();
+      sessionStorage.removeItem('edupulse_demo');
       logoutUser().then(function() { window.location.href = '../login.html'; });
     });
 

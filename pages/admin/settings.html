@@ -115,12 +115,22 @@
   <script>
     requireAuth();
 
-    auth.onAuthStateChanged(function(user) {
-      if (!user) return;
+    function initPage(user) {
       document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
       document.getElementById('userName').textContent = user.email.split('@')[0];
       loadSettings();
       checkApiStatus();
+    }
+
+    // Handle both real Firebase auth and demo mode
+    var _demoUser = sessionStorage.getItem('edupulse_demo');
+    if (_demoUser) {
+      var demo = JSON.parse(_demoUser);
+      initPage({email: demo.email});
+    }
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      initPage(user);
     });
 
     document.getElementById('logoutBtn').addEventListener('click', function(e) {
