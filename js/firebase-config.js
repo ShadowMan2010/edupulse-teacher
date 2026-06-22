@@ -1,13 +1,13 @@
 // ── EduPulse Firebase Configuration (v8 compat SDK) ──
 
 var firebaseConfig = {
-  apiKey: "AIzaSyA7jzhxK7dDJ4Aa-TPNI891DBbng6eAg4o",
-  authDomain: "cyberpunk-attendance.firebaseapp.com",
-  databaseURL: "https://cyberpunk-attendance-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "cyberpunk-attendance",
-  storageBucket: "cyberpunk-attendance.firebasestorage.app",
-  messagingSenderId: "314544638337",
-  appId: "1:314544638337:web:cf71511e55a998d3a04080"
+  apiKey: "AIzaSyDPYjylSBhng6CRL77P0MXTUcuq7jBFnnA",
+  authDomain: "edupulse-attendance-qr.firebaseapp.com",
+  databaseURL: "https://edupulse-attendance-qr-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "edupulse-attendance-qr",
+  storageBucket: "edupulse-attendance-qr.firebasestorage.app",
+  messagingSenderId: "364157582130",
+  appId: "1:364157582130:web:43b538e60858c22ec5b52b"
 };
 
 firebase.initializeApp(firebaseConfig);
