@@ -404,25 +404,9 @@
       }
 
       if (photoFile) {
-        // Read photo as Base64 and store in RTDB directly (no Firebase Storage needed)
         var reader = new FileReader();
-        reader.onload = function(ev) {
-          // Resize to max 300px to keep RTDB payload small
-          var img = new Image();
-          img.onload = function() {
-            var maxW = 300, maxH = 300;
-            var w = img.width, h = img.height;
-            if (w > maxW) { h *= maxW / w; w = maxW; }
-            if (h > maxH) { w *= maxH / h; h = maxH; }
-            var c = document.createElement('canvas');
-            c.width = w; c.height = h;
-            var ctx = c.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            var resized = c.toDataURL('image/jpeg', 0.7);
-            doSave(resized);
-          };
-          img.src = ev.target.result;
-        };
+        reader.onload = function(ev) { doSave(ev.target.result); };
+        reader.onerror = function() { showToast('Could not read photo file', 'warning'); doSave(null); };
         reader.readAsDataURL(photoFile);
       } else {
         doSave(null);
