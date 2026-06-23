@@ -388,38 +388,44 @@
 
       var studentData = { name: name, roll_no: roll, class: cls, section: section || '', email: email || '', phone: phone || '' };
 
-      function save(photoUrl) {
+      function doSave(photoUrl) {
         if (photoUrl) studentData.photo = photoUrl;
         var promise = id ? updateStudent(id, studentData) : addStudent(studentData);
-        return promise.then(function() {
+        promise.then(function() {
           showToast(id ? 'Student updated' : 'Student added', 'success');
           closeModal('studentModal');
           resetStudentForm();
           loadStudents();
-        });
-      }
-
-      if (photoFile) {
-        var uploadPath = 'students/' + (id || Date.now()) + '_' + photoFile.name;
-        // Timeout photo upload after 4s if Storage isn't configured
-        var uploadTimeout = setTimeout(function() {
-          showToast('Photo upload timed out — saving without photo', 'warning');
-          save(null);
-        }, 10000);
-        uploadPhoto(photoFile, uploadPath).then(function(url) {
-          clearTimeout(uploadTimeout);
-          save(url);
         }).catch(function(err) {
-          clearTimeout(uploadTimeout);
-          showToast('Photo upload failed: ' + err.message + ' — saving without photo', 'warning');
-          save(null);
-        });
-      } else {
-        save(null).catch(function(err) {
           showToast(err.message, 'error');
           btn.disabled = false;
           btn.textContent = '💾 Save Student';
         });
+      }
+
+      if (photoFile) {
+        // Read photo as Base64 and store in RTDB directly (no Firebase Storage needed)
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          // Resize to max 300px to keep RTDB payload small
+          var img = new Image();
+          img.onload = function() {
+            var maxW = 300, maxH = 300;
+            var w = img.width, h = img.height;
+            if (w > maxW) { h *= maxW / w; w = maxW; }
+            if (h > maxH) { w *= maxH / h; h = maxH; }
+            var c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            var ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            var resized = c.toDataURL('image/jpeg', 0.7);
+            doSave(resized);
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(photoFile);
+      } else {
+        doSave(null);
       }
     });
 
