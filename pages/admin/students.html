@@ -489,11 +489,17 @@
 
     function printIDCard() {
       var content = document.getElementById('idCardContent').cloneNode(true);
-      content.style.margin = '2rem auto';
+      content.style.cssText = 'margin:2rem auto;padding:2rem;text-align:center;background:#0a0a0b;border-radius:16px;border:1px solid rgba(0,255,255,0.3);max-width:360px';
+      var html = content.innerHTML.replace(/var\(--accent\)/g, '#00ffff').replace(/var\(--font-display\)/g, 'monospace').replace(/var\(--text-muted\)/g, '#94a3b8');
       var win = window.open('', '_blank');
-      win.document.write('<style>body{background:#0a0a0b;color:#f8fafc;font-family:sans-serif;display:flex;justify-content:center;padding:2rem}img{border-radius:12px}</style>');
-      win.document.write(content.outerHTML);
-      win.document.write('<script>window.onload=function(){window.print()}<\/script>');
+      win.document.write('<!DOCTYPE html><html><head><title>ID Card</title><style>');
+      win.document.write('body{margin:0;background:#0a0a0b;color:#f8fafc;font-family:sans-serif;display:flex;justify-content:center;padding:2rem}');
+      win.document.write('.accent{color:#00ffff}.muted{color:#94a3b8}.disp{font-family:monospace;letter-spacing:2px}');
+      win.document.write('img{border-radius:12px}@media print{body{background:white;color:black}.card{border-color:#ccc!important}');
+      win.document.write('.muted{color:#666}}</style></head><body>');
+      win.document.write('<div class="card" style="' + content.style.cssText + '">' + html + '</div></body></html>');
+      win.document.close();
+      setTimeout(function() { win.focus(); win.print(); }, 1000);
     }
 
     function handleBulkImport(event) {
