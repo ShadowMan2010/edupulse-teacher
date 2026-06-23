@@ -401,7 +401,7 @@
 
       if (photoFile) {
         var uploadPath = 'students/' + (id || Date.now()) + '_' + photoFile.name;
-        // Timeout photo upload after 10s in case Storage isn't configured
+        // Timeout photo upload after 4s if Storage isn't configured
         var uploadTimeout = setTimeout(function() {
           showToast('Photo upload timed out — saving without photo', 'warning');
           save(null);
