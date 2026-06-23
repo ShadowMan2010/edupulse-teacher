@@ -309,9 +309,20 @@ class Card3DWidget(QWidget):
         photo = student.get('photo', '')
         if photo:
             try:
-                u = photo if (photo.startswith('http') or USE_FIREBASE_DIRECT) else f"{API_BASE.replace('/api', '')}{photo}"
-                self._photo_pix = QPixmap()
-                self._photo_pix.loadFromData(requests.get(u, timeout=3).content)
+                if photo.startswith('data:'):
+                    # Base64 data URL — load directly
+                    header, encoded = photo.split(',', 1)
+                    import base64
+                    self._photo_pix = QPixmap()
+                    self._photo_pix.loadFromData(base64.b64decode(encoded))
+                elif photo.startswith('http'):
+                    self._photo_pix = QPixmap()
+                    self._photo_pix.loadFromData(requests.get(photo, timeout=3).content)
+                else:
+                    # Local path from old API
+                    u = f"{API_BASE.replace('/api', '')}{photo}"
+                    self._photo_pix = QPixmap()
+                    self._photo_pix.loadFromData(requests.get(u, timeout=3).content)
             except:
                 pass
         r = __import__('random')
