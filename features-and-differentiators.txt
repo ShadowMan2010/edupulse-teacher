@@ -53,6 +53,49 @@ EduPulse Attendance System — Features & Differentiators
    • OpenSCAD enclosure design for 3D printing
    • Display rotation support (portrait/landscape)
    • Boot splash screen with animation
+   • Tailscale-ready — access dashboard from any device securely
+
+
+═══ LOCAL HOSTING WITH TALSCALE ═══
+
+   Instead of Firebase Hosting, you can host everything locally on the Pi
+   and expose it securely via Tailscale (free for personal use).
+
+   ┌─ Architecture
+   │
+   │   [Pi Kiosk] ──Tailscale── [Admin Phone/Laptop]
+   │      ├─ Scanner (PyQt5, full-screen)
+   │      ├─ Local API (server.js, port 3000)
+   │      ├─ Web Dashboard (Python HTTP, port 8000)
+   │      └─ Firebase RTDB (syncs all data)
+   │
+   ├─ Why Tailscale?
+   │   • No port forwarding or static IP needed
+   │   • End-to-end encrypted WireGuard tunnel
+   │   • Free for up to 3 users (admin + principal + teacher)
+   │   • Works on any network — school WiFi, cellular hotspot
+   │   • No Cloud hosting cost — everything runs on the Pi
+   │
+   ├─ Setup
+   │   1. Install Tailscale on Pi:
+   │        curl -fsSL https://tailscale.com/install.sh | sh
+   │        sudo tailscale up
+   │   2. Install Tailscale on admin phone/laptop
+   │   3. Access dashboard at:
+   │        http://<tailscale-ip>:8000/pages/login.html
+   │   4. API at:
+   │        http://<tailscale-ip>:3000
+   │
+   ├─ Benefits Over Firebase-Only
+   │   • Zero cloud cost — Pi does everything
+   │   • Works in areas with unreliable internet
+   │   • Full control over data (no third-party cloud)
+   │   • Can still sync to Firebase as backup
+   │
+   └─ Requirements
+       • Tailscale on each device (free)
+       • Python + Node.js on Pi (already included)
+       • Both devices logged into same Tailscale account
 
 
 ═══ WHAT MAKES US DIFFERENT ═══
