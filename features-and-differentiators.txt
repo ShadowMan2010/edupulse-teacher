@@ -1,0 +1,100 @@
+EduPulse Attendance System — Features & Differentiators
+
+═══ FEATURES ═══
+
+┌─ Hardware
+│  • Raspberry Pi 4/5 kiosk with 7" touchscreen
+│  • USB camera or DroidCam wireless (phone as camera)
+│  • 4G/LTE HAT support for offline SMS
+│  • Custom 3D-printable enclosure
+│  • Speaker for voice announcements (text-to-speech)
+│
+├─ Scanning
+│  • QR code scan → instant attendance
+│  • 3D card flip animation with status + time
+│  • Duplicate scan prevention (configurable window)
+│  • Sound effects on scan (success/error)
+│  • Voice announcement of student name + status
+│
+├─ Attendance Logic
+│  • Configurable timing: entry start, entry end, late threshold, half-day cutoff
+│  • Statuses: early, present, late, half-day, absent, duplicate
+│  • 60-min default duplicate window
+│  • Real-time sync to Firebase Realtime Database
+│
+├─ Dashboard (Web)
+│  • Firebase Hosting — accessible from any device
+│  • Role-based login: Admin, Principal
+│  • Real-time attendance overview with charts
+│  • Student management (CRUD, photo upload, QR generation)
+│  • Attendance reports with filters
+│  • Settings panel for timing configuration
+│  • ID card generator with QR code (print / PDF)
+│  • Bulk student import (JSON)
+│  • Cyberpunk neon UI with glassmorphism
+│
+├─ Notifications
+│  • SMS (Twilio / 4G HAT / MSG91)
+│  • Telegram bot (free)
+│  • WhatsApp Business API
+│  • Parent receives: student name, status, time, date
+│
+├─ Deployment
+│  • Firebase Hosting (web) — no server management
+│  • Firebase Realtime Database — live sync, no backend ops
+│  • Local API server (optional, for scanner fallback)
+│  • Kiosk OS conversion script (Ubuntu/Debian/Pi OS)
+│  • Live USB ISO builder
+│  • Raspberry Pi OS image builder
+│  • Plymouth boot theme with EduPulse branding
+│
+└─ Extras
+   • Test QR included
+   • OpenSCAD enclosure design for 3D printing
+   • Display rotation support (portrait/landscape)
+   • Boot splash screen with animation
+
+
+═══ WHAT MAKES US DIFFERENT ═══
+
+1. Zero Monthly Cloud Costs (for the scanner)
+   - No Firebase Storage needed — photos stored as Base64 in RTDB
+   - No Cloud Functions — all logic runs on-device or client-side
+   - Only Firebase Hosting + RTDB on free Spark tier
+
+2. Hybrid Architecture
+   - Scanner writes directly to Firebase via Admin SDK
+   - Web dashboard reads/writes same RTDB in real-time
+   - No intermediate server needed — less points of failure
+
+3. Offline-First Kiosk
+   - 4G HAT for SMS without internet dependency
+   - QR codes generated client-side (no API call)
+   - Scanner boots directly to desktop OS (no browser kiosk lag)
+
+4. Cyberpunk UI
+   - Not another boring green-on-black attendance screen
+   - Glassmorphism, neon glow, particle effects, 3D card flip
+   - Designed to impress visitors and keep operators engaged
+
+5. Complete Hardware Package
+   - We provide the OS image, not just the software
+   - Plymouth boot theme, auto-login, full-screen scanner
+   - 3D-printable enclosure design included
+   - Setup script: one command → full kiosk
+
+6. Parent Notification Without APIs
+   - 4G HAT sends SMS using any SIM — no Twilio/API keys needed
+   - Telegram bot for free alternative
+   - No recurring API costs per notification
+
+7. QR Generation Built-In
+   - No Google Charts or external QR API dependency
+   - Client-side QR generation works offline
+   - ID card + QR print ready
+
+8. Free Tier Viable
+   - Firebase Spark plan handles 200-500 students easily
+   - RTDB: 1GB storage, 10GB/month download
+   - Hosting: 10GB storage, 360MB/day bandwidth
+   - No need to upgrade to Blaze for normal school use
