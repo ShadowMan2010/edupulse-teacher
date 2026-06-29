@@ -21,3 +21,10 @@ EduPulse Parent Notification Options
    - Most reliable, works globally
    - ~₹10,000/month for 500 daily scans
    - Setup: 1 hour
+
+5. 4G/LTE HAT + SIM Card (one-time hardware cost)
+   - Waveshare SIM7600G-H / Sixfab LTE HAT (~$50)
+   - Python sends SMS via AT commands over serial
+   - Cost: ~₹0.10-0.50 per SMS (depends on SIM plan)
+   - No API fees, fully offline
+   - Setup: 2-3 hours
