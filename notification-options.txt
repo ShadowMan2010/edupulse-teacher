@@ -1,0 +1,23 @@
+EduPulse Parent Notification Options
+
+1. Telegram Bot (RECOMMENDED — completely free)
+   - Parents install Telegram and join a bot
+   - Bot sends attendance notifications instantly
+   - Zero cost, very reliable
+   - Setup: 30 min
+
+2. WhatsApp Business API (free up to 1,000 conversations/month)
+   - Free for small schools (<50 students)
+   - Needs Meta business verification + setup
+   - Setup: 1-2 weeks (verification)
+
+3. MSG91 / TextLocal (₹0.20-0.30/SMS)
+   - Cheaper SMS option for India
+   - Needs DLT registration (govt paperwork)
+   - ~₹3,000-4,500/month for 500 daily scans
+   - Setup: 1-2 weeks
+
+4. Twilio SMS (~₹0.66/SMS)
+   - Most reliable, works globally
+   - ~₹10,000/month for 500 daily scans
+   - Setup: 1 hour
