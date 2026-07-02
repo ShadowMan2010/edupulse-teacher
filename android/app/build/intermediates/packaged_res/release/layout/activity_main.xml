@@ -1,0 +1,632 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0a0a0b">
+
+    <!-- ═══════════════════════ SPLASH SCREEN ═══════════════════════ -->
+    <LinearLayout
+        android:id="@+id/splashContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:background="#0a0a0b"
+        android:visibility="visible">
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/logo"
+            android:scaleType="fitCenter"
+            android:id="@+id/splashLogo"
+            android:contentDescription="Logo"/>
+
+        <TextView
+            android:id="@+id/splashTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EDUPULSE"
+            android:textSize="28sp"
+            android:textColor="#00ffff"
+            android:fontFamily="@font/orbitron"
+            android:fontWeight="900"
+            android:letterSpacing="0.15"
+            android:layout_marginTop="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Teacher"
+            android:textSize="14sp"
+            android:textColor="#94a3b8"
+            android:letterSpacing="0.2"
+            android:layout_marginTop="4dp"/>
+    </LinearLayout>
+
+    <!-- ═══════════════════════ LOGIN SCREEN ═══════════════════════ -->
+    <ScrollView
+        android:id="@+id/loginContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/logo"
+                android:scaleType="fitCenter"
+                android:layout_marginTop="48dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EDUPULSE"
+                android:textSize="24sp"
+                android:textColor="#00ffff"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.15"
+                android:layout_marginTop="12dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Teacher Sign In"
+                android:textSize="16sp"
+                android:textColor="#94a3b8"
+                android:layout_marginTop="36dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                style="@style/Widget.EduPulse.TextInput"
+                app:hintEnabled="true"
+                app:endIconMode="clear_text">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/loginEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Email"
+                    android:inputType="textEmailAddress"
+                    android:textColor="#f8fafc"
+                    android:fontFamily="sans-serif"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                style="@style/Widget.EduPulse.TextInput"
+                app:hintEnabled="true"
+                app:endIconMode="password_toggle"
+                app:passwordToggleEnabled="true">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/loginPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Password"
+                    android:inputType="textPassword"
+                    android:textColor="#f8fafc"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/loginButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="24dp"
+                android:text="SIGN IN"
+                android:textAllCaps="true"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="14sp"
+                android:backgroundTint="#00ffff"
+                android:textColor="#0a0a0b"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="or"
+                android:textColor="#94a3b8"
+                android:textSize="13sp"
+                android:gravity="center"/>
+
+            <com.google.android.gms.common.SignInButton
+                android:id="@+id/googleSignInButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:visibility="visible"/>
+
+            <TextView
+                android:id="@+id/loginError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="#ef4444"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:visibility="gone"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ═══════════════════════ CONNECT SCREEN ═══════════════════════ -->
+    <ScrollView
+        android:id="@+id/connectContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp">
+
+            <ImageView
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:src="@drawable/logo"
+                android:scaleType="fitCenter"
+                android:layout_marginTop="48dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Connect to Server"
+                android:textSize="22sp"
+                android:textColor="#f8fafc"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="32dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Enter the server IP address"
+                android:textSize="14sp"
+                android:textColor="#94a3b8"
+                android:layout_marginTop="8dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                style="@style/Widget.EduPulse.TextInput"
+                app:hintEnabled="true"
+                app:endIconMode="clear_text">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/connectIp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Server IP (e.g. 192.168.1.100)"
+                    android:inputType="text"
+                    android:textColor="#f8fafc"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                style="@style/Widget.EduPulse.TextInput"
+                app:hintEnabled="true">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/connectPort"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Port"
+                    android:inputType="number"
+                    android:text="3000"
+                    android:textColor="#f8fafc"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/connectButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="24dp"
+                android:text="CONNECT"
+                android:textAllCaps="true"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="14sp"
+                android:backgroundTint="#00ffff"
+                android:textColor="#0a0a0b"/>
+
+            <TextView
+                android:id="@+id/connectStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="#94a3b8"
+                android:textSize="13sp"
+                android:gravity="center"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ═══════════════════════ MAIN SCREEN ═══════════════════════ -->
+    <LinearLayout
+        android:id="@+id/mainContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:padding="20dp">
+
+        <!-- Top Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/logo"
+                android:scaleType="fitCenter"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="EduPulse"
+                android:textSize="16sp"
+                android:textColor="#00ffff"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.1"
+                android:layout_marginStart="10dp"/>
+
+            <TextView
+                android:id="@+id/userEmailText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="#94a3b8"
+                android:layout_marginEnd="10dp"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <Button
+                android:id="@+id/disconnectButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Exit"
+                android:textSize="11sp"
+                android:backgroundTint="#ef4444"
+                android:textColor="#fff"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"/>
+        </LinearLayout>
+
+        <!-- Scan Count Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:background="#111113"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Scanned Students"
+                android:textSize="13sp"
+                android:textColor="#94a3b8"/>
+
+            <TextView
+                android:id="@+id/scanCountText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="28sp"
+                android:textColor="#00ffff"
+                android:fontFamily="sans-serif-black"/>
+        </LinearLayout>
+
+        <!-- Selection Area -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SELECT CLASS &amp; SUBJECT"
+            android:textSize="11sp"
+            android:textColor="#00ffff"
+            android:letterSpacing="0.15"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Class"
+                android:textSize="13sp"
+                android:textColor="#94a3b8"
+                android:layout_marginEnd="8dp"/>
+
+            <Spinner
+                android:id="@+id/classSpinner"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="#111113"
+                android:padding="8dp"
+                android:textColor="#f8fafc"
+                android:popupBackground="#1a1a1e"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Section"
+                android:textSize="13sp"
+                android:textColor="#94a3b8"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="8dp"/>
+
+            <Spinner
+                android:id="@+id/sectionSpinner"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="0.6"
+                android:background="#111113"
+                android:padding="8dp"
+                android:textColor="#f8fafc"
+                android:popupBackground="#1a1a1e"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Subject"
+            android:textSize="13sp"
+            android:textColor="#94a3b8"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"/>
+
+        <Spinner
+            android:id="@+id/subjectSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#111113"
+            android:padding="8dp"
+            android:textColor="#f8fafc"
+            android:popupBackground="#1a1a1e"/>
+
+        <!-- Scan Button -->
+        <Button
+            android:id="@+id/scanButton"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="24dp"
+            android:backgroundTint="#00ffff"
+            android:text="SCAN\nQR"
+            android:textSize="22sp"
+            android:textColor="#0a0a0b"
+            android:fontFamily="sans-serif-black"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.1"
+            android:gravity="center"
+            android:stateListAnimator="@null"
+            android:elevation="8dp"/>
+
+        <!-- Scanned List Preview -->
+        <TextView
+            android:id="@+id/lastScannedText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="14sp"
+            android:textColor="#94a3b8"
+            android:gravity="center"
+            android:visibility="gone"/>
+
+        <!-- Scan Finished Button -->
+        <Button
+            android:id="@+id/scanFinishedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="SCAN FINISHED"
+            android:textSize="15sp"
+            android:textAllCaps="true"
+            android:visibility="gone"
+            style="@style/Widget.EduPulse.Button.Outline"/>
+
+    </LinearLayout>
+
+    <!-- ═══════════════════════ LOADING OVERLAY ═══════════════════════ -->
+    <FrameLayout
+        android:id="@+id/loadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC0a0a0b"
+        android:visibility="gone"
+        android:clickable="true">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/loading_ring"/>
+
+            <TextView
+                android:id="@+id/loadingText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Connecting..."
+                android:textSize="15sp"
+                android:textColor="#00ffff"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="20dp"/>
+
+            <TextView
+                android:id="@+id/loadingSubtext"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="#94a3b8"
+                android:layout_marginTop="6dp"/>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- ═══════════════════════ SCAN SUMMARY SHEET ═══════════════════════ -->
+    <LinearLayout
+        android:id="@+id/scanSummarySheet"
+        android:layout_width="match_parent"
+        android:layout_height="280dp"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="#1a1a1e"
+        android:visibility="gone"
+        android:elevation="16dp"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SCAN SUMMARY"
+            android:textSize="16sp"
+            android:textColor="#00ffff"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.15"/>
+
+        <TextView
+            android:id="@+id/summaryCountText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 students scanned"
+            android:textSize="13sp"
+            android:textColor="#94a3b8"
+            android:layout_marginTop="4dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/summaryList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="12dp"
+            android:clipToPadding="false"
+            android:paddingBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/addMoreButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="ADD MORE"
+                android:textSize="13sp"
+                style="@style/Widget.EduPulse.Button.Outline"
+                android:layout_marginEnd="6dp"/>
+
+            <Button
+                android:id="@+id/pushButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="PUSH TO SERVER"
+                android:textSize="13sp"
+                android:backgroundTint="#00ffff"
+                android:textColor="#0a0a0b"
+                android:layout_marginStart="6dp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ═══════════════════════ SUCCESS OVERLAY ═══════════════════════ -->
+    <FrameLayout
+        android:id="@+id/successOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC0a0a0b"
+        android:visibility="gone"
+        android:clickable="true">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/successIcon"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:text="✓"
+                android:textSize="48sp"
+                android:textColor="#0a0a0b"
+                android:gravity="center"
+                android:background="@drawable/bg_success_circle"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Attendance Pushed!"
+                android:textSize="20sp"
+                android:textColor="#f8fafc"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginTop="24dp"/>
+
+            <TextView
+                android:id="@+id/successSubtext"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:textColor="#94a3b8"
+                android:layout_marginTop="6dp"
+                android:gravity="center"/>
+
+            <Button
+                android:id="@+id/successDoneButton"
+                android:layout_width="200dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="32dp"
+                android:text="DONE"
+                android:textSize="14sp"
+                android:backgroundTint="#00ffff"
+                android:textColor="#0a0a0b"/>
+        </LinearLayout>
+    </FrameLayout>
+
+</FrameLayout>

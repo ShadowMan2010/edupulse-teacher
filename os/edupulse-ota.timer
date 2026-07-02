@@ -1,0 +1,10 @@
+[Unit]
+Description=EduPulse OTA Update Timer (daily at 3 AM)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=3600
+
+[Install]
+WantedBy=timers.target

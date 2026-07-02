@@ -123,11 +123,15 @@ async function initDB() {
     ['duplicate_window_minutes', '60'],
     ['school_name', 'EduPulse Academy'],
     ['late_threshold_minutes', '30'],
-    ['school_start_time', '08:30']
+    ['school_start_time', '08:30'],
+    ['telegram_bot_token', '']
   ];
   defaults.forEach(([k, v]) => {
     runSql(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`, [k, v]);
   });
+
+  // Migration: add telegram_chat_id column if missing
+  try { runSql(`ALTER TABLE students ADD COLUMN telegram_chat_id TEXT DEFAULT ''`); } catch (e) {}
 
   saveDB();
   console.log('✅ Database initialized');
@@ -156,8 +160,8 @@ app.get('/api/students', (req, res) => {
     const params = [];
 
     if (search) {
-      sql += ` AND (name LIKE ? OR roll_no LIKE ?)`;
-      params.push(`%${search}%`, `%${search}%`);
+      sql += ` AND (name LIKE ? OR roll_no LIKE ? OR phone LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
     if (cls) { sql += ` AND class = ?`; params.push(cls); }
     if (active !== undefined) { sql += ` AND active = ?`; params.push(active === 'true' ? 1 : 0); }
@@ -181,28 +185,28 @@ app.get('/api/students/:id', (req, res) => {
   }
 });
 
-app.post('/api/students', upload.single('photo'), async (req, res) => {
+app.post('/api/students', async (req, res) => {
   try {
-    const { name, roll_no, class: cls, section, email, phone } = req.body;
+    const { name, roll_no, class: cls, section, email, phone, telegram_chat_id } = req.body;
     if (!name || !roll_no || !cls) {
       return res.status(400).json({ success: false, error: 'name, roll_no, class required' });
     }
 
     const id = uuidv4();
-    const photo = req.file ? `/uploads/${req.file.filename}` : null;
+    const photo = req.body.photo && req.body.photo.startsWith('data:image') ? req.body.photo : null;
 
     // Generate QR
     const qrData = JSON.stringify({ student_id: id, roll_no, name });
     const qrPath = path.join(QR_DIR, `${id}.png`);
     await QRCode.toFile(qrPath, qrData, {
       width: 300, margin: 2,
-      color: { dark: '#00ffff', light: '#0a0a0b' }
+      color: { dark: '#0a0a0b', light: '#00ffff' }
     });
     const qrCode = `/qrcodes/${id}.png`;
 
     runSql(
-      `INSERT INTO students (id, name, roll_no, class, section, email, phone, photo, qr_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, name, roll_no, cls, section || '', email || '', phone || '', photo, qrCode]
+      `INSERT INTO students (id, name, roll_no, class, section, email, phone, telegram_chat_id, photo, qr_code, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [id, name, roll_no, cls, section || '', email || '', phone || '', telegram_chat_id || '', photo, qrCode]
     );
     saveDB();
 
@@ -216,18 +220,19 @@ app.post('/api/students', upload.single('photo'), async (req, res) => {
   }
 });
 
-app.put('/api/students/:id', upload.single('photo'), async (req, res) => {
+app.put('/api/students/:id', async (req, res) => {
   try {
-    const { name, roll_no, class: cls, section, email, phone, active } = req.body;
+    const { name, roll_no, class: cls, section, email, phone, telegram_chat_id, active } = req.body;
     const existing = rowsToObjects(query(`SELECT * FROM students WHERE id = ?`, [req.params.id]));
     if (!existing.length) return res.status(404).json({ success: false, error: 'Not found' });
 
-    const photo = req.file ? `/uploads/${req.file.filename}` : existing[0].photo;
+    const photo = req.body.photo && req.body.photo.startsWith('data:image') ? req.body.photo : existing[0].photo;
 
     runSql(
-      `UPDATE students SET name=?, roll_no=?, class=?, section=?, email=?, phone=?, photo=?, active=? WHERE id=?`,
+      `UPDATE students SET name=?, roll_no=?, class=?, section=?, email=?, phone=?, telegram_chat_id=?, photo=?, active=? WHERE id=?`,
       [name || existing[0].name, roll_no || existing[0].roll_no, cls || existing[0].class,
        section ?? existing[0].section, email ?? existing[0].email, phone ?? existing[0].phone,
+       telegram_chat_id ?? existing[0].telegram_chat_id,
        photo, active !== undefined ? (active === 'true' ? 1 : 0) : existing[0].active, req.params.id]
     );
     saveDB();
@@ -302,6 +307,46 @@ app.get('/api/students/:id/qr', async (req, res) => {
   }
 });
 
+// ─── TELEGRAM NOTIFICATION ─────────────────────────────────────────────────────
+
+const PAIRINGS_PATH = path.join(__dirname, 'bot', 'pairings.json');
+
+function loadPairings() {
+  try {
+    return JSON.parse(fs.readFileSync(PAIRINGS_PATH, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function normPhone(phone) {
+  return (phone || '').replace(/[\s\-\(\)\+]/g, '');
+}
+
+async function sendTelegramNotification(student, status, date, timeStr) {
+  try {
+    const botToken = getSetting('telegram_bot_token');
+    if (!botToken) return;
+    const phone = student.phone;
+    if (!phone) return;
+    const pairings = loadPairings();
+    const chatId = pairings[normPhone(phone)];
+    if (!chatId) return;
+
+    const emojis = { present: '✅', late: '⏰', 'half-day': '⚠️', absent: '❌', duplicate: '🔄', early: '🌟' };
+    const emoji = emojis[status] || '📋';
+    const cls = [student.class, student.section].filter(Boolean).join(' ');
+
+    const text = `${emoji} *Attendance Update*\n━━━━━━━━━━━━━━━\n👤 Student: ${student.name}\n📅 Date: ${date}\n⏰ Time: ${timeStr}\n📌 Status: *${status.toUpperCase()}*${cls ? '\n🏫 Class: ' + cls : ''}`;
+
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: String(chatId).trim(), text, parse_mode: 'Markdown' })
+    });
+  } catch {}
+}
+
 // ─── ATTENDANCE ROUTES ────────────────────────────────────────────────────────
 
 app.post('/api/attendance/scan', (req, res) => {
@@ -363,8 +408,8 @@ app.post('/api/attendance/scan', (req, res) => {
       status = 'early';
       timing_msg = `Attendance opens at ${startTime}`;
     } else if (now.isAfter(schoolEnd)) {
-      status = 'absent';
-      timing_msg = `Attendance closed after ${endTime}`;
+      status = 'late';
+      timing_msg = `Entry period ended at ${endTime}`;
     } else if (now.isAfter(halfDay)) {
       status = 'half-day';
       timing_msg = `Marked half-day (after ${halfDayCutoff})`;
@@ -383,6 +428,8 @@ app.post('/api/attendance/scan', (req, res) => {
       [id, sid, today, time, status]
     );
     saveDB();
+
+    sendTelegramNotification(student[0], status, today, time);
 
     res.json({
       success: true,
@@ -594,6 +641,29 @@ app.put('/api/settings', (req, res) => {
   }
 });
 
+// ─── SUBJECTS ──────────────────────────────────────────────────────────────────
+
+app.get('/api/subjects', (req, res) => {
+  try {
+    const result = query(`SELECT value FROM settings WHERE key = 'subjects'`);
+    const rows = rowsToObjects(result);
+    const val = rows.length ? rows[0].value : null;
+    res.json({ success: true, data: val ? JSON.parse(val) : {} });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/subjects', (req, res) => {
+  try {
+    runSql(`INSERT OR REPLACE INTO settings (key, value) VALUES ('subjects', ?)`, [JSON.stringify(req.body)]);
+    saveDB();
+    res.json({ success: true, message: 'Subjects saved' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ─── HEALTH ───────────────────────────────────────────────────────────────────
 
 app.get('/api/health', (req, res) => {
@@ -602,7 +672,7 @@ app.get('/api/health', (req, res) => {
 
 // Start server
 initDB().then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 EduPulse API running on http://localhost:${PORT}`);
   });
 }).catch(console.error);

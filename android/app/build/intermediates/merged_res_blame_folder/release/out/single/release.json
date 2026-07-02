@@ -1,0 +1,38 @@
+[
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/drawable_logo.png.flat",
+        "source": "com.edupulse.teacher.app-main-37:/drawable/logo.png"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/drawable_bg_button_cyber.xml.flat",
+        "source": "com.edupulse.teacher.app-main-37:/drawable/bg_button_cyber.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/drawable_loading_ring.xml.flat",
+        "source": "com.edupulse.teacher.app-main-37:/drawable/loading_ring.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/layout_activity_main.xml.flat",
+        "source": "com.edupulse.teacher.app-main-37:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/xml_network_security_config.xml.flat",
+        "source": "com.edupulse.teacher.app-main-37:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/layout_item_student_scan.xml.flat",
+        "source": "com.edupulse.teacher.app-main-37:/layout/item_student_scan.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/font_orbitron.ttf.flat",
+        "source": "com.edupulse.teacher.app-main-37:/font/orbitron.ttf"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/xml_file_paths.xml.flat",
+        "source": "com.edupulse.teacher.app-main-37:/xml/file_paths.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/drawable_bg_success_circle.xml.flat",
+        "source": "com.edupulse.teacher.app-main-37:/drawable/bg_success_circle.xml"
+    }
+]

@@ -1,0 +1,16 @@
+[Unit]
+Description=EduPulse Local API Server
+After=network-online.target
+Wants=network-online.target
+PartOf=edupulse.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /home/pi/edupulse/server.js
+WorkingDirectory=/home/pi/edupulse
+Restart=on-failure
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=edupulse.target

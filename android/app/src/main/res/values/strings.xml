@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EduPulse Teacher</string>
+    <string name="pwa_url">https://edupulse-attendance-qr.web.app</string>
+    <string name="update_url">https://edupulse-attendance-qr.web.app/version.json</string>
+</resources>

@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>document.documentElement.style.background='#0a0a0b';document.documentElement.style.visibility='hidden'</script>
+  <noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0a0b;color:#f8fafc;font-family:sans-serif;font-size:1.2rem;z-index:99999">EduPulse requires JavaScript to be enabled.</div></noscript>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings — EduPulse Admin</title>
+  <style>html{color-scheme:dark;background:#0a0a0b!important}body{background:#0a0a0b!important;color:#f8fafc!important;font-family:Inter,system-ui,sans-serif!important}.table-wrapper{background:#111113!important}.data-table{background:#111113!important;color:#f8fafc!important}.data-table th{color:#94a3b8!important}.data-table td{color:#f8fafc!important}.filter-bar{background:rgba(17,17,19,0.85)!important}.sidebar{background:rgba(17,17,19,0.85)!important}.glass-panel-strong{background:rgba(17,17,19,0.85)!important}</style>
   <link rel="stylesheet" href="../../css/theme.css">
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -101,6 +104,18 @@
       </form>
     </div>
 
+
+    <div class="glass-panel-strong" style="padding:2rem;max-width:640px;margin-top:1.5rem">
+      <h3 style="font-family:var(--font-display);font-size:0.9rem;color:var(--accent);margin-bottom:1rem">Subjects per Class</h3>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem">Subjects appear in the teacher's mobile scan page for period-wise attendance.</p>
+      <div id="subjectsContainer">
+        <div style="font-size:0.85rem;color:var(--text-muted)">Loading...</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="addSubjectRow()" style="margin-top:0.75rem">+ Add Subject</button>
+      <button class="btn btn-primary btn-sm" onclick="saveSubjectsConfig()" style="margin-top:0.75rem;margin-left:0.5rem">Save Subjects</button>
+      <div id="subjectsStatus" style="font-size:0.85rem;margin-top:0.5rem"></div>
+    </div>
+
     <div class="glass-panel-strong" style="padding:2rem;max-width:640px;margin-top:1.5rem">
       <h3 style="font-family:var(--font-display);font-size:0.9rem;color:var(--accent);margin-bottom:1rem">System Info</h3>
       <div style="font-size:0.85rem;color:var(--text-muted);line-height:1.8">
@@ -184,21 +199,107 @@
         entry_end_time: document.getElementById('setEndTime').value,
         half_day_cutoff: document.getElementById('setHalfDayCutoff').value
       };
-      // Save to local API
       fetch('http://localhost:3000/api/settings', {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body)
-      }).catch(function() {});
-      // Save to Firebase
-      saveSettings(body).then(function() {
+      }).then(function() {
         document.getElementById('settingsStatus').textContent = 'Settings saved!';
         document.getElementById('settingsStatus').style.color = 'var(--success)';
       }).catch(function(e) {
-        document.getElementById('settingsStatus').textContent = 'Error: ' + e.message;
+        document.getElementById('settingsStatus').textContent = 'Error: ' + (e.message || e);
         document.getElementById('settingsStatus').style.color = 'var(--danger)';
       });
     });
+
+    // ── Subjects Management ──
+    var _subjectsData = {};
+
+    function loadSubjects() {
+      getSubjects().then(function(s) {
+        _subjectsData = s || {};
+        renderSubjects();
+        document.getElementById('subjectsStatus').textContent = '';
+      }).catch(function(e) {
+        console.error('loadSubjects error:', e);
+        document.getElementById('subjectsStatus').textContent = 'Error loading subjects: ' + (e && e.message ? e.message : 'unknown');
+        document.getElementById('subjectsStatus').style.color = 'var(--danger)';
+      });
+    }
+
+    function renderSubjects() {
+      var container = document.getElementById('subjectsContainer');
+      var classes = Object.keys(_subjectsData);
+      if (!classes.length) {
+        container.innerHTML = '<div style="font-size:0.85rem;color:var(--text-muted)">No subjects defined yet. Add a class below.</div>';
+        return;
+      }
+      container.innerHTML = '';
+      classes.forEach(function(cls) {
+        var div = document.createElement('div');
+        div.style.cssText = 'margin-bottom:0.75rem;padding:0.75rem;background:var(--glass-bg);border-radius:8px';
+        div.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem">' +
+          '<strong style="font-size:0.85rem">Class ' + cls + '</strong>' +
+          '<button class="btn btn-danger btn-sm" onclick="removeClass(\'' + cls + '\')" style="padding:2px 6px;font-size:0.7rem">✕</button></div>' +
+          '<div id="subjList_' + cls + '" style="display:flex;flex-wrap:wrap;gap:0.35rem">' +
+          (_subjectsData[cls] || []).map(function(s) {
+            return '<span style="background:var(--accent);color:#000;padding:2px 8px;border-radius:4px;font-size:0.78rem">' + s + '</span>';
+          }).join('') +
+          '</div>' +
+          '<div style="display:flex;gap:0.35rem;margin-top:0.35rem">' +
+          '<input type="text" id="newSubj_' + cls + '" placeholder="Subject name" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:4px 8px;color:var(--text-primary);font-size:0.8rem">' +
+          '<button class="btn btn-secondary btn-sm" onclick="addSubjectToClass(\'' + cls + '\')">+</button></div>';
+        container.appendChild(div);
+      });
+      // Add new class row
+      var newRow = document.createElement('div');
+      newRow.style.cssText = 'display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem';
+      newRow.innerHTML = '<input type="text" id="newClassName" placeholder="Class name (e.g. 10)" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:6px 10px;color:var(--text-primary);font-size:0.85rem">' +
+        '<button class="btn btn-secondary btn-sm" onclick="addNewClass()">+ Add Class</button>';
+      container.appendChild(newRow);
+    }
+
+    function addNewClass() {
+      var cls = document.getElementById('newClassName').value.trim();
+      if (!cls) return;
+      if (!_subjectsData[cls]) _subjectsData[cls] = [];
+      document.getElementById('newClassName').value = '';
+      renderSubjects();
+    }
+
+    function removeClass(cls) {
+      delete _subjectsData[cls];
+      renderSubjects();
+    }
+
+    function addSubjectToClass(cls) {
+      var input = document.getElementById('newSubj_' + cls);
+      var name = input.value.trim();
+      if (!name) return;
+      if (!_subjectsData[cls]) _subjectsData[cls] = [];
+      _subjectsData[cls].push(name);
+      input.value = '';
+      renderSubjects();
+    }
+
+    function saveSubjectsConfig() {
+      saveSubjects(_subjectsData).then(function() {
+        document.getElementById('subjectsStatus').textContent = 'Subjects saved!';
+        document.getElementById('subjectsStatus').style.color = 'var(--success)';
+      }).catch(function(e) {
+        document.getElementById('subjectsStatus').textContent = 'Error: ' + e.message;
+        document.getElementById('subjectsStatus').style.color = 'var(--danger)';
+      });
+    }
+
+    // Load subjects on page init
+    var _origInit = initPage;
+    initPage = function(user) {
+      _origInit(user);
+      loadSubjects();
+    };
+    // Also retrigger init for cases where initPage already ran
+    setTimeout(loadSubjects, 500);
   </script>
 </body>
 </html>

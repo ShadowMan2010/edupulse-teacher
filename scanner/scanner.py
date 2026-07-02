@@ -20,7 +20,7 @@ from PyQt5.QtCore import (
 )
 from PyQt5.QtGui import (
     QPixmap, QImage, QPainter, QColor, QPen, QFont, QLinearGradient,
-    QRadialGradient, QBrush, QPainterPath, QFontDatabase
+    QRadialGradient, QBrush, QPainterPath, QFontDatabase, QFontMetrics
 )
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtCore import QUrl
@@ -43,10 +43,23 @@ except ImportError:
     qr_decode = None
 
 # ── Firebase Admin SDK ──
-USE_FIREBASE_DIRECT = True
-FIREBASE_CRED_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'firebase-adminsdk-key.json'
+USE_FIREBASE_DIRECT = False
+
+# Load env file for kiosk (optional)
+_env_file = os.path.expanduser('~/.config/edupulse/env')
+if os.path.isfile(_env_file):
+    with open(_env_file) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#'):
+                _k, _sep, _v = _line.partition('=')
+                if _sep:
+                    os.environ.setdefault(_k.strip(), _v.strip().strip('"\''))
+
+FIREBASE_CRED_PATH = (
+    os.environ.get('FIREBASE_ADMIN_KEY_PATH')
+    or os.path.expanduser('~/.config/edupulse/firebase-adminsdk-key.json')
+    or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'firebase-adminsdk-key.json')
 )
 firebase_admin = None
 firebase_db = None
@@ -78,6 +91,11 @@ SCAN_INTERVAL_MS = 300
 DUPLICATE_COOLDOWN = 2
 CAMERA_SOURCE = os.environ.get('EDUPULSE_CAMERA', "0")
 DISPLAY_ROTATION = int(os.environ.get('EDUPULSE_ROTATION', '0'))
+
+# ── OTA Update ──
+SCANNER_VERSION = 1
+SCANNER_VERSION_NAME = "1.0.0"
+VERSION_URL = "https://edupulse-attendance-qr.web.app/version.json"
 
 
 class MjpegReader(threading.Thread):
@@ -310,7 +328,6 @@ class Card3DWidget(QWidget):
         if photo:
             try:
                 if photo.startswith('data:'):
-                    # Base64 data URL — load directly
                     header, encoded = photo.split(',', 1)
                     import base64
                     self._photo_pix = QPixmap()
@@ -319,7 +336,6 @@ class Card3DWidget(QWidget):
                     self._photo_pix = QPixmap()
                     self._photo_pix.loadFromData(requests.get(photo, timeout=3).content)
                 else:
-                    # Local path from old API
                     u = f"{API_BASE.replace('/api', '')}{photo}"
                     self._photo_pix = QPixmap()
                     self._photo_pix.loadFromData(requests.get(u, timeout=3).content)
@@ -338,16 +354,17 @@ class Card3DWidget(QWidget):
         self.raise_()
         if not self._timer.isActive():
             self._timer.start()
-        # Auto-dismiss after 4s
-        QTimer.singleShot(4000, self._auto_dismiss)
+        # Auto-dismiss after 2s
+        QTimer.singleShot(2000, self._auto_dismiss)
 
     def _auto_dismiss(self):
         if self.isVisible():
             self.hide()
 
     def _tick(self):
-        if self.angle < self.target_angle:
-            self.angle = min(self.angle + 12, self.target_angle)
+        animating = self.angle < self.target_angle
+        if animating:
+            self.angle = min(self.angle + 3, self.target_angle)
             self.glow_intensity = max(0, self.glow_intensity - 0.03)
         for p in list(self.particles):
             p['x'] += p['vx']
@@ -356,7 +373,7 @@ class Card3DWidget(QWidget):
             p['alpha'] -= p['decay']
             if p['alpha'] <= 0:
                 self.particles.remove(p)
-        if self.particles or self.angle < self.target_angle:
+        if self.particles or animating:
             self.update()
         elif self.angle >= self.target_angle and not self.particles:
             self._timer.stop()
@@ -384,11 +401,38 @@ class Card3DWidget(QWidget):
 
         # 3D flip
         theta = min(self.angle, 180)
-        sx = np.cos(np.radians(theta))
-        if sx < 0.01:
-            sx = 0.01
+        rad = np.radians(theta)
+        sx = np.cos(rad)
+        show_front = sx > 0
+        scale = max(0.01, abs(sx))
 
-        # Render card face to pixmap
+        # Render appropriate face
+        if show_front:
+            face = self._render_front_face(w, h)
+        else:
+            face = self._render_back_face(w, h)
+
+        # Perspective draw
+        off = (1 - scale) * (w // 2)
+        dst = QRectF(cx + off, cy, w * scale, h)
+        src = QRectF(0, 0, w, h)
+        painter.drawPixmap(dst, face, src)
+
+        # Scan line during flip
+        if self.angle < self.target_angle:
+            progress = self.angle / self.target_angle
+            sy = int(cy + h * progress)
+            grad = QLinearGradient(0, sy-10, 0, sy+10)
+            grad.setColorAt(0, Qt.transparent)
+            grad.setColorAt(0.4, QColor(0, 255, 255, 60))
+            grad.setColorAt(0.5, QColor(0, 255, 255, 100))
+            grad.setColorAt(0.6, QColor(0, 255, 255, 60))
+            grad.setColorAt(1, Qt.transparent)
+            painter.fillRect(int(cx + off), sy-10, int(w * scale), 20, grad)
+
+        painter.end()
+
+    def _render_front_face(self, w, h):
         face = QPixmap(w, h)
         face.fill(Qt.transparent)
         fp = QPainter(face)
@@ -419,7 +463,7 @@ class Card3DWidget(QWidget):
         fp.drawText(QRect(0, 18, w, 24), Qt.AlignCenter, "⚡ EDUPULSE")
 
         # Photo
-        pix = self._photo_pix if hasattr(self, '_photo_pix') else None
+        pix = getattr(self, '_photo_pix', None)
         if pix and not pix.isNull():
             pp = pix.scaled(130, 130, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
             m = QPixmap(130, 130)
@@ -500,26 +544,38 @@ class Card3DWidget(QWidget):
         fp.setPen(QColor(148, 163, 184, 80))
         fp.drawText(QRect(0, h-44, w, 20), Qt.AlignCenter, "EDUPULSE ATTENDANCE SYSTEM v1.0")
         fp.end()
+        return face
 
-        # Perspective draw
-        off = (1 - sx) * (w // 2)
-        dst = QRectF(cx + off, cy, w * sx, h)
-        src = QRectF(0, 0, w, h)
-        painter.drawPixmap(dst, face, src)
+    def _render_back_face(self, w, h):
+        face = QPixmap(w, h)
+        face.fill(Qt.transparent)
+        fp = QPainter(face)
+        fp.setRenderHint(QPainter.Antialiasing)
 
-        # Scan line during flip
-        if self.angle < self.target_angle:
-            progress = self.angle / self.target_angle
-            sy = int(cy + h * progress)
-            grad = QLinearGradient(0, sy-10, 0, sy+10)
-            grad.setColorAt(0, Qt.transparent)
-            grad.setColorAt(0.4, QColor(0, 255, 255, 60))
-            grad.setColorAt(0.5, QColor(0, 255, 255, 100))
-            grad.setColorAt(0.6, QColor(0, 255, 255, 60))
-            grad.setColorAt(1, Qt.transparent)
-            painter.fillRect(int(cx + off), sy-10, int(w * sx), 20, grad)
+        # Background
+        bg = QRadialGradient(w//2, h//2, w*0.6)
+        bg.setColorAt(0, QColor(10, 12, 16))
+        bg.setColorAt(0.8, QColor(5, 5, 8))
+        bg.setColorAt(1, QColor(2, 2, 5))
+        fp.setBrush(bg)
+        fp.setPen(QPen(QColor(0, 255, 255, 120), 2))
+        fp.drawRoundedRect(1, 1, w-2, h-2, 18, 18)
 
-        painter.end()
+        # Center logo
+        fp.setPen(QColor(0, 255, 255, 80))
+        f = QFont("Orbitron", 28, QFont.Bold)
+        fp.setFont(f)
+        fp.drawText(QRect(0, h//2 - 60, w, 50), Qt.AlignCenter, "⚡")
+        fp.setPen(QColor(0, 255, 255, 60))
+        f2 = QFont("Orbitron", 14, QFont.Bold)
+        fp.setFont(f2)
+        fp.drawText(QRect(0, h//2 - 10, w, 30), Qt.AlignCenter, "EDUPULSE")
+        fp.setPen(QColor(148, 163, 184, 60))
+        f3 = QFont("Segoe UI", 11)
+        fp.setFont(f3)
+        fp.drawText(QRect(40, h//2 + 25, w-80, 24), Qt.AlignCenter, "Attendance Verified")
+        fp.end()
+        return face
 
 
 class BootScreen(QWidget):
@@ -658,6 +714,20 @@ class BootScreen(QWidget):
 
 # ── Sound ──
 _sound_player = None
+def _check_update(self):
+    try:
+        r = requests.get(VERSION_URL, timeout=5)
+        d = r.json()
+        if d.get('version', 0) > SCANNER_VERSION:
+            from PyQt5.QtWidgets import QMessageBox
+            msg = QMessageBox()
+            msg.setWindowTitle("Update Available")
+            msg.setText(f"Version {d['version_name']} available\n\n{d.get('changelog', '')}\n\nRun: sudo bash os/ota-update.sh")
+            msg.setStyleSheet("background:#111113; color:#f8fafc; font-size:14px")
+            msg.exec_()
+    except Exception:
+        pass
+
 def init_sound():
     global _sound_player
     _sound_player = QMediaPlayer()
@@ -673,7 +743,6 @@ class Desktop(QWidget):
         super().__init__()
         self.setWindowTitle("EduPulse OS")
         self.setCursor(Qt.BlankCursor)
-        self.showFullScreen()
 
         # Kiosk env overrides
         self._rotation = DISPLAY_ROTATION
@@ -683,13 +752,16 @@ class Desktop(QWidget):
         self.scanned_students = {}
         self.current_frame = None
         self.qr_found = False
+        self._scan_cooldown = False
 
         self._init_ui()
+        self.showFullScreen()
         self._start_clock()
         self._check_api()
         self._fetch_settings()
         self._start_camera()
         init_sound()
+        threading.Thread(target=_check_update, args=(self,), daemon=True).start()
 
     def _apply_rotation(self):
         """Apply display rotation via xrandr (only on X11)."""
@@ -774,77 +846,32 @@ class Desktop(QWidget):
         self.overlay.setGeometry(self.camera_container.rect())
         self.card_3d = Card3DWidget(self.camera_container)
 
-        # ── Desktop icons (bottom-left floating) ──
-        self.desktop_icons = QWidget(self)
-        self.desktop_icons.setAttribute(Qt.WA_TransparentForMouseEvents, False)
-        di_layout = QVBoxLayout(self.desktop_icons)
-        di_layout.setContentsMargins(20, 0, 0, 80)
-        di_layout.setSpacing(16)
-        di_layout.addStretch()
-
-        def make_desk_icon(emoji, text, shortcut):
-            btn = QPushButton(f"{emoji}\n{text}")
-            btn.setFixedSize(80, 80)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background: rgba(0, 255, 255, 0.06); color: #94a3b8;
-                    font-size: 10px; font-family: Orbitron; border: 1px solid rgba(0,255,255,0.12);
-                    border-radius: 12px; padding: 4px;
-                }
-                QPushButton:hover {
-                    background: rgba(0, 255, 255, 0.15); color: #00ffff;
-                    border-color: rgba(0, 255, 255, 0.4);
-                }
-            """)
-            btn.clicked.connect(lambda: self._launch(shortcut))
-            return btn
-
-        self.scan_icon = make_desk_icon("📷", "Scanner", "scanner")
-        di_layout.addWidget(self.scan_icon, alignment=Qt.AlignLeft)
-
-        self.reports_icon = make_desk_icon("📊", "Reports", "reports")
-        di_layout.addWidget(self.reports_icon, alignment=Qt.AlignLeft)
-
-        self.settings_icon = make_desk_icon("⚙", "Settings", "settings")
-        di_layout.addWidget(self.settings_icon, alignment=Qt.AlignLeft)
-
-        self.power_icon = make_desk_icon("⏻", "Shutdown", "shutdown")
-        di_layout.addWidget(self.power_icon, alignment=Qt.AlignLeft)
-
-        self.desktop_icons.setLayout(di_layout)
-
         # ── Dock (bottom) ──
         dock = QWidget()
-        dock.setFixedHeight(56)
+        dock.setFixedHeight(48)
         dock.setStyleSheet("background: rgba(8, 8, 10, 0.92); border-top: 1px solid rgba(0, 255, 255, 0.12);")
         dk = QHBoxLayout(dock)
-        dk.setContentsMargins(20, 0, 20, 0)
+        dk.setContentsMargins(16, 0, 16, 0)
 
-        def make_dock_btn(emoji, text, shortcut):
-            btn = QPushButton(f"  {emoji}  {text}  ")
-            btn.setFixedHeight(38)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background: rgba(0, 255, 255, 0.06); color: #94a3b8;
-                    font-size: 11px; font-family: Orbitron; border: 1px solid rgba(0,255,255,0.08);
-                    border-radius: 8px; padding: 0 12px;
-                }
-                QPushButton:hover {
-                    background: rgba(0, 255, 255, 0.15); color: #00ffff;
-                }
-            """)
-            btn.clicked.connect(lambda: self._launch(shortcut))
-            return btn
-
-        dk.addWidget(make_dock_btn("📷", "Scanner", "scanner"))
-        dk.addWidget(make_dock_btn("📊", "Reports", "reports"))
-        dk.addWidget(make_dock_btn("⚙", "Settings", "settings"))
-        dk.addStretch()
         self.status_msg = QLabel("● Ready — waiting for QR code...")
         self.status_msg.setStyleSheet("font-size: 11px; color: #475569; font-family: monospace;")
         dk.addWidget(self.status_msg, alignment=Qt.AlignCenter)
         dk.addStretch()
-        dk.addWidget(make_dock_btn("⏻", "Exit", "shutdown"))
+
+        shutdown_btn = QPushButton("⏻")
+        shutdown_btn.setFixedSize(36, 36)
+        shutdown_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 60, 60, 0.1); color: #ef4444;
+                font-size: 16px; border: 1px solid rgba(255,60,60,0.2);
+                border-radius: 18px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 60, 60, 0.25);
+            }
+        """)
+        shutdown_btn.clicked.connect(self.close)
+        dk.addWidget(shutdown_btn)
 
         main.addWidget(dock)
 
@@ -952,14 +979,21 @@ class Desktop(QWidget):
             Qt.KeepAspectRatio, Qt.SmoothTransformation
         )
         self.camera_label.setPixmap(scaled)
+        self._frame_count += 1
+
+    _frame_count = 0
 
     def _process_frame(self):
         if self.current_frame is None or qr_decode is None:
             return
+        self._frame_count += 1
+        if self._frame_count % 30 == 0:
+            print(f"[QR] scanning frame {self._frame_count}, shape={self.current_frame.shape}")
         frame = self.current_frame
         try:
             decoded = qr_decode(frame)
-        except Exception:
+        except Exception as e:
+            print(f"[QR] decode error: {e}")
             return
         if not decoded:
             return
@@ -980,6 +1014,11 @@ class Desktop(QWidget):
             self._mark_attendance(student_id)
 
     def _mark_attendance(self, student_id):
+        if self._scan_cooldown:
+            return
+        self._scan_cooldown = True
+        QTimer.singleShot(2500, lambda: self._clear_cooldown())
+
         def do_mark():
             try:
                 if USE_FIREBASE_DIRECT and firebase_db:
@@ -995,6 +1034,17 @@ class Desktop(QWidget):
                     count = int(self.scan_count_label.text().split(':')[1]) + 1
                     self.scan_count_label.setText(f"SCANS: {count}")
                     self.card_3d.flip_in(student, status, timing)
+                    # Telegram notification
+                    try:
+                        from notify import notify_parent_async
+                        att = result.get('attendance', {})
+                        r = requests.get(f'{API_BASE}/settings', timeout=3)
+                        s = r.json().get('data', {}) if r.ok else {}
+                        bot_token = s.get('telegram_bot_token', '')
+                        if bot_token:
+                            notify_parent_async(bot_token, student, status, att.get('date', ''), att.get('time', ''))
+                    except Exception:
+                        pass
                 elif result.get('duplicate'):
                     student = result.get('student', {})
                     play_sound('error.wav')
@@ -1009,9 +1059,21 @@ class Desktop(QWidget):
 
         threading.Thread(target=do_mark, daemon=True).start()
 
+    def _clear_cooldown(self):
+        self._scan_cooldown = False
+        self.card_3d.hide()
+
     def _fb_mark(self, student_id):
         ref = firebase_db.reference
-        student = ref(f'students/{student_id}').get()
+        student = None
+        try:
+            import requests
+            r = requests.get(f'http://localhost:3000/api/students/{student_id}', timeout=3)
+            d = r.json()
+            if d.get('success') and d.get('data'):
+                student = d['data']
+        except Exception:
+            student = ref(f'students/{student_id}').get()
         if not student:
             return {'error': 'Student not found'}
         if student.get('active') is False:
@@ -1071,9 +1133,27 @@ class Desktop(QWidget):
             'date': date,
             'time': time_str,
             'status': status,
-            'scanned_by': 'kiosk'
+            'scanned_by': 'kiosk',
+            'period': 0  # 0 = entry scan (kiosk)
         }
         new_ref = ref('attendance').push(record)
+
+        # Telegram notification for parent
+        bot_token = settings.get('telegram_bot_token', '')
+        if bot_token:
+            try:
+                from notify import notify_parent_async
+                notify_parent_async(bot_token, student, status, date, time_str)
+            except Exception:
+                pass
+
+        # Also write to local API so dashboard can read it
+        try:
+            requests.post(f"{API_BASE}/attendance/scan", json={
+                'student_id': student_id, 'status': status, 'time': time_str, 'date': date
+            }, timeout=3)
+        except Exception:
+            pass
 
         timing = {
             'start_time': start_time,
@@ -1129,7 +1209,6 @@ class Desktop(QWidget):
                 (pw - self.card_3d.width()) // 2,
                 (ph - self.card_3d.height()) // 2 - 30
             )
-        self.desktop_icons.setGeometry(0, 0, self.width(), self.height())
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:

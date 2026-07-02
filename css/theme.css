@@ -1,6 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 :root {
+  color-scheme: dark;
   --bg-primary: #0a0a0b;
   --bg-secondary: #111113;
   --bg-card: rgba(17, 17, 19, 0.85);
@@ -10,6 +9,7 @@
   --accent-purple: #7c3aed;
   --accent-pink: #ec4899;
   --text-primary: #f8fafc;
+  --text: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --glass-border: rgba(0, 255, 255, 0.12);
@@ -33,11 +33,11 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; background: #0a0a0b }
 
 body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: #0a0a0b !important;
+  color: #f8fafc !important;
   font-family: var(--font-body);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -183,6 +183,8 @@ input, select, textarea {
   box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
 }
 .input-field::placeholder { color: var(--text-muted); }
+select { color-scheme: dark; }
+option { background: #1a1a1e; color: #f8fafc; }
 select.input-field {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -208,9 +210,18 @@ select.input-field {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  background: #111113;
+  background: var(--bg-secondary);
+}
+.data-table thead {
+  background: rgba(0, 255, 255, 0.05);
+}
+.data-table th, .data-table td {
+  background: inherit;
 }
 .data-table th {
-  background: rgba(0, 255, 255, 0.05);
+  background: rgba(0, 255, 255, 0.08);
+  color: #00ffff;
   color: var(--accent);
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -224,6 +235,7 @@ select.input-field {
 .data-table td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
   color: var(--text-secondary);
 }
 .data-table tr:hover td {
@@ -372,6 +384,7 @@ select.input-field {
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 700;
+  color: #00ffff;
   color: var(--accent);
   letter-spacing: 0.1em;
 }
@@ -697,6 +710,8 @@ select.input-field {
   overflow-x: auto;
   border-radius: var(--radius);
   border: 1px solid var(--glass-border);
+  background: #111113;
+  background: var(--bg-secondary);
 }
 
 /* ── Splash Screen ── */

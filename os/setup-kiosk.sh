@@ -207,7 +207,53 @@ else
 fi
 
 # ────────────────────────────────────────
-# 12. Boot optimization
+# 11b. Bot service
+# ────────────────────────────────────────
+if [ -f "${EDUPULSE_SRC}/os/edupulse-bot.service" ] && command -v python3 &>/dev/null; then
+    $RUN cp "${EDUPULSE_SRC}/os/edupulse-bot.service" /etc/systemd/system/
+    ok "Bot service copied"
+fi
+
+# ────────────────────────────────────────
+# 11c. Enable target (grouped start/stop)
+# ────────────────────────────────────────
+if [ -f "${EDUPULSE_SRC}/os/edupulse.target" ]; then
+    $RUN cp "${EDUPULSE_SRC}/os/edupulse.target" /etc/systemd/system/
+    $RUN systemctl daemon-reload
+    $RUN systemctl enable edupulse.target 2>/dev/null || true
+    ok "edupulse.target enabled — all services start/stop together"
+    info "  Start all:  sudo systemctl start edupulse.target"
+    info "  Stop all:   sudo systemctl stop edupulse.target"
+    info "  Status:     sudo systemctl status edupulse.target"
+fi
+
+# ────────────────────────────────────────
+# 12. Firebase Admin SDK Key
+# ────────────────────────────────────────
+info "Setting up Firebase Admin SDK key..."
+KEY_DEST="${HOME}/.config/edupulse"
+KEY_FILE="${KEY_DEST}/firebase-adminsdk-key.json"
+if [ ! -f "${KEY_FILE}" ]; then
+    $RUN mkdir -p "${KEY_DEST}"
+    # Check if key exists in legacy scanner/ location
+    if [ -f "${EDUPULSE_SRC}/scanner/firebase-adminsdk-key.json" ]; then
+        $RUN cp "${EDUPULSE_SRC}/scanner/firebase-adminsdk-key.json" "${KEY_FILE}"
+        $RUN chmod 600 "${KEY_FILE}"
+        ok "Key migrated from scanner/ folder"
+    else
+        info "⚠  Firebase Admin SDK key not found!"
+        info "   The kiosk scanner needs this file to connect to Firebase."
+        info "   Download it from Firebase Console → Project Settings → Service Accounts"
+        info "   Then save it to: ${KEY_FILE}"
+        info "   Run: chmod 600 ${KEY_FILE}"
+        info ""
+        info "   Alternatively, set the path via env var in ~/.config/edupulse/env:"
+        info "   FIREBASE_ADMIN_KEY_PATH=/path/to/your-key.json"
+    fi
+fi
+
+# ────────────────────────────────────────
+# 13. Boot optimization
 # ────────────────────────────────────────
 info "Optimizing boot time..."
 $RUN systemctl disable bluetooth.service 2>/dev/null || true

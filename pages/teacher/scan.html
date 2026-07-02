@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>document.documentElement.style.background='#0a0a0b';document.documentElement.style.visibility='hidden'</script>
+  <noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0a0b;color:#f8fafc;font-family:sans-serif;font-size:1.2rem;z-index:99999">EduPulse requires JavaScript to be enabled.</div></noscript>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EduPulse · Period Scan</title>
+  <link rel="manifest" href="../../manifest.json">
+  <meta name="theme-color" content="#00ffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <style>html{color-scheme:dark;background:#0a0a0b!important}body{background:#0a0a0b!important;color:#f8fafc!important;font-family:Inter,system-ui,sans-serif!important}.table-wrapper{background:#111113!important}.data-table{background:#111113!important;color:#f8fafc!important}.data-table th{color:#94a3b8!important}.data-table td{color:#f8fafc!important}.filter-bar{background:rgba(17,17,19,0.85)!important}.sidebar{background:rgba(17,17,19,0.85)!important}.glass-panel-strong{background:rgba(17,17,19,0.85)!important}</style>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <style>
+    body { background: #0a0a0b; background: var(--bg-primary); color: #f8fafc; color: var(--text-primary); min-height: 100dvh }
+    .scan-header { padding: 1rem 1rem 0.5rem }
+    .scan-header h1 { font-family: var(--font-display); font-size: 1.1rem; color: #f8fafc; color: var(--text-primary) }
+    .scan-header .sub { font-size: 0.78rem; color: #64748b; color: var(--text-muted) }
+    .selector-row { display: flex; gap: 0.5rem; padding: 0.75rem 1rem }
+    .selector-row select { flex: 1; background: rgba(255,255,255,0.03); background: var(--glass-bg); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 0.6rem; color: #f8fafc; color: var(--text-primary); font-size: 0.85rem }
+    .student-card { background: rgba(255,255,255,0.03); background: var(--glass-bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.75rem; margin: 0 1rem 0.5rem; display: flex; align-items: center; gap: 0.75rem; transition: 0.2s }
+    .student-card.present { border-color: var(--success); background: rgba(0,255,136,0.08) }
+    .student-card.duplicate { border-color: var(--warning); background: rgba(255,200,0,0.08); opacity: 0.7 }
+    .student-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0 }
+    .student-avatar-placeholder { width: 40px; height: 40px; border-radius: 50%; background: rgba(0,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: var(--text-muted); flex-shrink: 0 }
+    .student-info { flex: 1; min-width: 0 }
+    .student-info .name { font-size: 0.9rem; font-weight: 600 }
+    .student-info .meta { font-size: 0.72rem; color: var(--text-muted) }
+    .student-info .status-tag { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 2px }
+    .status-tag.present { background: var(--success); color: #000 }
+    .status-tag.late { background: var(--warning); color: #000 }
+    .status-tag.half-day { background: var(--danger); color: #fff }
+    .status-tag.duplicate { background: #666; color: #fff }
+    .btn-scan { background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0 }
+    .btn-scan:disabled { opacity: 0.4; cursor: not-allowed }
+    .btn-scan.done { background: var(--success) }
+    .gate-banner { margin: 0 1rem 0.75rem; padding: 0.75rem; border-radius: 8px; background: rgba(255,200,0,0.12); border: 1px solid rgba(255,200,0,0.3); font-size: 0.82rem; color: var(--warning); text-align: center }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.85rem }
+    .scan-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(8px) }
+    .scan-overlay.active { display: flex }
+    .scan-box { background: var(--glass-bg); border: 2px solid var(--accent); border-radius: 16px; padding: 2rem; text-align: center; max-width: 320px; width: 90% }
+    .scan-box .qr-icon { font-size: 4rem; margin-bottom: 1rem; animation: pulse-qr 1.5s infinite }
+    @keyframes pulse-qr { 0%,100% { opacity: 1; transform: scale(1) } 50% { opacity: 0.5; transform: scale(1.1) } }
+    .scan-box .hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem }
+    .scan-box input[type="text"] { width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #f8fafc; color: var(--text-primary); font-size: 1rem; text-align: center; margin-top: 0.75rem }
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); padding: 0.65rem 1.25rem; border-radius: 10px; font-size: 0.82rem; z-index: 1000; backdrop-filter: blur(8px); transition: 0.3s; opacity: 0; pointer-events: none }
+    .toast.show { opacity: 1 }
+    .toast.success { background: rgba(0,255,136,0.2); border: 1px solid var(--success); color: var(--success) }
+    .toast.error { background: rgba(255,50,50,0.2); border: 1px solid var(--danger); color: var(--danger) }
+    .toast.warning { background: rgba(255,200,0,0.2); border: 1px solid var(--warning); color: var(--warning) }
+    .period-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(0,255,255,0.1); border: 1px solid rgba(0,255,255,0.25); border-radius: 20px; padding: 0.3rem 0.75rem; font-size: 0.75rem; color: var(--accent); margin: 0 1rem 0.5rem }
+    .btn-back { background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer; padding: 0.35rem }
+    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 0.75rem 1rem; background: var(--glass-bg); border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); backdrop-filter: blur(12px) }
+    body { padding-bottom: 4rem }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="scan-header">
+    <div style="display:flex;align-items:center;gap:0.5rem">
+      <button class="btn-back" onclick="logout()">←</button>
+      <h1>📚 Period Scan</h1>
+    </div>
+    <div class="sub" id="teacherInfo">Loading...</div>
+  </div>
+
+  <div class="selector-row">
+    <select id="classSelect" onchange="onClassChange()">
+      <option value="">Select Class</option>
+      <option value="8">Class 8</option>
+      <option value="9">Class 9</option>
+      <option value="10">Class 10</option>
+      <option value="11">Class 11</option>
+      <option value="12">Class 12</option>
+    </select>
+    <select id="subjectSelect" onchange="onSubjectChange()" disabled>
+      <option value="">Subject</option>
+    </select>
+    <select id="periodSelect" onchange="onSubjectChange()">
+      <option value="1">Period 1</option>
+      <option value="2">Period 2</option>
+      <option value="3">Period 3</option>
+      <option value="4">Period 4</option>
+      <option value="5">Period 5</option>
+      <option value="6">Period 6</option>
+      <option value="7">Period 7</option>
+      <option value="8">Period 8</option>
+    </select>
+  </div>
+
+  <div id="gateBanner" class="gate-banner" style="display:none">
+    ⏳ Student hasn't done entry scan today. Entry scan required before period marking.
+  </div>
+
+  <div id="periodBadge" class="period-badge" style="display:none"></div>
+
+  <div id="studentList"></div>
+
+  <div id="scanOverlay" class="scan-overlay">
+    <div class="scan-box">
+      <div class="qr-icon">📷</div>
+      <p style="font-size:0.9rem;margin-bottom:0.5rem">Scan Student QR Code</p>
+      <p style="font-size:0.75rem;color:var(--text-muted)">Point camera at student's QR code or type manually</p>
+      <input type="text" id="manualQrInput" placeholder="Student ID or QR text" autocomplete="off" onkeydown="if(event.key==='Enter')processManualQr()">
+      <div style="margin-top:1rem;display:flex;gap:0.5rem;justify-content:center">
+        <button class="btn-scan" onclick="closeScanOverlay()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <div class="bottom-bar">
+    <span id="dateDisplay"></span>
+    <span id="countDisplay">0 marked</span>
+  </div>
+
+  <script src="../../js/theme.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+  <script>
+    requireAuth();
+
+    var _user = null;
+    var _studentsData = [];
+    var _classSubjects = {};
+    var _todayAttendance = {};
+    var _selectedSubject = '';
+    var _selectedPeriod = '1';
+    var _selectedClass = '';
+
+    function initPage(user) {
+      try {
+        _user = user;
+        document.getElementById('teacherInfo').textContent = user.email + ' · Teacher';
+        document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
+        loadSubjects();
+      } catch(e) {
+        document.getElementById('teacherInfo').textContent = 'Error: ' + e.message;
+      }
+    }
+
+    var _demoUser = sessionStorage.getItem('edupulse_demo');
+    if (_demoUser) { var d = JSON.parse(_demoUser); initPage({email:d.email}); }
+    auth.onAuthStateChanged(function(u) { if (u) initPage(u); });
+
+    // ── OTA Update Check ──
+    (function checkUpdate() {
+      fetch('https://edupulse-attendance-qr.web.app/version.json')
+        .then(function(r) { return r.json(); })
+        .then(function(v) {
+          if (v.version > 1) {
+            var b = document.createElement('div');
+            b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:999;background:#1a1a2e;border-top:1px solid var(--accent);padding:0.75rem 1rem;display:flex;align-items:center;gap:0.75rem';
+            b.innerHTML = '<span style="flex:1;font-size:0.82rem">Update v' + v.version_name + ' available</span><button class="btn btn-primary btn-sm" onclick="window.open(\'' + v.apk_url + '\')">Download</button><button class="btn btn-outline btn-sm" onclick="this.parentElement.remove()">✕</button>';
+            document.body.appendChild(b);
+          }
+        }).catch(function() {});
+    })();
+
+    function logout() {
+      sessionStorage.removeItem('edupulse_demo');
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    }
+
+    function loadSubjects() {
+      getSubjects().then(function(s) {
+        _classSubjects = s || {};
+        if (_selectedClass) populateSubjects();
+      });
+    }
+
+    function onClassChange() {
+      _selectedClass = document.getElementById('classSelect').value;
+      populateSubjects();
+      loadStudentsForClass();
+    }
+
+    function populateSubjects() {
+      var sel = document.getElementById('subjectSelect');
+      sel.innerHTML = '<option value="">Subject</option>';
+      var subs = _classSubjects[_selectedClass] || [];
+      if (!subs.length) { sel.disabled = true; return; }
+      sel.disabled = false;
+      subs.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        sel.appendChild(opt);
+      });
+    }
+
+    function onSubjectChange() {
+      _selectedSubject = document.getElementById('subjectSelect').value;
+      _selectedPeriod = document.getElementById('periodSelect').value;
+      if (!_selectedClass || !_selectedSubject) { document.getElementById('studentList').innerHTML = '<div class="empty-state">Select class and subject to begin</div>'; return; }
+      checkEntryScansExist();
+      loadStudentsForClass();
+    }
+
+    function checkEntryScansExist() {
+      var date = getTodaysDate();
+      var ref = db.ref('attendance').orderByChild('student_id');
+      ref.once('value', function(snap) {
+        var all = snap.val() || {};
+        var entryScans = {};
+        Object.keys(all).forEach(function(k) {
+          var r = all[k];
+          if (r.date === date && r.period === 0) entryScans[r.student_id] = r;
+        });
+        window._entryScans = entryScans;
+        // Also load today's period attendance
+        var periodAtt = {};
+        Object.keys(all).forEach(function(k) {
+          var r = all[k];
+          if (r.date === date && r.period == _selectedPeriod && r.subject === _selectedSubject) periodAtt[r.student_id] = r;
+        });
+        _todayAttendance = periodAtt;
+        renderStudents();
+        updateCount();
+      });
+    }
+
+    function loadStudentsForClass() {
+      if (!_selectedClass) { document.getElementById('studentList').innerHTML = '<div class="empty-state">Select a class</div>'; return; }
+      getStudents().then(function(students) {
+        _studentsData = (students || []).filter(function(s) {
+          return s.class === _selectedClass && s.active !== false;
+        });
+        renderStudents();
+        updateCount();
+      });
+    }
+
+    function renderStudents() {
+      var container = document.getElementById('studentList');
+      var period = _selectedPeriod;
+      var subject = _selectedSubject;
+
+      if (!subject || !_selectedClass) { container.innerHTML = '<div class="empty-state">Select subject</div>'; return; }
+
+      // Check entry scan gate
+      var gateBanner = document.getElementById('gateBanner');
+      var entryScans = window._entryScans || {};
+      var studentsNoEntry = _studentsData.filter(function(s) { return !entryScans[s.id]; });
+      if (studentsNoEntry.length === _studentsData.length && _studentsData.length > 0) {
+        gateBanner.style.display = 'block';
+      } else {
+        gateBanner.style.display = 'none';
+      }
+
+      // Filter to students enrolled in this subject
+      var filtered = _studentsData.filter(function(s) {
+        return (s.subjects || []).indexOf(subject) !== -1;
+      });
+
+      if (!filtered.length) {
+        container.innerHTML = '<div class="empty-state">No students enrolled in ' + subject + ' for Class ' + _selectedClass + '</div>';
+        return;
+      }
+
+      // Show period badge
+      document.getElementById('periodBadge').style.display = 'flex';
+      document.getElementById('periodBadge').textContent = '📖 ' + subject + ' · Period ' + period;
+
+      var html = '';
+      filtered.forEach(function(s) {
+        var att = _todayAttendance[s.id];
+        var marked = !!att;
+        var status = att ? att.status : '';
+        var hasEntry = !!entryScans[s.id];
+        var avatarHtml = s.photo
+          ? '<img src="' + s.photo + '" class="student-avatar" onerror="this.outerHTML=\'<div class=\\\\\'student-avatar-placeholder\\\\\'>' + s.name[0] + '</div>\'">'
+          : '<div class="student-avatar-placeholder">' + s.name[0] + '</div>';
+        var statusHtml = marked ? '<span class="status-tag ' + status + '">' + status + '</span>' : '';
+        var btnHtml = marked
+          ? '<button class="btn-scan done" disabled>✓ Done</button>'
+          : '<button class="btn-scan" onclick="markStudent(\'' + s.id + '\')" ' + (hasEntry ? '' : 'disabled') + '>Mark</button>';
+        html += '<div class="student-card' + (marked ? ' present' : '') + '">' +
+          avatarHtml +
+          '<div class="student-info"><div class="name">' + s.name + '</div><div class="meta">' + s.roll_no + ' · ' + s.section + statusHtml + '</div></div>' +
+          btnHtml +
+        '</div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function markStudent(studentId) {
+      var entryScans = window._entryScans || {};
+      if (!entryScans[studentId]) {
+        showToast('Entry scan required first!', 'warning');
+        return;
+      }
+      // Record period attendance
+      var data = {
+        student_id: studentId,
+        date: getTodaysDate(),
+        time: getTimeStr(),
+        status: 'present',
+        scanned_by: _user ? _user.email : 'teacher',
+        period: parseInt(_selectedPeriod),
+        subject: _selectedSubject
+      };
+      var ref = db.ref('attendance').push();
+      ref.set(data).then(function() {
+        _todayAttendance[studentId] = data;
+        renderStudents();
+        updateCount();
+        showToast('✓ ' + _studentsData.find(function(s){return s.id===studentId})?.name + ' marked', 'success');
+      }).catch(function(err) {
+        showToast('Error: ' + err.message, 'error');
+      });
+    }
+
+    function showToast(msg, type) {
+      var el = document.getElementById('toast');
+      el.textContent = msg; el.className = 'toast ' + type + ' show';
+      setTimeout(function() { el.classList.remove('show'); }, 2500);
+    }
+
+    function updateCount() {
+      var marked = Object.keys(_todayAttendance).length;
+      document.getElementById('countDisplay').textContent = marked + ' / ' + _studentsData.filter(function(s) {
+        return (s.subjects || []).indexOf(_selectedSubject) !== -1;
+      }).length + ' marked';
+    }
+
+    // Fallback: if initPage hasn't been called after 5s, show error
+    setTimeout(function() {
+      var info = document.getElementById('teacherInfo');
+      if (info && info.textContent === 'Loading...') {
+        info.textContent = '⚠ Not logged in — redirecting...';
+        window.location.href = '../login.html';
+      }
+    }, 5000);
+
+    // Register service worker for installable app
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('../../sw.js');
+    }
+  </script>
+</body>
+</html>
