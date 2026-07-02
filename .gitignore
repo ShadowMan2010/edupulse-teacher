@@ -15,3 +15,5 @@ os/output/
 *.img
 *.img.xz
 scanner/*-key.json
+*.apk
+android/app/build/

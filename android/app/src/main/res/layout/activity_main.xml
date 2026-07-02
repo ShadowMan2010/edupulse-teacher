@@ -43,6 +43,12 @@
             android:textColor="#94a3b8"
             android:letterSpacing="0.2"
             android:layout_marginTop="4dp"/>
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/loading_ring"
+            android:layout_marginTop="40dp"/>
     </LinearLayout>
 
     <!-- ═══════════════════════ LOGIN SCREEN ═══════════════════════ -->
@@ -85,10 +91,17 @@
                 android:textColor="#94a3b8"
                 android:layout_marginTop="36dp"/>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_glass"
+                android:padding="24dp"
+                android:layout_marginTop="12dp">
+
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
                 style="@style/Widget.EduPulse.TextInput"
                 app:hintEnabled="true"
                 app:endIconMode="clear_text">
@@ -161,6 +174,7 @@
                 android:gravity="center"
                 android:visibility="gone"/>
 
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
@@ -419,13 +433,24 @@
             android:textColor="#f8fafc"
             android:popupBackground="#1a1a1e"/>
 
+        <!-- Scan Info Badge -->
+        <TextView
+            android:id="@+id/scanInfoText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:textSize="11sp"
+            android:textColor="#94a3b8"
+            android:visibility="gone"/>
+
         <!-- Scan Button -->
         <Button
             android:id="@+id/scanButton"
             android:layout_width="220dp"
             android:layout_height="220dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="8dp"
             android:backgroundTint="#00ffff"
             android:text="SCAN\nQR"
             android:textSize="22sp"
@@ -435,7 +460,8 @@
             android:letterSpacing="0.1"
             android:gravity="center"
             android:stateListAnimator="@null"
-            android:elevation="8dp"/>
+            android:elevation="8dp"
+            android:translationZ="12dp"/>
 
         <!-- Scanned List Preview -->
         <TextView
@@ -511,7 +537,7 @@
         android:layout_height="280dp"
         android:layout_gravity="bottom"
         android:orientation="vertical"
-        android:background="#1a1a1e"
+        android:background="@drawable/bg_glass"
         android:visibility="gone"
         android:elevation="16dp"
         android:padding="20dp">
@@ -644,7 +670,7 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:orientation="vertical"
-            android:background="#1a1a1e"
+            android:background="@drawable/bg_glass"
             android:elevation="24dp"
             android:padding="32dp">
 

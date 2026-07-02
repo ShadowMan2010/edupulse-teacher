@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     // Main
     private Spinner classSpinner, sectionSpinner, subjectSpinner;
     private Button scanButton, scanFinishedButton;
-    private TextView scanCountText, lastScannedText, userEmailText;
+    private TextView scanCountText, lastScannedText, userEmailText, scanInfoText;
     private Button disconnectButton;
 
     // Splash
@@ -188,6 +188,7 @@ public class MainActivity extends AppCompatActivity {
         lastScannedText = findViewById(R.id.lastScannedText);
         userEmailText = findViewById(R.id.userEmailText);
         disconnectButton = findViewById(R.id.disconnectButton);
+        scanInfoText = findViewById(R.id.scanInfoText);
 
         // Summary
         scanSummarySheet = findViewById(R.id.scanSummarySheet);
@@ -284,6 +285,15 @@ public class MainActivity extends AppCompatActivity {
                     updateSubjectsForClass(cls);
                     prefetchStudentsForClass(cls);
                 }
+                updateScanInfoText();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        subjectSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateScanInfoText();
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -645,6 +655,7 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         subjectSpinner.setAdapter(adapter);
+        updateScanInfoText();
     }
 
     private void prefetchStudentsForClass(String cls) {
@@ -677,6 +688,20 @@ public class MainActivity extends AppCompatActivity {
                 error -> {});
         req.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
         requestQueue.add(req);
+    }
+
+    private void updateScanInfoText() {
+        String cls = classSpinner.getSelectedItem() != null ? classSpinner.getSelectedItem().toString() : "";
+        String sub = subjectSpinner.getSelectedItem() != null ? subjectSpinner.getSelectedItem().toString() : "";
+        if (!cls.isEmpty() && !sub.isEmpty() && !sub.equals("No subjects")) {
+            scanInfoText.setText("Class " + cls + "  ·  " + sub);
+            scanInfoText.setVisibility(View.VISIBLE);
+        } else if (!cls.isEmpty()) {
+            scanInfoText.setText("Class " + cls);
+            scanInfoText.setVisibility(View.VISIBLE);
+        } else {
+            scanInfoText.setVisibility(View.GONE);
+        }
     }
 
     // ─── QR SCAN ──────────────────────────────────────────
@@ -1027,7 +1052,6 @@ public class MainActivity extends AppCompatActivity {
         updateChangelogText.setText(changelog);
         updateButton.setTag(apkUrl);
         updateOverlay.setVisibility(View.VISIBLE);
-        startPulseAnimation(updateOverlay.findViewById(android.R.id.content));
     }
 
     private void showUpdateProgress(int percent) {
