@@ -23,6 +23,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -113,6 +114,12 @@ public class MainActivity extends AppCompatActivity {
     private TextView successSubtext;
     private Button successDoneButton;
 
+    // Update Overlay
+    private View updateOverlay;
+    private TextView updateTitleText, updateVersionText, updateChangelogText, updateProgressText;
+    private ProgressBar updateProgressBar;
+    private Button updateButton, updateLaterButton;
+
     // Animation
     private View successIcon;
 
@@ -121,6 +128,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Map<String, String>> scannedStudents = new ArrayList<>();
     private List<String> classList = new ArrayList<>();
     private Map<String, List<String>> subjectsMap = new HashMap<>();
+    private Map<String, Map<String, String>> studentsCache = new HashMap<>();
     private List<String> currentSubjects = new ArrayList<>();
     private static final List<String> SECTIONS = Arrays.asList("A", "B", "C", "D", "E");
 
@@ -199,6 +207,16 @@ public class MainActivity extends AppCompatActivity {
         successSubtext = findViewById(R.id.successSubtext);
         successDoneButton = findViewById(R.id.successDoneButton);
 
+        // Update Overlay
+        updateOverlay = findViewById(R.id.updateOverlay);
+        updateTitleText = findViewById(R.id.updateTitleText);
+        updateVersionText = findViewById(R.id.updateVersionText);
+        updateChangelogText = findViewById(R.id.updateChangelogText);
+        updateProgressBar = findViewById(R.id.updateProgressBar);
+        updateProgressText = findViewById(R.id.updateProgressText);
+        updateButton = findViewById(R.id.updateButton);
+        updateLaterButton = findViewById(R.id.updateLaterButton);
+
         summaryList.setLayoutManager(new LinearLayoutManager(this));
         studentAdapter = new StudentAdapter(scannedStudents, this::removeStudent, apiBaseUrl);
         summaryList.setAdapter(studentAdapter);
@@ -231,6 +249,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         disconnectButton.setOnClickListener(v -> logout());
+
+        updateButton.setOnClickListener(v -> {
+            String url = updateButton.getTag() != null ? updateButton.getTag().toString() : "";
+            downloadUpdate(url);
+        });
+        updateLaterButton.setOnClickListener(v -> updateOverlay.setVisibility(View.GONE));
     }
 
     private void setupSpinners() {
@@ -255,8 +279,11 @@ public class MainActivity extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (view instanceof TextView)
                     ((TextView)view).setTextColor(Color.parseColor("#f8fafc"));
-                if (position >= 0 && position < classList.size())
-                    updateSubjectsForClass(classList.get(position));
+                if (position >= 0 && position < classList.size()) {
+                    String cls = classList.get(position);
+                    updateSubjectsForClass(cls);
+                    prefetchStudentsForClass(cls);
+                }
             }
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
@@ -522,6 +549,23 @@ public class MainActivity extends AppCompatActivity {
 
         loadSubjects();
         checkForUpdate();
+
+        // Pulse animation on scan button
+        scanButton.post(() -> startPulseAnimation(scanButton));
+    }
+
+    private void startPulseAnimation(View v) {
+        if (v == null) return;
+        ObjectAnimator anim = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.05f, 1f);
+        anim.setDuration(1500);
+        anim.setRepeatCount(ObjectAnimator.INFINITE);
+        anim.setInterpolator(new DecelerateInterpolator());
+        anim.start();
+        ObjectAnimator animY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 1.05f, 1f);
+        animY.setDuration(1500);
+        animY.setRepeatCount(ObjectAnimator.INFINITE);
+        animY.setInterpolator(new DecelerateInterpolator());
+        animY.start();
     }
 
     private void loadSubjects() {
@@ -603,6 +647,38 @@ public class MainActivity extends AppCompatActivity {
         subjectSpinner.setAdapter(adapter);
     }
 
+    private void prefetchStudentsForClass(String cls) {
+        if (apiBaseUrl == null || apiBaseUrl.isEmpty()) return;
+        String url = apiBaseUrl + "/api/students?class=" + cls;
+
+        JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, url, null,
+                response -> {
+                    if (response.optBoolean("success", false)) {
+                        JSONArray data = response.optJSONArray("data");
+                        if (data == null) return;
+                        studentsCache.clear();
+                        for (int i = 0; i < data.length(); i++) {
+                            JSONObject s = data.optJSONObject(i);
+                            if (s != null) {
+                                String id = s.optString("id", "");
+                                if (!id.isEmpty()) {
+                                    Map<String, String> m = new HashMap<>();
+                                    m.put("id", id);
+                                    m.put("name", s.optString("name", ""));
+                                    m.put("class", s.optString("class", ""));
+                                    m.put("section", s.optString("section", ""));
+                                    m.put("photo", s.optString("photo", ""));
+                                    studentsCache.put(id, m);
+                                }
+                            }
+                        }
+                    }
+                },
+                error -> {});
+        req.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+        requestQueue.add(req);
+    }
+
     // ─── QR SCAN ──────────────────────────────────────────
 
     private void startQrScan() {
@@ -646,23 +722,40 @@ public class MainActivity extends AppCompatActivity {
             String studentId = json.optString("student_id", "");
             if (studentId.isEmpty()) {
                 Toast.makeText(this, "Invalid QR code", Toast.LENGTH_SHORT).show();
+                if (isScanning) startQrScan();
                 return;
             }
 
             // Check if already scanned
             if (scannedStudentIds.contains(studentId)) {
-                Toast.makeText(this, "Already scanned this student", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Already scanned", Toast.LENGTH_SHORT).show();
                 if (isScanning) startQrScan();
                 return;
             }
 
-            fetchStudentInfo(studentId);
+            String selectedClass = classSpinner.getSelectedItem() != null ? classSpinner.getSelectedItem().toString() : "";
+
+            // Try cache first
+            Map<String, String> cached = studentsCache.get(studentId);
+            if (cached != null) {
+                String studentClass = cached.get("class");
+                if (!selectedClass.isEmpty() && !selectedClass.equals(studentClass)) {
+                    Toast.makeText(this, "Student not in class " + selectedClass, Toast.LENGTH_LONG).show();
+                    if (isScanning) startQrScan();
+                    return;
+                }
+                addStudentToScanList(cached);
+                return;
+            }
+
+            fetchStudentInfo(studentId, selectedClass);
         } catch (JSONException e) {
-            Toast.makeText(this, "Invalid QR data format", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Invalid QR data", Toast.LENGTH_SHORT).show();
+            if (isScanning) startQrScan();
         }
     }
 
-    private void fetchStudentInfo(String studentId) {
+    private void fetchStudentInfo(String studentId, String selectedClass) {
         String url = apiBaseUrl + "/api/students/" + studentId;
 
         JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, url, null,
@@ -676,21 +769,20 @@ public class MainActivity extends AppCompatActivity {
                         String section = student.optString("section", "");
                         String photo = student.optString("photo", "");
 
-                        Map<String, String> entry = new HashMap<>();
-                        entry.put("id", studentId);
-                        entry.put("name", name);
-                        entry.put("class", cls);
-                        entry.put("section", section);
-                        entry.put("photo", photo);
-                        scannedStudentIds.add(studentId);
-                        scannedStudents.add(entry);
-
-                        updateScanDisplay();
-                        Toast.makeText(this, "✓ " + name, Toast.LENGTH_SHORT).show();
-
-                        if (isScanning) {
-                            new Handler().postDelayed(this::startQrScan, 800);
+                        // Validate class
+                        if (!selectedClass.isEmpty() && !selectedClass.equals(cls)) {
+                            Toast.makeText(this, "Student not in class " + selectedClass, Toast.LENGTH_LONG).show();
+                            if (isScanning) startQrScan();
+                            return;
                         }
+
+                        // If photo empty, try Firebase fallback
+                        if (photo == null || photo.isEmpty()) {
+                            fetchPhotoFromFirebase(studentId, name, cls, section, selectedClass);
+                            return;
+                        }
+
+                        addStudentToScanList(studentId, name, cls, section, photo);
                     } else {
                         Toast.makeText(this, "Student not found", Toast.LENGTH_SHORT).show();
                         if (isScanning) startQrScan();
@@ -703,6 +795,43 @@ public class MainActivity extends AppCompatActivity {
 
         req.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
         requestQueue.add(req);
+    }
+
+    private void fetchPhotoFromFirebase(String studentId, String name, String cls, String section, String selectedClass) {
+        String fbUrl = "https://edupulse-attendance-qr-default-rtdb.asia-southeast1.firebasedatabase.app/students/"
+                + studentId + ".json";
+
+        JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, fbUrl, null,
+                response -> {
+                    String photo = response.optString("photo", "");
+                    addStudentToScanList(studentId, name, cls, section, photo);
+                },
+                error -> addStudentToScanList(studentId, name, cls, section, ""));
+        requestQueue.add(req);
+    }
+
+    private void addStudentToScanList(Map<String, String> cached) {
+        String id = cached.get("id");
+        scannedStudentIds.add(id);
+        scannedStudents.add(new HashMap<>(cached));
+        updateScanDisplay();
+        Toast.makeText(this, "✓ " + cached.get("name"), Toast.LENGTH_SHORT).show();
+        if (isScanning) new Handler().postDelayed(this::startQrScan, 800);
+    }
+
+    private void addStudentToScanList(String studentId, String name, String cls, String section, String photo) {
+        Map<String, String> entry = new HashMap<>();
+        entry.put("id", studentId);
+        entry.put("name", name);
+        entry.put("class", cls);
+        entry.put("section", section);
+        entry.put("photo", photo != null ? photo : "");
+        scannedStudentIds.add(studentId);
+        scannedStudents.add(entry);
+
+        updateScanDisplay();
+        Toast.makeText(this, "✓ " + name, Toast.LENGTH_SHORT).show();
+        if (isScanning) new Handler().postDelayed(this::startQrScan, 800);
     }
 
     private void updateScanDisplay() {
@@ -776,10 +905,15 @@ public class MainActivity extends AppCompatActivity {
         JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, url, body,
                 response -> {
                     loadingSubtext.setText((finalIndex + 1) + "/" + scannedStudents.size() + " - " + student.get("name"));
+                    String status = response.optJSONObject("attendance") != null
+                            ? response.optJSONObject("attendance").optString("status", "")
+                            : "";
+                    if (!status.isEmpty()) {
+                        scannedStudents.get(finalIndex).put("status", status);
+                    }
                     pushNext(finalIndex + 1, cls, section, subject);
                 },
                 error -> {
-                    // Continue anyway
                     loadingSubtext.setText((finalIndex + 1) + "/" + scannedStudents.size() + " - " + student.get("name"));
                     pushNext(finalIndex + 1, cls, section, subject);
                 });
@@ -881,10 +1015,26 @@ public class MainActivity extends AppCompatActivity {
                     String versionName = release.optString("tag_name", "v" + remoteVersion);
 
                     String finalApkUrl = apkUrl;
-                    runOnUiThread(() -> showUpdateDialog(versionName, changelog, finalApkUrl));
+                    String finalChangelog = changelog;
+                    runOnUiThread(() -> showUpdateOverlay(versionName, finalChangelog, finalApkUrl));
                 }
             } catch (Exception ignored) {}
         }).start();
+    }
+
+    private void showUpdateOverlay(String version, String changelog, String apkUrl) {
+        updateVersionText.setText(version);
+        updateChangelogText.setText(changelog);
+        updateButton.setTag(apkUrl);
+        updateOverlay.setVisibility(View.VISIBLE);
+        startPulseAnimation(updateOverlay.findViewById(android.R.id.content));
+    }
+
+    private void showUpdateProgress(int percent) {
+        updateProgressBar.setVisibility(View.VISIBLE);
+        updateProgressText.setVisibility(View.VISIBLE);
+        updateProgressBar.setProgress(percent);
+        updateProgressText.setText(percent + "%");
     }
 
     private int parseVersion(String tag) {
@@ -895,27 +1045,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showUpdateDialog(String version, String changelog, String apkUrl) {
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                .setTitle("Update Available " + version)
-                .setMessage(changelog)
-                .setPositiveButton("Update", (d, w) -> downloadUpdate(apkUrl))
-                .setNegativeButton("Later", null)
-                .show();
-    }
-
     private void downloadUpdate(String apkUrl) {
         if (apkUrl == null || apkUrl.isEmpty()) {
             Toast.makeText(this, "No APK found in release", Toast.LENGTH_SHORT).show();
             return;
         }
-        Toast.makeText(this, "Downloading update...", Toast.LENGTH_SHORT).show();
+        updateButton.setEnabled(false);
+        updateButton.setText("DOWNLOADING...");
+        showUpdateProgress(0);
 
         new Thread(() -> {
             try {
                 URL url = new URL(apkUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.connect();
+                int fileLength = conn.getContentLength();
 
                 File dir = new File(getExternalCacheDir(), "updates");
                 dir.mkdirs();
@@ -925,15 +1069,27 @@ public class MainActivity extends AppCompatActivity {
                      FileOutputStream fos = new FileOutputStream(apkFile)) {
                     byte[] buffer = new byte[8192];
                     int count;
+                    long total = 0;
                     while ((count = is.read(buffer)) > 0) {
                         fos.write(buffer, 0, count);
+                        total += count;
+                        if (fileLength > 0) {
+                            final int pct = (int) (total * 100 / fileLength);
+                            runOnUiThread(() -> showUpdateProgress(pct));
+                        }
                     }
                 }
 
-                runOnUiThread(() -> installApk(apkFile));
+                runOnUiThread(() -> {
+                    updateOverlay.setVisibility(View.GONE);
+                    installApk(apkFile);
+                });
             } catch (Exception e) {
-                runOnUiThread(() ->
-                        Toast.makeText(this, "Download failed", Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> {
+                    updateButton.setEnabled(true);
+                    updateButton.setText("UPDATE NOW");
+                    Toast.makeText(this, "Download failed", Toast.LENGTH_LONG).show();
+                });
             }
         }).start();
     }
@@ -1005,6 +1161,32 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 holder.photo.setImageDrawable(null);
             }
+
+            // Status badge
+            String status = s.get("status");
+            if (status != null && !status.isEmpty()) {
+                holder.statusBadge.setVisibility(View.VISIBLE);
+                holder.statusBadge.setText(status.toUpperCase());
+                switch (status) {
+                    case "late":
+                        holder.statusBadge.setTextColor(Color.parseColor("#f59e0b"));
+                        holder.statusBadge.setBackgroundColor(Color.parseColor("#2d1f00"));
+                        break;
+                    case "early":
+                        holder.statusBadge.setTextColor(Color.parseColor("#00ffff"));
+                        holder.statusBadge.setBackgroundColor(Color.parseColor("#003333"));
+                        break;
+                    case "present":
+                        holder.statusBadge.setTextColor(Color.parseColor("#22c55e"));
+                        holder.statusBadge.setBackgroundColor(Color.parseColor("#0a2e1a"));
+                        break;
+                    default:
+                        holder.statusBadge.setTextColor(Color.parseColor("#94a3b8"));
+                        holder.statusBadge.setBackgroundColor(Color.parseColor("#1a1a1e"));
+                }
+            } else {
+                holder.statusBadge.setVisibility(View.GONE);
+            }
         }
 
         private void loadPhoto(ImageView iv, String url) {
@@ -1036,12 +1218,13 @@ public class MainActivity extends AppCompatActivity {
 
         class ViewHolder extends RecyclerView.ViewHolder {
             ImageView photo;
-            TextView name, detail, removeBtn;
+            TextView name, detail, removeBtn, statusBadge;
             ViewHolder(android.view.View itemView) {
                 super(itemView);
                 photo = itemView.findViewById(R.id.studentPhoto);
                 name = itemView.findViewById(R.id.studentName);
                 detail = itemView.findViewById(R.id.studentDetail);
+                statusBadge = itemView.findViewById(R.id.statusBadge);
                 removeBtn = itemView.findViewById(R.id.removeButton);
                 removeBtn.setOnClickListener(v -> {
                     int pos = getAdapterPosition();

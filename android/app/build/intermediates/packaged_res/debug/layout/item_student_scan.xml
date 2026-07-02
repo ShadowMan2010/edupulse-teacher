@@ -41,6 +41,16 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/statusBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="24dp"
+        android:textSize="10sp"
+        android:gravity="center"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone"/>
+
+    <TextView
         android:id="@+id/removeButton"
         android:layout_width="32dp"
         android:layout_height="32dp"
