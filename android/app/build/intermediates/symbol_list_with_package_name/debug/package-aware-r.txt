@@ -3457,6 +3457,7 @@ id startToEnd
 id startVertical
 id staticLayout
 id staticPostLayout
+id statusBadge
 id stop
 id stretch
 id studentDetail
@@ -3521,6 +3522,14 @@ id unchecked
 id uniform
 id unlabeled
 id up
+id updateButton
+id updateChangelogText
+id updateLaterButton
+id updateOverlay
+id updateProgressBar
+id updateProgressText
+id updateTitleText
+id updateVersionText
 id useLogo
 id userEmailText
 id view_offset_helper

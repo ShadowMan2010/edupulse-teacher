@@ -4,8 +4,8 @@
         "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/xml/network_security_config.xml"
     },
     {
-        "merged": "com.edupulse.teacher.app-merged_res-36:/layout_activity_main.xml.flat",
-        "source": "com.edupulse.teacher.app-main-38:/layout/activity_main.xml"
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/layout_item_student_scan.xml.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/layout/item_student_scan.xml"
     },
     {
         "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/drawable_logo.png.flat",

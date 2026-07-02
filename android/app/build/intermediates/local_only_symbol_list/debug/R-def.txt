@@ -34,6 +34,7 @@ id sectionSpinner
 id splashContainer
 id splashLogo
 id splashTitle
+id statusBadge
 id studentDetail
 id studentName
 id studentPhoto
@@ -44,6 +45,14 @@ id successOverlay
 id successSubtext
 id summaryCountText
 id summaryList
+id updateButton
+id updateChangelogText
+id updateLaterButton
+id updateOverlay
+id updateProgressBar
+id updateProgressText
+id updateTitleText
+id updateVersionText
 id userEmailText
 layout activity_main
 layout item_student_scan
