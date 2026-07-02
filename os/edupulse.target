@@ -1,0 +1,6 @@
+[Unit]
+Description=EduPulse Attendance System (API + Scanner + Bot)
+After=network.target
+
+[Install]
+WantedBy=multi-user.target

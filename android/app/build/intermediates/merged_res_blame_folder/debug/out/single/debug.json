@@ -1,0 +1,42 @@
+[
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/xml_network_security_config.xml.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/layout_activity_main.xml.flat",
+        "source": "com.edupulse.teacher.app-main-38:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/drawable_logo.png.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/drawable/logo.png"
+    },
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/xml_file_paths.xml.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/xml/file_paths.xml"
+    },
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/drawable_bg_button_cyber.xml.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/drawable/bg_button_cyber.xml"
+    },
+    {
+        "merged": "com.edupulse.teacher.app-merged_res-36:/layout_item_student_scan.xml.flat",
+        "source": "com.edupulse.teacher.app-main-38:/layout/item_student_scan.xml"
+    },
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/layout_activity_main.xml.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/drawable_loading_ring.xml.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/drawable/loading_ring.xml"
+    },
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/font_orbitron.ttf.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/font/orbitron.ttf"
+    },
+    {
+        "merged": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-merged_res-36:/drawable_bg_success_circle.xml.flat",
+        "source": "/home/dhruba/.gradle/daemon/8.14.4/com.edupulse.teacher.app-main-38:/drawable/bg_success_circle.xml"
+    }
+]

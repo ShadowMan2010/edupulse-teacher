@@ -1,3 +1,11 @@
+// ── Google Fonts (loaded async so CSS is not blocked) ──
+(function() {
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap';
+  document.head.appendChild(link);
+})();
+
 // ── EduPulse Theme Utilities ──
 
 function initClock() {
@@ -123,13 +131,42 @@ function setActiveNav() {
 }
 
 // ── FIREBASE AUTH REDIRECT GUARD ──
+// Content is hidden by an inline <script> in each page's <head>.
+// This function reveals it after successful auth verification.
+
 function requireAuth(redirectTo = '/pages/login.html') {
-  // Demo mode bypass
   var demo = sessionStorage.getItem('edupulse_demo');
-  if (demo) return;
-  firebase.auth().onAuthStateChanged(user => {
-    if (!user) window.location.href = redirectTo;
-  });
+  if (demo) {
+    document.documentElement.style.visibility = 'visible';
+    return;
+  }
+  // Check currentUser synchronously first (fast path for cached sessions)
+  try {
+    if (firebase.auth().currentUser) {
+      document.documentElement.style.visibility = 'visible';
+      return;
+    }
+  } catch(e) {
+    window.location.href = redirectTo;
+    return;
+  }
+  // No cached session — wait for onAuthStateChanged with a timeout
+  var timer = setTimeout(function() {
+    window.location.href = redirectTo;
+  }, 4000);
+  try {
+    firebase.auth().onAuthStateChanged(function(user) {
+      clearTimeout(timer);
+      if (user) {
+        document.documentElement.style.visibility = 'visible';
+      } else {
+        window.location.href = redirectTo;
+      }
+    });
+  } catch(e) {
+    clearTimeout(timer);
+    window.location.href = redirectTo;
+  }
 }
 
 function getUserRole(uid) {
@@ -137,12 +174,33 @@ function getUserRole(uid) {
 }
 
 function requireRole(allowedRoles, redirectTo = '/pages/login.html') {
-  firebase.auth().onAuthStateChanged(user => {
-    if (!user) return window.location.href = redirectTo;
-    getUserRole(user.uid).then(role => {
+  function checkAndShow(user) {
+    if (!user) { window.location.href = redirectTo; return; }
+    getUserRole(user.uid).then(function(role) {
       if (!allowedRoles.includes(role)) window.location.href = redirectTo;
+      else document.documentElement.style.visibility = 'visible';
     });
-  });
+  }
+  // Fast path: check currentUser synchronously
+  try {
+    if (firebase.auth().currentUser) {
+      checkAndShow(firebase.auth().currentUser);
+      return;
+    }
+  } catch(e) {
+    window.location.href = redirectTo;
+    return;
+  }
+  var timer = setTimeout(function() { window.location.href = redirectTo; }, 4000);
+  try {
+    firebase.auth().onAuthStateChanged(function(user) {
+      clearTimeout(timer);
+      checkAndShow(user);
+    });
+  } catch(e) {
+    clearTimeout(timer);
+    window.location.href = redirectTo;
+  }
 }
 
 // ── Splash Screen ──

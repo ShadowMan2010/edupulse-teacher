@@ -1,0 +1,13 @@
+[Unit]
+Description=EduPulse OTA Update Check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash /home/pi/edupulse/os/ota-update.sh
+User=root
+WorkingDirectory=/home/pi/edupulse
+
+[Install]
+WantedBy=multi-user.target

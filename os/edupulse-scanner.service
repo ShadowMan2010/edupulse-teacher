@@ -1,0 +1,18 @@
+[Unit]
+Description=EduPulse QR Scanner Kiosk
+After=edupulse-api.service
+BindsTo=edupulse-api.service
+PartOf=edupulse.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pi/edupulse/scanner/scanner.py
+WorkingDirectory=/home/pi/edupulse
+Restart=on-failure
+RestartSec=5
+User=pi
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+
+[Install]
+WantedBy=edupulse.target

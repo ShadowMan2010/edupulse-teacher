@@ -56,16 +56,6 @@ function dbUpdate(path, data) {
 function dbRemove(path) {
   return db.ref(path).remove();
 }
-function dbList(path) {
-  return dbGet(path).then(function(data) {
-    var arr = [];
-    for (var k in data) {
-      if (data.hasOwnProperty(k)) { arr.push(Object.assign({id: k}, data[k])); }
-    }
-    return arr;
-  });
-}
-
 // ── Storage ──
 function uploadPhoto(file, path) {
   var ref = storage.ref(path);
@@ -82,27 +72,36 @@ function getCurrentUserRole() {
 
 // ── STUDENT CRUD ──
 function getStudents() {
-  // Try local API first, fall back to Firebase
-  return fetch('http://localhost:3000/api/students', {signal: AbortSignal.timeout(3000)})
+  return fetch('http://localhost:3000/api/students')
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.success && Array.isArray(d.data)) return d.data.filter(function(s) { return s.active !== false; });
-      return fbGetStudents();
+      if (d.success && Array.isArray(d.data)) return d.data.filter(function(s) { return s.active == 1 || s.active === true; });
+      throw new Error(d.message || 'Failed to fetch students');
     })
-    .catch(function() { return fbGetStudents(); });
-}
-
-function fbGetStudents() {
-  return dbList('students').then(function(arr) {
-    return arr.filter(function(s) { return s.active !== false; });
-  });
+    .catch(function() {
+      return dbGet('students').then(function(all) {
+        var arr = [];
+        for (var k in all) {
+          if (all.hasOwnProperty(k)) {
+            var s = Object.assign({id: k}, all[k]);
+            if (s.active == 1 || s.active === true || s.active === undefined) arr.push(s);
+          }
+        }
+        return arr;
+      });
+    });
 }
 
 function getStudent(id) {
   return fetch('http://localhost:3000/api/students/' + id, {signal: AbortSignal.timeout(3000)})
     .then(function(r) { return r.json(); })
-    .then(function(d) { return d.success ? d.data : dbGet('students/' + id); })
-    .catch(function() { return dbGet('students/' + id); });
+    .then(function(d) {
+      if (d.success) return d.data;
+      throw new Error(d.message || 'Failed to fetch student');
+    })
+    .catch(function() {
+      return dbGet('students/' + id).then(function(s) { return s ? Object.assign({id: id}, s) : null; });
+    });
 }
 
 function addStudent(data) {
@@ -113,15 +112,10 @@ function addStudent(data) {
     signal: AbortSignal.timeout(3000)
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.success) return d.data;
-    return fbAddStudent(data);
-  }).catch(function() { return fbAddStudent(data); });
-}
-
-function fbAddStudent(data) {
-  var ref = db.ref('students').push();
-  data.active = true;
-  data.created_at = firebase.database.ServerValue.TIMESTAMP;
-  return ref.set(data).then(function() { return Object.assign({id: ref.key}, data); });
+    throw new Error(d.message || 'Failed to save student');
+  }).catch(function() {
+    return dbPush('students', data).then(function(ref) { return Object.assign({id: ref.key}, data); });
+  });
 }
 
 function updateStudent(id, data) {
@@ -132,18 +126,21 @@ function updateStudent(id, data) {
     signal: AbortSignal.timeout(3000)
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.success) return d.data;
-    return db.ref('students/' + id).update(data);
-  }).catch(function() { return db.ref('students/' + id).update(data); });
+    throw new Error(d.message || 'Failed to update student');
+  }).catch(function() {
+    return dbUpdate('students/' + id, data).then(function() { return Object.assign({id: id}, data); });
+  });
 }
 
 function deactivateStudent(id) {
   return fetch('http://localhost:3000/api/students/' + id, {
-    method: 'DELETE',
-    signal: AbortSignal.timeout(3000)
+    method: 'DELETE'
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.success) return;
-    return db.ref('students/' + id).update({active: false});
-  }).catch(function() { return db.ref('students/' + id).update({active: false}); });
+    throw new Error(d.message || 'Failed to deactivate student');
+  }).catch(function() {
+    return dbUpdate('students/' + id, {active: false});
+  });
 }
 
 // ── ATTENDANCE ──
@@ -173,11 +170,13 @@ function fbGetSettings() {
   });
 }
 
-function recordAttendance(studentId, status, scannedBy) {
+function recordAttendance(studentId, status, scannedBy, period, subject) {
   scannedBy = scannedBy || 'kiosk';
   var date = getTodaysDate();
   var time = getTimeStr();
   var data = { student_id: studentId, date: date, time: time, status: status || 'present', scanned_by: scannedBy };
+  if (period !== undefined) data.period = period;
+  if (subject) data.subject = subject;
   return fetch('http://localhost:3000/api/attendance/scan', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -185,13 +184,15 @@ function recordAttendance(studentId, status, scannedBy) {
     signal: AbortSignal.timeout(3000)
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.success) return d.data || d.attendance;
-    return fbRecordAttendance(studentId, status, scannedBy);
-  }).catch(function() { return fbRecordAttendance(studentId, status, scannedBy); });
+    return fbRecordAttendance(studentId, status, scannedBy, period, subject);
+  }).catch(function() { return fbRecordAttendance(studentId, status, scannedBy, period, subject); });
 }
 
-function fbRecordAttendance(studentId, status, scannedBy) {
+function fbRecordAttendance(studentId, status, scannedBy, period, subject) {
   var ref = db.ref('attendance').push();
   var data = { student_id: studentId, date: getTodaysDate(), time: getTimeStr(), status: status || 'present', scanned_by: scannedBy || 'kiosk' };
+  if (period !== undefined) data.period = period;
+  if (subject) data.subject = subject;
   return ref.set(data).then(function() { return Object.assign({id: ref.key}, data); });
 }
 
@@ -287,7 +288,7 @@ function getAttendanceSummary(date) {
     var total = students.length;
     var present = records.filter(function(r) { return r.status === 'present'; }).length;
     var late = records.filter(function(r) { return r.status === 'late'; }).length;
-    var scanned = present + late;
+    var scanned = records.length;
     var absent = total - scanned;
 
     // Class-wise
@@ -355,4 +356,29 @@ function generateAttendanceData(filters) {
 // ── SETTINGS HELPERS ──
 function saveSettings(data) {
   return dbSet('settings', data);
+}
+
+// ── SUBJECTS ──
+function getSubjects() {
+  return fetch('http://localhost:3000/api/subjects')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) return d.data || {};
+      throw new Error(d.message || 'Failed to load subjects');
+    })
+    .catch(function() {
+      return dbGet('subjects').then(function(s) { return s || {}; });
+    });
+}
+function saveSubjects(data) {
+  return fetch('http://localhost:3000/api/subjects', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) return;
+    throw new Error(d.message || 'Failed to save subjects');
+  }).catch(function() {
+    return dbSet('subjects', data);
+  });
 }

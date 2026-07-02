@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merger version="3"><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/home/dhruba/edupulse/android/app/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main" generated-set="main$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/home/dhruba/edupulse/android/app/src/main/res"><file name="activity_main" path="/home/dhruba/edupulse/android/app/src/main/res/layout/activity_main.xml" qualifiers="" type="layout"/><file path="/home/dhruba/edupulse/android/app/src/main/res/values/strings.xml" qualifiers=""><string name="app_name">EduPulse Teacher</string><string name="pwa_url">https://edupulse-attendance-qr.web.app</string><string name="update_url">https://edupulse-attendance-qr.web.app/version.json</string></file><file path="/home/dhruba/edupulse/android/app/src/main/res/values/themes.xml" qualifiers=""><style name="Theme.EduPulse" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#00ffff</item>
+        <item name="colorPrimaryVariant">#00cccc</item>
+        <item name="colorOnPrimary">#0a0a0b</item>
+        <item name="colorSecondary">#00ffff</item>
+        <item name="colorSecondaryVariant">#00cccc</item>
+        <item name="colorOnSecondary">#0a0a0b</item>
+        <item name="android:colorBackground">#0a0a0b</item>
+        <item name="colorSurface">#111113</item>
+        <item name="colorOnSurface">#f8fafc</item>
+        <item name="android:statusBarColor">#0a0a0b</item>
+        <item name="android:navigationBarColor">#0a0a0b</item>
+    </style><style name="Widget.EduPulse.Button" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">#00ffff</item>
+        <item name="android:textColor">#0a0a0b</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="cornerRadius">12dp</item>
+    </style><style name="Widget.EduPulse.Button.Outline" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="strokeColor">#00ffff</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:textColor">#00ffff</item>
+        <item name="cornerRadius">12dp</item>
+    </style><style name="Widget.EduPulse.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">#00ffff</item>
+        <item name="boxStrokeWidth">1.5dp</item>
+        <item name="hintTextColor">#94a3b8</item>
+    </style></file><file name="network_security_config" path="/home/dhruba/edupulse/android/app/src/main/res/xml/network_security_config.xml" qualifiers="" type="xml"/><file name="logo" path="/home/dhruba/edupulse/android/app/src/main/res/drawable/logo.png" qualifiers="" type="drawable"/><file name="bg_button_cyber" path="/home/dhruba/edupulse/android/app/src/main/res/drawable/bg_button_cyber.xml" qualifiers="" type="drawable"/><file name="loading_ring" path="/home/dhruba/edupulse/android/app/src/main/res/drawable/loading_ring.xml" qualifiers="" type="drawable"/><file name="bg_success_circle" path="/home/dhruba/edupulse/android/app/src/main/res/drawable/bg_success_circle.xml" qualifiers="" type="drawable"/><file name="orbitron" path="/home/dhruba/edupulse/android/app/src/main/res/font/orbitron.ttf" qualifiers="" type="font"/><file name="file_paths" path="/home/dhruba/edupulse/android/app/src/main/res/xml/file_paths.xml" qualifiers="" type="xml"/><file name="item_student_scan" path="/home/dhruba/edupulse/android/app/src/main/res/layout/item_student_scan.xml" qualifiers="" type="layout"/></source></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/home/dhruba/edupulse/android/app/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug" generated-set="debug$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/home/dhruba/edupulse/android/app/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/home/dhruba/edupulse/android/app/build/generated/res/resValues/debug"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated" generated-set="generated$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/home/dhruba/edupulse/android/app/build/generated/res/resValues/debug"/></dataSet><mergedItems/></merger>

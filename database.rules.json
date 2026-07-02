@@ -2,6 +2,10 @@
   "rules": {
     ".read": "auth != null",
     ".write": "auth != null",
+    "subjects": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
     "settings": {
       ".read": "auth != null",
       ".write": "auth != null"
@@ -12,7 +16,8 @@
     },
     "attendance": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null",
+      ".indexOn": ["date"]
     },
     "users": {
       ".read": "auth != null",

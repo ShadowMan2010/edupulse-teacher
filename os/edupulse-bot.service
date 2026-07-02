@@ -1,0 +1,17 @@
+[Unit]
+Description=EduPulse Telegram Parent Bot
+After=edupulse-api.service
+BindsTo=edupulse-api.service
+PartOf=edupulse.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/edupulse/bot
+ExecStart=/usr/bin/python3 /home/pi/edupulse/bot/bot.py
+Restart=always
+RestartSec=10
+Environment=API_BASE=http://localhost:3000
+
+[Install]
+WantedBy=edupulse.target
