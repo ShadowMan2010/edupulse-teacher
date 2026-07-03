@@ -28,10 +28,9 @@ public class ConfettiView extends View {
         int color;
     }
 
-    public ConfettiView(Context context) {
-        super(context);
-        paint.setStyle(Paint.Style.FILL);
-    }
+    public ConfettiView(Context context) { super(context); paint.setStyle(Paint.Style.FILL); }
+    public ConfettiView(Context context, android.util.AttributeSet attrs) { super(context, attrs); paint.setStyle(Paint.Style.FILL); }
+    public ConfettiView(Context context, android.util.AttributeSet attrs, int defStyle) { super(context, attrs, defStyle); paint.setStyle(Paint.Style.FILL); }
 
     public void burst() {
         pieces.clear();

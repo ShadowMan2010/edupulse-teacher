@@ -13,8 +13,11 @@ public class ScanPulseView extends View {
     private float ringRadius = 0f;
     private float ringAlpha = 1f;
 
-    public ScanPulseView(Context context) {
-        super(context);
+    public ScanPulseView(Context context) { super(context); init(); }
+    public ScanPulseView(Context context, android.util.AttributeSet attrs) { super(context, attrs); init(); }
+    public ScanPulseView(Context context, android.util.AttributeSet attrs, int defStyle) { super(context, attrs, defStyle); init(); }
+
+    private void init() {
         ringPaint.setStyle(Paint.Style.STROKE);
         ringPaint.setStrokeWidth(3f);
         ringPaint.setColor(0xFF00FFFF);

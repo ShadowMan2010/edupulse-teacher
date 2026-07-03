@@ -43,10 +43,9 @@ public class CyberBgView extends View {
         float driftX, driftY;
     }
 
-    public CyberBgView(Context context) {
-        super(context);
-        init();
-    }
+    public CyberBgView(Context context) { super(context); init(); }
+    public CyberBgView(Context context, android.util.AttributeSet attrs) { super(context, attrs); init(); }
+    public CyberBgView(Context context, android.util.AttributeSet attrs, int defStyle) { super(context, attrs, defStyle); init(); }
 
     private void init() {
         particlePaint.setStyle(Paint.Style.FILL);
