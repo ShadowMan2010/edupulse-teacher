@@ -1,8 +1,8 @@
 {
-  "version": 2,
-  "version_name": "2.0.0",
-  "apk_url": "https://github.com/ShadowMan2010/edupulse-teacher/releases/download/v2/edupulse-teacher-v2.apk",
-  "changelog": "- Student photos in scan list\n- Auto-show summary after scan\n- Quick subject/class selection\n- Subjects API seeding\n- API server Telegram notifications\n- Bug fixes and performance improvements",
-  "release_date": "2026-07-02",
+  "version": 3,
+  "version_name": "3.0.0",
+  "apk_url": "https://github.com/ShadowMan2010/edupulse-teacher/releases/download/v3/edupulse-teacher.apk",
+  "changelog": "- Scanner auto-rotation fixed (portrait lock)\n- Loading spinner on splash screen\n- Class/Subject info badge on scan screen\n- Glass effect UI panels\n- Classes 8,9,10 added to subject selector\n- OTA check reliability improvements",
+  "release_date": "2026-07-03",
   "min_android_version": 24
 }
