@@ -367,7 +367,17 @@ function getSubjects() {
       throw new Error(d.message || 'Failed to load subjects');
     })
     .catch(function() {
-      return dbGet('subjects').then(function(s) { return s || {}; });
+      return dbGet('subjects').then(function(s) {
+        if (!s) return {};
+        if (Array.isArray(s)) {
+          var obj = {};
+          for (var i = 0; i < s.length; i++) {
+            if (s[i]) obj[String(i)] = s[i];
+          }
+          return obj;
+        }
+        return s;
+      });
     });
 }
 function saveSubjects(data) {
