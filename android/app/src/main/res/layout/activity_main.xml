@@ -3,7 +3,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0a0a0b">
+    android:background="#0a0a0b"
+    android:keepScreenOn="true">
+
+    <!-- Animated Cyberpunk Background -->
+    <com.edupulse.teacher.CyberBgView
+        android:id="@+id/cyberBg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
     <!-- ═══════════════════════ SPLASH SCREEN ═══════════════════════ -->
     <LinearLayout
@@ -444,24 +451,33 @@
             android:textColor="#94a3b8"
             android:visibility="gone"/>
 
-        <!-- Scan Button -->
-        <Button
-            android:id="@+id/scanButton"
+        <!-- Scan Button with Pulse Ring -->
+        <FrameLayout
             android:layout_width="220dp"
             android:layout_height="220dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="#00ffff"
-            android:text="SCAN\nQR"
-            android:textSize="22sp"
-            android:textColor="#0a0a0b"
-            android:fontFamily="sans-serif-black"
-            android:includeFontPadding="false"
-            android:letterSpacing="0.1"
-            android:gravity="center"
-            android:stateListAnimator="@null"
-            android:elevation="8dp"
-            android:translationZ="12dp"/>
+            android:layout_marginTop="8dp">
+
+            <com.edupulse.teacher.ScanPulseView
+                android:layout_width="220dp"
+                android:layout_height="220dp"/>
+
+            <Button
+                android:id="@+id/scanButton"
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:backgroundTint="#00ffff"
+                android:text="SCAN\nQR"
+                android:textSize="22sp"
+                android:textColor="#0a0a0b"
+                android:fontFamily="sans-serif-black"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.1"
+                android:gravity="center"
+                android:stateListAnimator="@null"
+                android:elevation="8dp"
+                android:translationZ="12dp"/>
+        </FrameLayout>
 
         <!-- Scanned List Preview -->
         <TextView
@@ -607,6 +623,11 @@
         android:background="#CC0a0a0b"
         android:visibility="gone"
         android:clickable="true">
+
+        <com.edupulse.teacher.ConfettiView
+            android:id="@+id/confettiView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
 
         <LinearLayout
             android:layout_width="wrap_content"

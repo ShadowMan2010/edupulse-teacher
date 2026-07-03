@@ -3,6 +3,7 @@ package com.edupulse.teacher;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -155,6 +156,21 @@ public class MainActivity extends AppCompatActivity {
         // Splash
         splashContainer = findViewById(R.id.splashContainer);
         splashTitle = findViewById(R.id.splashTitle);
+
+        if (splashTitle != null) {
+            splashTitle.post(() -> {
+                ValueAnimator glitch = ValueAnimator.ofFloat(0f, 1f);
+                glitch.setDuration(180);
+                glitch.setRepeatCount(ValueAnimator.INFINITE);
+                glitch.setRepeatMode(ValueAnimator.REVERSE);
+                glitch.addUpdateListener(a -> {
+                    float v = a.getAnimatedFraction();
+                    splashTitle.setTranslationX((float) (Math.sin(v * 50) * 2.5f));
+                    splashTitle.setAlpha(0.85f + (float) (Math.sin(v * 30) * 0.15f));
+                });
+                glitch.start();
+            });
+        }
 
         // Login
         loginContainer = findViewById(R.id.loginContainer);
@@ -964,6 +980,10 @@ public class MainActivity extends AppCompatActivity {
         scaleY.start();
 
         successOverlay.setVisibility(View.VISIBLE);
+
+        // Confetti burst!
+        ConfettiView confetti = findViewById(R.id.confettiView);
+        if (confetti != null) confetti.burst();
     }
 
     // ─── LOADING OVERLAY ─────────────────────────────────
