@@ -66,7 +66,7 @@ public class DigitalLoader extends View {
 
         scanlinePaint.setStyle(Paint.Style.STROKE);
         scanlinePaint.setStrokeWidth(1f);
-        scanlinePaint.setColor(Color.parseColor("#08000000"));
+        scanlinePaint.setColor(Color.parseColor("#0AFFFFFF"));
 
         ValueAnimator rotAnim = ValueAnimator.ofFloat(0f, 360f);
         rotAnim.setDuration(2000);

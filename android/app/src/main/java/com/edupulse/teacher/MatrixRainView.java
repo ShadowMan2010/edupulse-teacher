@@ -59,7 +59,7 @@ public class MatrixRainView extends View {
 
         scanlinePaint.setStyle(Paint.Style.STROKE);
         scanlinePaint.setStrokeWidth(1f);
-        scanlinePaint.setColor(Color.parseColor("#05000000"));
+        scanlinePaint.setColor(Color.parseColor("#0AFFFFFF"));
 
         ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
         anim.setDuration(50);

@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0a0a0b"
+    android:background="#000000"
     android:keepScreenOn="true">
 
     <!-- Animated Cyberpunk Background -->
@@ -17,7 +17,7 @@
         android:id="@+id/splashContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#0a0a0b"
+        android:background="#000000"
         android:visibility="visible">
 
         <com.edupulse.teacher.MatrixRainView
@@ -45,7 +45,7 @@
                 android:layout_height="wrap_content"
                 android:text="EDUPULSE"
                 android:textSize="28sp"
-                android:textColor="#00ffff"
+                android:textColor="#00E5FF"
                 android:layout_marginTop="16dp"/>
 
             <TextView
@@ -53,8 +53,8 @@
                 android:layout_height="wrap_content"
                 android:text="Teacher"
                 android:textSize="14sp"
-                android:textColor="#94a3b8"
-                android:fontFamily="@font/inter_medium"
+                android:textColor="#9E9E9E"
+                android:fontFamily="sans-serif"
                 android:letterSpacing="0.2"
                 android:layout_marginTop="4dp"/>
 
@@ -87,7 +87,8 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:padding="32dp">
+                android:paddingHorizontal="20dp"
+                android:paddingTop="32dp">
 
                 <ImageView
                     android:layout_width="80dp"
@@ -101,7 +102,7 @@
                     android:layout_height="wrap_content"
                     android:text="EDUPULSE"
                     android:textSize="24sp"
-                    android:textColor="#00ffff"
+                    android:textColor="#00E5FF"
                     android:layout_marginTop="12dp"/>
 
                 <TextView
@@ -109,8 +110,8 @@
                     android:layout_height="wrap_content"
                     android:text="Teacher Sign In"
                     android:textSize="16sp"
-                    android:textColor="#94a3b8"
-                    android:fontFamily="@font/inter_medium"
+                    android:textColor="#9E9E9E"
+                    android:fontFamily="sans-serif"
                     android:layout_marginTop="36dp"/>
 
                 <LinearLayout
@@ -134,8 +135,8 @@
                         android:layout_height="wrap_content"
                         android:hint="Email"
                         android:inputType="textEmailAddress"
-                        android:textColor="#f8fafc"
-                        android:fontFamily="@font/inter_regular"/>
+                        android:textColor="#E0E0E0"
+                        android:fontFamily="sans-serif"/>
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -154,8 +155,8 @@
                         android:layout_height="wrap_content"
                         android:hint="Password"
                         android:inputType="textPassword"
-                        android:textColor="#f8fafc"
-                        android:fontFamily="@font/inter_regular"/>
+                        android:textColor="#E0E0E0"
+                        android:fontFamily="sans-serif"/>
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -174,9 +175,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="or"
-                    android:textColor="#94a3b8"
+                    android:textColor="#9E9E9E"
                     android:textSize="13sp"
-                    android:fontFamily="@font/inter_regular"
+                    android:fontFamily="sans-serif"
                     android:gravity="center"/>
 
                 <com.google.android.gms.common.SignInButton
@@ -191,9 +192,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:textColor="#ef4444"
+                    android:textColor="#FF3B3B"
                     android:textSize="13sp"
-                    android:fontFamily="@font/inter_regular"
+                    android:fontFamily="sans-serif"
                     android:gravity="center"
                     android:visibility="gone"/>
 
@@ -229,8 +230,8 @@
                 android:layout_height="wrap_content"
                 android:text="Connect to Server"
                 android:textSize="22sp"
-                android:textColor="#f8fafc"
-                android:fontFamily="@font/inter_semibold"
+                android:textColor="#E0E0E0"
+                android:fontFamily="sans-serif"
                 android:layout_marginTop="32dp"/>
 
             <TextView
@@ -238,8 +239,8 @@
                 android:layout_height="wrap_content"
                 android:text="Enter the server IP address"
                 android:textSize="14sp"
-                android:textColor="#94a3b8"
-                android:fontFamily="@font/inter_regular"
+                android:textColor="#9E9E9E"
+                android:fontFamily="sans-serif"
                 android:layout_marginTop="8dp"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -256,8 +257,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Server IP (e.g. 192.168.1.100)"
                     android:inputType="text"
-                    android:textColor="#f8fafc"
-                    android:fontFamily="@font/jetbrainsmono_regular"/>
+                    android:textColor="#E0E0E0"
+                    android:fontFamily="monospace"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -275,8 +276,8 @@
                     android:hint="Port"
                     android:inputType="number"
                     android:text="3000"
-                    android:textColor="#f8fafc"
-                    android:fontFamily="@font/jetbrainsmono_regular"/>
+                    android:textColor="#E0E0E0"
+                    android:fontFamily="monospace"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -295,9 +296,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="#94a3b8"
+                android:textColor="#9E9E9E"
                 android:textSize="13sp"
-                android:fontFamily="@font/inter_regular"
+                android:fontFamily="sans-serif"
                 android:gravity="center"/>
 
         </LinearLayout>
@@ -333,8 +334,8 @@
                 android:layout_weight="1"
                 android:text="EduPulse"
                 android:textSize="15sp"
-                android:textColor="#00ffff"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#00E5FF"
+                android:fontFamily="monospace"
                 android:letterSpacing="0.1"
                 android:layout_marginStart="10dp"/>
 
@@ -343,8 +344,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:textColor="#64748b"
-                android:fontFamily="@font/jetbrainsmono_medium"
+                android:textColor="#9E9E9E"
+                android:fontFamily="monospace"
                 android:layout_marginEnd="8dp"
                 android:maxLines="1"
                 android:ellipsize="end"/>
@@ -355,11 +356,11 @@
                 android:layout_height="32dp"
                 android:text="Exit"
                 android:textSize="10sp"
-                android:backgroundTint="#ef4444"
+                android:backgroundTint="#FF3B3B"
                 android:textColor="#fff"
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:fontFamily="monospace"
                 app:cornerRadius="8dp"/>
         </LinearLayout>
 
@@ -386,8 +387,8 @@
                     android:layout_height="wrap_content"
                     android:text="SCANNED STUDENTS"
                     android:textSize="10sp"
-                    android:textColor="#64748b"
-                    android:fontFamily="@font/jetbrainsmono_bold"
+                    android:textColor="#9E9E9E"
+                    android:fontFamily="monospace"
                     android:letterSpacing="0.12"/>
 
                 <TextView
@@ -396,8 +397,8 @@
                     android:layout_height="wrap_content"
                     android:text="0"
                     android:textSize="36sp"
-                    android:textColor="#00ffff"
-                    android:fontFamily="@font/jetbrainsmono_bold"
+                    android:textColor="#00E5FF"
+                    android:fontFamily="monospace"
                     android:layout_marginTop="2dp"/>
             </LinearLayout>
 
@@ -406,8 +407,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="10sp"
-                android:textColor="#64748b"
-                android:fontFamily="@font/jetbrainsmono_medium"
+                android:textColor="#9E9E9E"
+                android:fontFamily="monospace"
                 android:gravity="end"
                 android:visibility="gone"/>
         </LinearLayout>
@@ -418,8 +419,8 @@
             android:layout_height="wrap_content"
             android:text="CLASS &amp; SUBJECT"
             android:textSize="10sp"
-            android:textColor="#00ffff"
-            android:fontFamily="@font/jetbrainsmono_bold"
+            android:textColor="#00E5FF"
+            android:fontFamily="monospace"
             android:letterSpacing="0.15"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="10dp"/>
@@ -437,8 +438,8 @@
                 android:layout_height="wrap_content"
                 android:text="CLASS"
                 android:textSize="10sp"
-                android:textColor="#64748b"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#9E9E9E"
+                android:fontFamily="monospace"
                 android:letterSpacing="0.1"
                 android:layout_marginEnd="8dp"/>
 
@@ -449,9 +450,9 @@
                 android:layout_weight="1"
                 android:background="#1A1A1A"
                 android:padding="8dp"
-                android:textColor="#f8fafc"
+                android:textColor="#E0E0E0"
                 android:textSize="14sp"
-                android:fontFamily="@font/jetbrainsmono_medium"
+                android:fontFamily="monospace"
                 android:popupBackground="#111111"/>
 
             <TextView
@@ -459,8 +460,8 @@
                 android:layout_height="wrap_content"
                 android:text="SEC"
                 android:textSize="10sp"
-                android:textColor="#64748b"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#9E9E9E"
+                android:fontFamily="monospace"
                 android:letterSpacing="0.1"
                 android:layout_marginStart="12dp"
                 android:layout_marginEnd="8dp"/>
@@ -472,9 +473,9 @@
                 android:layout_weight="0.5"
                 android:background="#1A1A1A"
                 android:padding="8dp"
-                android:textColor="#f8fafc"
+                android:textColor="#E0E0E0"
                 android:textSize="14sp"
-                android:fontFamily="@font/jetbrainsmono_medium"
+                android:fontFamily="monospace"
                 android:popupBackground="#111111"/>
         </LinearLayout>
 
@@ -492,8 +493,8 @@
                 android:layout_height="wrap_content"
                 android:text="SUBJECT"
                 android:textSize="10sp"
-                android:textColor="#64748b"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#9E9E9E"
+                android:fontFamily="monospace"
                 android:letterSpacing="0.1"
                 android:layout_marginEnd="8dp"/>
 
@@ -504,9 +505,9 @@
                 android:layout_weight="1"
                 android:background="#1A1A1A"
                 android:padding="8dp"
-                android:textColor="#f8fafc"
+                android:textColor="#E0E0E0"
                 android:textSize="14sp"
-                android:fontFamily="@font/jetbrainsmono_medium"
+                android:fontFamily="monospace"
                 android:popupBackground="#111111"/>
         </LinearLayout>
 
@@ -528,8 +529,8 @@
                 android:background="@drawable/btn_gradient_scan"
                 android:text="SCAN\nQR"
                 android:textSize="20sp"
-                android:textColor="#0a0a0b"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#000000"
+                android:fontFamily="monospace"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.1"
                 android:gravity="center"
@@ -556,8 +557,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textSize="13sp"
-                android:textColor="#f8fafc"
-                android:fontFamily="@font/inter_regular"/>
+                android:textColor="#E0E0E0"
+                android:fontFamily="sans-serif"/>
         </LinearLayout>
 
         <!-- Scan Finished Button -->
@@ -604,8 +605,8 @@
                 android:layout_height="wrap_content"
                 android:text="Connecting..."
                 android:textSize="14sp"
-                android:textColor="#00ffff"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#00E5FF"
+                android:fontFamily="monospace"
                 android:layout_marginTop="16dp"/>
 
             <TextView
@@ -613,8 +614,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#94a3b8"
-                android:fontFamily="@font/jetbrainsmono_medium"
+                android:textColor="#9E9E9E"
+                android:fontFamily="monospace"
                 android:layout_marginTop="6dp"
                 android:gravity="center"/>
         </LinearLayout>
@@ -637,8 +638,8 @@
             android:layout_height="wrap_content"
             android:text="SCAN SUMMARY"
             android:textSize="14sp"
-            android:textColor="#00ffff"
-            android:fontFamily="@font/jetbrainsmono_bold"
+            android:textColor="#00E5FF"
+            android:fontFamily="monospace"
             android:letterSpacing="0.15"/>
 
         <TextView
@@ -647,8 +648,8 @@
             android:layout_height="wrap_content"
             android:text="0 students scanned"
             android:textSize="12sp"
-            android:textColor="#94a3b8"
-            android:fontFamily="@font/inter_regular"
+            android:textColor="#9E9E9E"
+            android:fontFamily="sans-serif"
             android:layout_marginTop="4dp"/>
 
         <androidx.recyclerview.widget.RecyclerView
@@ -719,7 +720,7 @@
                 android:layout_height="80dp"
                 android:text="✓"
                 android:textSize="40sp"
-                android:textColor="#0a0a0b"
+                android:textColor="#000000"
                 android:gravity="center"
                 android:background="@drawable/bg_success_circle"/>
 
@@ -728,8 +729,8 @@
                 android:layout_height="wrap_content"
                 android:text="Attendance Pushed!"
                 android:textSize="20sp"
-                android:textColor="#f8fafc"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#E0E0E0"
+                android:fontFamily="monospace"
                 android:layout_marginTop="20dp"/>
 
             <TextView
@@ -737,8 +738,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
-                android:textColor="#94a3b8"
-                android:fontFamily="@font/inter_regular"
+                android:textColor="#9E9E9E"
+                android:fontFamily="sans-serif"
                 android:layout_marginTop="6dp"
                 android:gravity="center"/>
 
@@ -785,8 +786,8 @@
                 android:layout_height="wrap_content"
                 android:text="FINGERPRINT LOCK"
                 android:textSize="18sp"
-                android:textColor="#f8fafc"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#E0E0E0"
+                android:fontFamily="monospace"
                 android:letterSpacing="0.15"
                 android:layout_marginTop="20dp"/>
 
@@ -796,8 +797,8 @@
                 android:layout_height="wrap_content"
                 android:text="Touch the fingerprint sensor"
                 android:textSize="13sp"
-                android:textColor="#94a3b8"
-                android:fontFamily="@font/inter_regular"
+                android:textColor="#9E9E9E"
+                android:fontFamily="sans-serif"
                 android:gravity="center"
                 android:layout_marginTop="8dp"/>
 
@@ -837,7 +838,7 @@
                 android:layout_height="56dp"
                 android:text="⬇"
                 android:textSize="26sp"
-                android:textColor="#0a0a0b"
+                android:textColor="#000000"
                 android:gravity="center"
                 android:background="@drawable/bg_success_circle"/>
 
@@ -847,8 +848,8 @@
                 android:layout_height="wrap_content"
                 android:text="Update Available"
                 android:textSize="18sp"
-                android:textColor="#f8fafc"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#E0E0E0"
+                android:fontFamily="monospace"
                 android:letterSpacing="0.1"
                 android:layout_marginTop="16dp"/>
 
@@ -858,8 +859,8 @@
                 android:layout_height="wrap_content"
                 android:text="v2.0.0"
                 android:textSize="13sp"
-                android:textColor="#00ffff"
-                android:fontFamily="@font/jetbrainsmono_bold"
+                android:textColor="#00E5FF"
+                android:fontFamily="monospace"
                 android:layout_marginTop="4dp"/>
 
             <TextView
@@ -867,8 +868,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="#94a3b8"
-                android:fontFamily="@font/inter_regular"
+                android:textColor="#9E9E9E"
+                android:fontFamily="sans-serif"
                 android:lineSpacingExtra="4dp"
                 android:gravity="center"
                 android:layout_marginTop="14dp"
@@ -881,7 +882,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="6dp"
                 android:layout_marginTop="16dp"
-                android:progressTint="#00ffff"
+                android:progressTint="#00E5FF"
                 android:visibility="gone"/>
 
             <TextView
@@ -889,8 +890,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
-                android:textColor="#94a3b8"
-                android:fontFamily="@font/jetbrainsmono_regular"
+                android:textColor="#9E9E9E"
+                android:fontFamily="monospace"
                 android:layout_marginTop="4dp"
                 android:visibility="gone"/>
 

@@ -4,8 +4,8 @@
     android:layout_height="wrap_content"
     android:padding="12dp"
     android:textSize="14sp"
-    android:fontFamily="@font/inter_regular"
-    android:textColor="#f8fafc"
-    android:background="#1a1a1e"
+    android:fontFamily="sans-serif"
+    android:textColor="#E0E0E0"
+    android:background="#1F1F1F"
     android:ellipsize="end"
     android:maxLines="1" />

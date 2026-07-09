@@ -394,7 +394,7 @@ public class MainActivity extends AppCompatActivity {
             @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
                 View v = super.getDropDownView(pos, cv, p);
                 if (v instanceof TextView)
-                    ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
+                    ((TextView)v).setBackgroundColor(Color.parseColor("#1F1F1F"));
                 return v;
             }
         };
@@ -404,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (view instanceof TextView)
-                    ((TextView)view).setTextColor(Color.parseColor("#f8fafc"));
+                    ((TextView)view).setTextColor(Color.parseColor("#E0E0E0"));
                 if (position >= 0 && position < classList.size()) {
                     String cls = classList.get(position);
                     updateSubjectsForClass(cls);
@@ -633,7 +633,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (ip.isEmpty()) {
             connectStatus.setText("Enter server IP");
-            connectStatus.setTextColor(Color.parseColor("#ef4444"));
+            connectStatus.setTextColor(Color.parseColor("#FF3B3B"));
             return;
         }
 
@@ -651,13 +651,13 @@ public class MainActivity extends AppCompatActivity {
                             .putString(KEY_API_PORT, finalPort)
                             .apply();
                     connectStatus.setText("✓ Connected");
-                    connectStatus.setTextColor(Color.parseColor("#22c55e"));
+                    connectStatus.setTextColor(Color.parseColor("#00FF88"));
                     new Handler().postDelayed(this::showMain, 600);
                 },
                 error -> {
                     hideLoading();
                     connectStatus.setText("✕ Connection failed. Check IP and port.");
-                    connectStatus.setTextColor(Color.parseColor("#ef4444"));
+                    connectStatus.setTextColor(Color.parseColor("#FF3B3B"));
                 });
 
         req.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
@@ -739,7 +739,7 @@ public class MainActivity extends AppCompatActivity {
             @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
                 View v = super.getDropDownView(pos, cv, p);
                 if (v instanceof TextView)
-                    ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
+                    ((TextView)v).setBackgroundColor(Color.parseColor("#1F1F1F"));
                 return v;
             }
         };
@@ -756,7 +756,7 @@ public class MainActivity extends AppCompatActivity {
             @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
                 View v = super.getDropDownView(pos, cv, p);
                 if (v instanceof TextView)
-                    ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
+                    ((TextView)v).setBackgroundColor(Color.parseColor("#1F1F1F"));
                 return v;
             }
         };
@@ -1347,16 +1347,16 @@ public class MainActivity extends AppCompatActivity {
                         holder.statusBadge.setBackgroundColor(Color.parseColor("#2d1f00"));
                         break;
                     case "early":
-                        holder.statusBadge.setTextColor(Color.parseColor("#00ffff"));
+                        holder.statusBadge.setTextColor(Color.parseColor("#00E5FF"));
                         holder.statusBadge.setBackgroundColor(Color.parseColor("#003333"));
                         break;
                     case "present":
-                        holder.statusBadge.setTextColor(Color.parseColor("#22c55e"));
+                        holder.statusBadge.setTextColor(Color.parseColor("#00FF88"));
                         holder.statusBadge.setBackgroundColor(Color.parseColor("#0a2e1a"));
                         break;
                     default:
-                        holder.statusBadge.setTextColor(Color.parseColor("#94a3b8"));
-                        holder.statusBadge.setBackgroundColor(Color.parseColor("#1a1a1e"));
+                        holder.statusBadge.setTextColor(Color.parseColor("#9E9E9E"));
+                        holder.statusBadge.setBackgroundColor(Color.parseColor("#1F1F1F"));
                 }
             } else {
                 holder.statusBadge.setVisibility(View.GONE);

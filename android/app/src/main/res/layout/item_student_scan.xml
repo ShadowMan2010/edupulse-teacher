@@ -4,7 +4,7 @@
     android:layout_height="60dp"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:background="#111113"
+    android:background="#111111"
     android:padding="8dp"
     android:layout_marginBottom="4dp">
 
@@ -13,7 +13,7 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:scaleType="centerCrop"
-        android:background="#1a1a1e"
+        android:background="#1F1F1F"
         android:visibility="visible"/>
 
     <LinearLayout
@@ -28,8 +28,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="14sp"
-            android:textColor="#f8fafc"
-            android:fontFamily="@font/inter_medium"
+            android:textColor="#E0E0E0"
+            android:fontFamily="sans-serif"
             android:singleLine="true"/>
 
         <TextView
@@ -37,8 +37,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="10sp"
-            android:textColor="#94a3b8"
-            android:fontFamily="@font/jetbrainsmono_regular"
+            android:textColor="#9E9E9E"
+            android:fontFamily="monospace"
             android:singleLine="true"/>
 
     </LinearLayout>
@@ -60,7 +60,7 @@
         android:layout_height="32dp"
         android:text="✕"
         android:textSize="14sp"
-        android:textColor="#ef4444"
+        android:textColor="#FF3B3B"
         android:gravity="center"
         android:clickable="true"
         android:focusable="true"/>

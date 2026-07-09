@@ -23,7 +23,7 @@ public class GlitchTextView extends View {
     private String text = "EDUPULSE";
     private String glitchText = "";
     private float textSize = 28f;
-    private int textColor = Color.parseColor("#00ffff");
+    private int textColor = Color.parseColor("#00E5FF");
     private Typeface typeface;
 
     private boolean glitching = false;
