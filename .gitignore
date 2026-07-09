@@ -16,5 +16,6 @@ os/output/
 *.img.xz
 scanner/*-key.json
 *.apk
+*.idsig
 android/app/build/
 .gradle/
