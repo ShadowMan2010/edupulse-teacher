@@ -313,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle("EduPulse")
                 .setSubtitle("Verify your identity")
                 .setDescription("Touch the fingerprint sensor to unlock")
-                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setNegativeButtonText("Cancel")
                 .setConfirmationRequired(false)
                 .build();
 
@@ -325,9 +325,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean hasBiometricHardware() {
-        BiometricManager manager = BiometricManager.from(this);
-        return manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-                == BiometricManager.BIOMETRIC_SUCCESS;
+        try {
+            BiometricManager manager = BiometricManager.from(this);
+            int result = manager.canAuthenticate();
+            return result == BiometricManager.BIOMETRIC_SUCCESS;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void showBiometricAuth() {
