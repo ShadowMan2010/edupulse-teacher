@@ -1,37 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Glow base -->
+    <!-- Border base -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#0a00ffff" />
-            <corners android:radius="14dp" />
+            <solid android:color="#6600E5FF" />
+            <corners android:radius="12dp" />
         </shape>
     </item>
-    <!-- Gradient accent bar (cyan → purple) -->
-    <item>
+    <!-- Accent bar -->
+    <item android:top="0dp" android:bottom="0dp" android:left="0dp" android:right="0dp">
         <shape android:shape="rectangle">
-            <gradient
-                android:type="linear"
-                android:angle="0"
-                android:startColor="#00ffff"
-                android:endColor="#7c3aed" />
-            <corners android:topLeftRadius="14dp" android:topRightRadius="14dp" />
-            <size android:height="3dp" />
+            <solid android:color="#00E5FF" />
+            <corners android:topLeftRadius="12dp" android:topRightRadius="12dp" />
+            <size android:height="2dp" />
         </shape>
     </item>
-    <!-- Glass card body -->
-    <item android:top="4dp">
+    <!-- Card body -->
+    <item android:top="2dp">
         <shape android:shape="rectangle">
-            <solid android:color="#D91A1A24" />
-            <stroke
-                android:width="1dp"
-                android:color="#1800ffff" />
-            <corners android:bottomLeftRadius="14dp" android:bottomRightRadius="14dp" />
-            <gradient
-                android:type="linear"
-                android:angle="135"
-                android:startColor="#18ffffff"
-                android:endColor="#06000000" />
+            <solid android:color="#111111" />
+            <corners android:bottomLeftRadius="12dp" android:bottomRightRadius="12dp" />
         </shape>
     </item>
 </layer-list>

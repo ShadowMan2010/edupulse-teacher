@@ -10,9 +10,6 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Matrix;
-import android.graphics.Shader;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -115,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
     private Button disconnectButton;
 
     // Splash
-    private TextView splashTitle;
+    private View splashTitle;
 
     // Summary
     private RecyclerView summaryList;
@@ -183,21 +180,6 @@ public class MainActivity extends AppCompatActivity {
         // Splash
         splashContainer = findViewById(R.id.splashContainer);
         splashTitle = findViewById(R.id.splashTitle);
-
-        if (splashTitle != null) {
-            splashTitle.post(() -> {
-                ValueAnimator glitch = ValueAnimator.ofFloat(0f, 1f);
-                glitch.setDuration(180);
-                glitch.setRepeatCount(ValueAnimator.INFINITE);
-                glitch.setRepeatMode(ValueAnimator.REVERSE);
-                glitch.addUpdateListener(a -> {
-                    float v = a.getAnimatedFraction();
-                    splashTitle.setTranslationX((float) (Math.sin(v * 50) * 2.5f));
-                    splashTitle.setAlpha(0.85f + (float) (Math.sin(v * 30) * 0.15f));
-                });
-                glitch.start();
-            });
-        }
 
         // Login
         loginContainer = findViewById(R.id.loginContainer);
@@ -471,49 +453,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSplash(boolean show) {
         splashContainer.setVisibility(show ? View.VISIBLE : View.GONE);
-        if (show && splashTitle != null) {
-            splashTitle.post(() -> {
-                try {
-                    android.graphics.Paint p = splashTitle.getPaint();
-                    float tw = p.measureText(splashTitle.getText().toString());
-                    if (tw < 1) tw = splashTitle.getWidth();
-                    if (tw < 1) tw = 200;
-                    final float textWidth = tw;
-
-                    float gradientWidth = textWidth * 3;
-                    final float gw = gradientWidth;
-                    Shader shader = new LinearGradient(
-                            0, 0, gw, 0,
-                            new int[]{
-                                Color.parseColor("#00ffff"),
-                                Color.parseColor("#7c3aed"),
-                                Color.parseColor("#ec4899"),
-                                Color.parseColor("#00ffff")
-                            },
-                            new float[]{0f, 0.33f, 0.66f, 1f},
-                            Shader.TileMode.CLAMP);
-                    p.setShader(shader);
-                    Matrix matrix = new Matrix();
-                    shader.setLocalMatrix(matrix);
-
-                    ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
-                    anim.setDuration(3000);
-                    anim.setRepeatCount(ValueAnimator.INFINITE);
-                    anim.setRepeatMode(ValueAnimator.REVERSE);
-                    anim.setInterpolator(null);
-                    anim.addUpdateListener(a -> {
-                        float t = a.getAnimatedFraction();
-                        float offset = -t * (gw - textWidth);
-                        Matrix m = new Matrix();
-                        m.setTranslate(offset, 0);
-                        shader.setLocalMatrix(m);
-                        splashTitle.invalidate();
-                    });
-                    anim.start();
-                    splashTitle.invalidate();
-                } catch (Exception ignored) {}
-            });
-        }
     }
 
     // ─── LOGIN ────────────────────────────────────────────

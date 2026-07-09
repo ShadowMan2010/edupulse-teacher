@@ -1,8 +1,8 @@
 {
-  "version": 4,
-  "version_name": "4.0.0",
-  "apk_url": "https://github.com/ShadowMan2010/edupulse-teacher/releases/download/v4/edupulse-teacher.apk",
-  "changelog": "- Glassmorphism redesign: frosted glass panels, gradient accent bars, neon glow buttons, glass spinner backgrounds\n- Fingerprint / biometric lock: enable after login, unlock with your fingerprint on future launches\n- Professional stat card with cyan→purple gradient accent bar\n- Loading & success overlays now use glass cards for consistent look\n- Improved button styles with subtle glow and elevation\n- Spinners now match glass aesthetic with semi-transparent backgrounds\n- Fix: ProGuard rules updated to preserve custom view classes\n- Fix: OTA updates now install correctly — file is downloaded to internal cache, FileProvider path matches both cache and external-cache\n- Fix: Clearer toast message when install permission needs to be enabled first\n- Scan sound effect on successful scan\n- Animated gradient text on splash (matching web)\n- Inter & JetBrains Mono fonts throughout\n- Gradient buttons (cyan→purple) matching web\n- Pill-shaped status badges\n- Updated glass UI panels\n- Stat cards with accent bar\n- Firebase RTDB permissions fixed\n- Subjects/settings save reliability improved",
+  "version": 5,
+  "version_name": "5.0.0",
+  "apk_url": "https://github.com/ShadowMan2010/edupulse-teacher/releases/download/v5/edupulse-teacher.apk",
+  "changelog": "- Matrix digital rain background on splash & login screens\n- Glitch text effect on EDUPULSE title throughout app\n- CRT scan line overlay for retro cyberpunk feel\n- New DigitalLoader animation with pulsing ring, progress arcs, and cycling Matrix characters\n- Cyberpunk redesign with pure black background (#000000), #111111 cards with cyan borders\n- Fingerprint / biometric lock: enable after login, unlock with your fingerprint on future launches\n- OTA updates with progress bar\n- Monospace JetBrains Mono labels in uppercase\n- Inter & JetBrains Mono fonts throughout\n- Gradient buttons (cyan→purple)\n- Stat cards with accent bar\n- Pill-shaped status badges\n- Scan sound effects",
   "release_date": "2026-07-09",
   "min_android_version": 24
 }
