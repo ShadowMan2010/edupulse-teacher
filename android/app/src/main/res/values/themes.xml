@@ -21,6 +21,8 @@
         <item name="cornerRadius">12dp</item>
         <item name="android:fontFamily">@font/inter_semibold</item>
         <item name="android:textSize">14sp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">4dp</item>
     </style>
 
     <style name="Widget.EduPulse.Button.Outline" parent="Widget.MaterialComponents.Button.OutlinedButton">
@@ -30,6 +32,7 @@
         <item name="cornerRadius">12dp</item>
         <item name="android:fontFamily">@font/inter_medium</item>
         <item name="android:textSize">13sp</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
 
     <style name="Widget.EduPulse.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">

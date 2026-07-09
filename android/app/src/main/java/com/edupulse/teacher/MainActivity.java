@@ -32,8 +32,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -63,6 +66,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.util.concurrent.Executor;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,9 +85,11 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_ID_TOKEN = "id_token";
     private static final String KEY_OTA_URL = "ota_url";
     private static final String KEY_PENDING_APK = "pending_apk";
+    private static final String KEY_BIOMETRIC_ENABLED = "biometric_enabled";
     private static final int RC_INSTALL_PERMISSION = 1001;
     private static final String FIREBASE_API_KEY = "AIzaSyDPYjylSBhng6CRL77P0MXTUcuq7jBFnnA";
     private static final int RC_GOOGLE_SIGN_IN = 9001;
+    private static final int RC_BIOMETRIC = 1002;
 
     // Screens
     private View splashContainer, loginContainer, connectContainer, mainContainer;
@@ -115,6 +121,14 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView summaryList;
     private TextView summaryCountText;
     private Button addMoreButton, pushButton;
+
+    // Biometric
+    private View biometricOverlay;
+    private TextView biometricStatusText;
+    private Button biometricUsePasswordButton;
+    private BiometricPrompt biometricPrompt;
+    private BiometricPrompt.PromptInfo biometricPromptInfo;
+    private Executor biometricExecutor;
 
     // Success
     private TextView successSubtext;
@@ -237,6 +251,11 @@ public class MainActivity extends AppCompatActivity {
         successSubtext = findViewById(R.id.successSubtext);
         successDoneButton = findViewById(R.id.successDoneButton);
 
+        // Biometric
+        biometricOverlay = findViewById(R.id.biometricOverlay);
+        biometricStatusText = findViewById(R.id.biometricStatusText);
+        biometricUsePasswordButton = findViewById(R.id.biometricUsePasswordButton);
+
         // Update Overlay
         updateOverlay = findViewById(R.id.updateOverlay);
         updateTitleText = findViewById(R.id.updateTitleText);
@@ -251,6 +270,8 @@ public class MainActivity extends AppCompatActivity {
         studentAdapter = new StudentAdapter(scannedStudents, this::removeStudent, apiBaseUrl);
         summaryList.setAdapter(studentAdapter);
 
+        setupBiometricPrompt();
+
         try {
             scanBeepPlayer = MediaPlayer.create(this, R.raw.scan_beep);
             scanSuccessPlayer = MediaPlayer.create(this, R.raw.scan_success);
@@ -258,6 +279,95 @@ public class MainActivity extends AppCompatActivity {
 
         setupClickListeners();
         setupSpinners();
+    }
+
+    private void setupBiometricPrompt() {
+        biometricExecutor = command -> command.run();
+
+        biometricPrompt = new BiometricPrompt(this, biometricExecutor,
+                new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                runOnUiThread(() -> {
+                    biometricOverlay.setVisibility(View.GONE);
+                    proceedAfterBiometric();
+                });
+            }
+
+            @Override
+            public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                runOnUiThread(() -> biometricStatusText.setText(errString));
+            }
+
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                runOnUiThread(() ->
+                    biometricStatusText.setText("Fingerprint not recognized. Try again."));
+            }
+        });
+
+        biometricPromptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle("EduPulse")
+                .setSubtitle("Verify your identity")
+                .setDescription("Touch the fingerprint sensor to unlock")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setConfirmationRequired(false)
+                .build();
+
+        biometricUsePasswordButton.setOnClickListener(v -> {
+            biometricOverlay.setVisibility(View.GONE);
+            prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, false).apply();
+            showLogin();
+        });
+    }
+
+    private boolean hasBiometricHardware() {
+        BiometricManager manager = BiometricManager.from(this);
+        return manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                == BiometricManager.BIOMETRIC_SUCCESS;
+    }
+
+    private void showBiometricAuth() {
+        biometricOverlay.setVisibility(View.VISIBLE);
+        biometricStatusText.setText("Touch the fingerprint sensor");
+        biometricPrompt.authenticate(biometricPromptInfo);
+    }
+
+    private void proceedAfterBiometric() {
+        boolean loggedIn = prefs.getBoolean(KEY_LOGGED_IN, false);
+        String ip = prefs.getString(KEY_API_IP, "");
+        String email = prefs.getString(KEY_EMAIL, "");
+
+        if (!email.isEmpty()) {
+            userEmailText.setText(email);
+        }
+
+        if (loggedIn && !ip.isEmpty()) {
+            apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
+            showMain();
+        } else if (loggedIn) {
+            showConnect();
+        } else {
+            showLogin();
+        }
+    }
+
+    private void promptEnableBiometric(String email) {
+        if (!hasBiometricHardware()) return;
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Enable Fingerprint Lock?")
+                .setMessage("Use your fingerprint to quickly unlock EduPulse on future launches.")
+                .setPositiveButton("Enable", (dialog, which) ->
+                    prefs.edit()
+                            .putBoolean(KEY_BIOMETRIC_ENABLED, true)
+                            .putString(KEY_EMAIL, email)
+                            .apply())
+                .setNegativeButton("Not Now", null)
+                .show();
     }
 
     private void setupClickListeners() {
@@ -331,11 +441,16 @@ public class MainActivity extends AppCompatActivity {
     private void checkAuthState() {
         boolean loggedIn = prefs.getBoolean(KEY_LOGGED_IN, false);
         String ip = prefs.getString(KEY_API_IP, "");
+        boolean biometricEnabled = prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false);
 
         showSplash(true);
 
         new Handler().postDelayed(() -> {
-            if (loggedIn && !ip.isEmpty()) {
+            if (biometricEnabled && hasBiometricHardware()) {
+                String email = prefs.getString(KEY_EMAIL, "");
+                if (!email.isEmpty()) userEmailText.setText(email);
+                showBiometricAuth();
+            } else if (loggedIn && !ip.isEmpty()) {
                 apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
                 String email = prefs.getString(KEY_EMAIL, "");
                 userEmailText.setText(email);
@@ -444,6 +559,7 @@ public class MainActivity extends AppCompatActivity {
                                 .apply();
 
                         userEmailText.setText(userEmail);
+                        promptEnableBiometric(userEmail);
                         String ip = prefs.getString(KEY_API_IP, "");
                         if (!ip.isEmpty()) {
                             apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
@@ -531,6 +647,7 @@ public class MainActivity extends AppCompatActivity {
                                 .putString(KEY_ID_TOKEN, response.optString("idToken", ""))
                                 .apply();
                         userEmailText.setText(userEmail);
+                        promptEnableBiometric(userEmail);
                         String ip = prefs.getString(KEY_API_IP, "");
                         if (!ip.isEmpty()) {
                             apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
