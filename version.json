@@ -1,8 +1,8 @@
 {
-  "version": 3,
-  "version_name": "3.0.0",
-  "apk_url": "https://github.com/ShadowMan2010/edupulse-teacher/releases/download/v3/edupulse-teacher.apk",
-  "changelog": "- Scanner auto-rotation fixed (portrait lock)\n- Loading spinner on splash screen\n- Class/Subject info badge on scan screen\n- Glass effect UI panels\n- Classes 8,9,10 added to subject selector\n- OTA check reliability improvements",
-  "release_date": "2026-07-03",
+  "version": 4,
+  "version_name": "4.0.0",
+  "apk_url": "https://github.com/ShadowMan2010/edupulse-teacher/releases/download/v4/edupulse-teacher.apk",
+  "changelog": "- Fix: OTA updates now install correctly — file is downloaded to internal cache, FileProvider path matches both cache and external-cache\n- Fix: Clearer toast message when install permission needs to be enabled first\n- Scan sound effect on successful scan\n- Animated gradient text on splash (matching web)\n- Inter & JetBrains Mono fonts throughout\n- Gradient buttons (cyan→purple) matching web\n- Pill-shaped status badges\n- Updated glass UI panels\n- Stat cards with accent bar\n- Firebase RTDB permissions fixed\n- Subjects/settings save reliability improved",
+  "release_date": "2026-07-09",
   "min_android_version": 24
 }

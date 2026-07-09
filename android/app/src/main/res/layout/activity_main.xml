@@ -48,6 +48,7 @@
             android:text="Teacher"
             android:textSize="14sp"
             android:textColor="#94a3b8"
+            android:fontFamily="@font/inter_medium"
             android:letterSpacing="0.2"
             android:layout_marginTop="4dp"/>
 
@@ -86,7 +87,7 @@
                 android:text="EDUPULSE"
                 android:textSize="24sp"
                 android:textColor="#00ffff"
-                android:fontFamily="sans-serif-black"
+                android:fontFamily="@font/orbitron"
                 android:letterSpacing="0.15"
                 android:layout_marginTop="12dp"/>
 
@@ -96,6 +97,7 @@
                 android:text="Teacher Sign In"
                 android:textSize="16sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/inter_medium"
                 android:layout_marginTop="36dp"/>
 
             <LinearLayout
@@ -120,7 +122,7 @@
                     android:hint="Email"
                     android:inputType="textEmailAddress"
                     android:textColor="#f8fafc"
-                    android:fontFamily="sans-serif"/>
+                    android:fontFamily="@font/inter_regular"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -139,7 +141,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Password"
                     android:inputType="textPassword"
-                    android:textColor="#f8fafc"/>
+                    android:textColor="#f8fafc"
+                    android:fontFamily="@font/inter_regular"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -150,10 +153,8 @@
                 android:layout_marginTop="24dp"
                 android:text="SIGN IN"
                 android:textAllCaps="true"
-                android:fontFamily="sans-serif-medium"
                 android:textSize="14sp"
-                android:backgroundTint="#00ffff"
-                android:textColor="#0a0a0b"/>
+                style="@style/Widget.EduPulse.Button"/>
 
             <TextView
                 android:layout_width="match_parent"
@@ -162,6 +163,7 @@
                 android:text="or"
                 android:textColor="#94a3b8"
                 android:textSize="13sp"
+                android:fontFamily="@font/inter_regular"
                 android:gravity="center"/>
 
             <com.google.android.gms.common.SignInButton
@@ -178,6 +180,7 @@
                 android:layout_marginTop="12dp"
                 android:textColor="#ef4444"
                 android:textSize="13sp"
+                android:fontFamily="@font/inter_regular"
                 android:gravity="center"
                 android:visibility="gone"/>
 
@@ -213,7 +216,7 @@
                 android:text="Connect to Server"
                 android:textSize="22sp"
                 android:textColor="#f8fafc"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/inter_semibold"
                 android:layout_marginTop="32dp"/>
 
             <TextView
@@ -222,6 +225,7 @@
                 android:text="Enter the server IP address"
                 android:textSize="14sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/inter_regular"
                 android:layout_marginTop="8dp"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -238,7 +242,8 @@
                     android:layout_height="wrap_content"
                     android:hint="Server IP (e.g. 192.168.1.100)"
                     android:inputType="text"
-                    android:textColor="#f8fafc"/>
+                    android:textColor="#f8fafc"
+                    android:fontFamily="@font/jetbrainsmono_regular"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -256,7 +261,8 @@
                     android:hint="Port"
                     android:inputType="number"
                     android:text="3000"
-                    android:textColor="#f8fafc"/>
+                    android:textColor="#f8fafc"
+                    android:fontFamily="@font/jetbrainsmono_regular"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -267,10 +273,8 @@
                 android:layout_marginTop="24dp"
                 android:text="CONNECT"
                 android:textAllCaps="true"
-                android:fontFamily="sans-serif-medium"
                 android:textSize="14sp"
-                android:backgroundTint="#00ffff"
-                android:textColor="#0a0a0b"/>
+                style="@style/Widget.EduPulse.Button"/>
 
             <TextView
                 android:id="@+id/connectStatus"
@@ -279,6 +283,7 @@
                 android:layout_marginTop="12dp"
                 android:textColor="#94a3b8"
                 android:textSize="13sp"
+                android:fontFamily="@font/inter_regular"
                 android:gravity="center"/>
 
         </LinearLayout>
@@ -313,7 +318,7 @@
                 android:text="EduPulse"
                 android:textSize="16sp"
                 android:textColor="#00ffff"
-                android:fontFamily="sans-serif-black"
+                android:fontFamily="@font/orbitron"
                 android:letterSpacing="0.1"
                 android:layout_marginStart="10dp"/>
 
@@ -323,6 +328,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/jetbrainsmono_medium"
                 android:layout_marginEnd="10dp"
                 android:maxLines="1"
                 android:ellipsize="end"/>
@@ -336,35 +342,56 @@
                 android:backgroundTint="#ef4444"
                 android:textColor="#fff"
                 android:paddingStart="12dp"
-                android:paddingEnd="12dp"/>
+                android:paddingEnd="12dp"
+                android:fontFamily="@font/inter_semibold"/>
         </LinearLayout>
 
-        <!-- Scan Count Bar -->
+        <!-- Scan Count Bar (Stat Card) -->
         <LinearLayout
+            android:id="@+id/scanCountBar"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="72dp"
             android:layout_marginTop="16dp"
-            android:background="#111113"
+            android:background="@drawable/bg_stat_card"
             android:gravity="center"
             android:orientation="horizontal"
-            android:padding="12dp">
+            android:padding="16dp"
+            android:elevation="2dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Scanned Students"
-                android:textSize="13sp"
-                android:textColor="#94a3b8"/>
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Scanned Students"
+                    android:textSize="11sp"
+                    android:textColor="#94a3b8"
+                    android:fontFamily="@font/jetbrainsmono_regular"
+                    android:letterSpacing="0.1"/>
+
+                <TextView
+                    android:id="@+id/scanCountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="32sp"
+                    android:textColor="#00ffff"
+                    android:fontFamily="@font/orbitron"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/scanCountText"
+                android:id="@+id/scanInfoText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0"
-                android:textSize="28sp"
-                android:textColor="#00ffff"
-                android:fontFamily="sans-serif-black"/>
+                android:textSize="10sp"
+                android:textColor="#64748b"
+                android:fontFamily="@font/jetbrainsmono_regular"
+                android:visibility="gone"/>
         </LinearLayout>
 
         <!-- Selection Area -->
@@ -372,8 +399,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="SELECT CLASS &amp; SUBJECT"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textColor="#00ffff"
+            android:fontFamily="@font/jetbrainsmono_medium"
             android:letterSpacing="0.15"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="8dp"/>
@@ -388,8 +416,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Class"
-                android:textSize="13sp"
+                android:textSize="11sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/jetbrainsmono_regular"
                 android:layout_marginEnd="8dp"/>
 
             <Spinner
@@ -406,8 +435,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Section"
-                android:textSize="13sp"
+                android:textSize="11sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/jetbrainsmono_regular"
                 android:layout_marginStart="12dp"
                 android:layout_marginEnd="8dp"/>
 
@@ -426,8 +456,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Subject"
-            android:textSize="13sp"
+            android:textSize="11sp"
             android:textColor="#94a3b8"
+            android:fontFamily="@font/jetbrainsmono_regular"
             android:layout_marginTop="12dp"
             android:layout_marginBottom="4dp"/>
 
@@ -440,23 +471,12 @@
             android:textColor="#f8fafc"
             android:popupBackground="#1a1a1e"/>
 
-        <!-- Scan Info Badge -->
-        <TextView
-            android:id="@+id/scanInfoText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            android:textSize="11sp"
-            android:textColor="#94a3b8"
-            android:visibility="gone"/>
-
         <!-- Scan Button with Pulse Ring -->
         <FrameLayout
             android:layout_width="220dp"
             android:layout_height="220dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="12dp">
 
             <com.edupulse.teacher.ScanPulseView
                 android:layout_width="220dp"
@@ -466,11 +486,11 @@
                 android:id="@+id/scanButton"
                 android:layout_width="220dp"
                 android:layout_height="220dp"
-                android:backgroundTint="#00ffff"
+                android:background="@drawable/btn_gradient_scan"
                 android:text="SCAN\nQR"
                 android:textSize="22sp"
                 android:textColor="#0a0a0b"
-                android:fontFamily="sans-serif-black"
+                android:fontFamily="@font/orbitron"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.1"
                 android:gravity="center"
@@ -479,26 +499,37 @@
                 android:translationZ="12dp"/>
         </FrameLayout>
 
-        <!-- Scanned List Preview -->
-        <TextView
-            android:id="@+id/lastScannedText"
+        <!-- Latest Scan Info -->
+        <LinearLayout
+            android:id="@+id/lastScannedCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:textSize="14sp"
-            android:textColor="#94a3b8"
-            android:gravity="center"
-            android:visibility="gone"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#111113"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/lastScannedText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="13sp"
+                android:textColor="#f8fafc"
+                android:fontFamily="@font/inter_regular"/>
+        </LinearLayout>
 
         <!-- Scan Finished Button -->
         <Button
             android:id="@+id/scanFinishedButton"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"
             android:text="SCAN FINISHED"
-            android:textSize="15sp"
+            android:textSize="13sp"
             android:textAllCaps="true"
             android:visibility="gone"
             style="@style/Widget.EduPulse.Button.Outline"/>
@@ -533,7 +564,7 @@
                 android:text="Connecting..."
                 android:textSize="15sp"
                 android:textColor="#00ffff"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/inter_semibold"
                 android:layout_marginTop="20dp"/>
 
             <TextView
@@ -542,6 +573,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/inter_regular"
                 android:layout_marginTop="6dp"/>
         </LinearLayout>
     </FrameLayout>
@@ -550,7 +582,7 @@
     <LinearLayout
         android:id="@+id/scanSummarySheet"
         android:layout_width="match_parent"
-        android:layout_height="280dp"
+        android:layout_height="300dp"
         android:layout_gravity="bottom"
         android:orientation="vertical"
         android:background="@drawable/bg_glass"
@@ -562,9 +594,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="SCAN SUMMARY"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textColor="#00ffff"
-            android:fontFamily="sans-serif-black"
+            android:fontFamily="@font/jetbrainsmono_bold"
             android:letterSpacing="0.15"/>
 
         <TextView
@@ -572,8 +604,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="0 students scanned"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textColor="#94a3b8"
+            android:fontFamily="@font/inter_regular"
             android:layout_marginTop="4dp"/>
 
         <androidx.recyclerview.widget.RecyclerView
@@ -598,7 +631,7 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="ADD MORE"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 style="@style/Widget.EduPulse.Button.Outline"
                 android:layout_marginEnd="6dp"/>
 
@@ -608,9 +641,8 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="PUSH TO SERVER"
-                android:textSize="13sp"
-                android:backgroundTint="#00ffff"
-                android:textColor="#0a0a0b"
+                android:textSize="12sp"
+                style="@style/Widget.EduPulse.Button"
                 android:layout_marginStart="6dp"/>
         </LinearLayout>
     </LinearLayout>
@@ -652,7 +684,7 @@
                 android:text="Attendance Pushed!"
                 android:textSize="20sp"
                 android:textColor="#f8fafc"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/inter_semibold"
                 android:layout_marginTop="24dp"/>
 
             <TextView
@@ -661,6 +693,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/inter_regular"
                 android:layout_marginTop="6dp"
                 android:gravity="center"/>
 
@@ -670,9 +703,8 @@
                 android:layout_height="48dp"
                 android:layout_marginTop="32dp"
                 android:text="DONE"
-                android:textSize="14sp"
-                android:backgroundTint="#00ffff"
-                android:textColor="#0a0a0b"/>
+                android:textSize="13sp"
+                style="@style/Widget.EduPulse.Button"/>
         </LinearLayout>
     </FrameLayout>
 
@@ -711,7 +743,7 @@
                 android:text="Update Available"
                 android:textSize="20sp"
                 android:textColor="#f8fafc"
-                android:fontFamily="sans-serif-black"
+                android:fontFamily="@font/inter_semibold"
                 android:letterSpacing="0.1"
                 android:layout_marginTop="20dp"/>
 
@@ -722,7 +754,7 @@
                 android:text="v2.0.0"
                 android:textSize="13sp"
                 android:textColor="#00ffff"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/jetbrainsmono_bold"
                 android:layout_marginTop="4dp"/>
 
             <TextView
@@ -731,6 +763,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/inter_regular"
                 android:lineSpacingExtra="4dp"
                 android:gravity="center"
                 android:layout_marginTop="16dp"
@@ -752,6 +785,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
                 android:textColor="#94a3b8"
+                android:fontFamily="@font/jetbrainsmono_regular"
                 android:layout_marginTop="4dp"
                 android:visibility="gone"/>
 
@@ -762,8 +796,7 @@
                 android:layout_marginTop="24dp"
                 android:text="UPDATE NOW"
                 android:textSize="13sp"
-                android:backgroundTint="#00ffff"
-                android:textColor="#0a0a0b"/>
+                style="@style/Widget.EduPulse.Button"/>
 
             <Button
                 android:id="@+id/updateLaterButton"

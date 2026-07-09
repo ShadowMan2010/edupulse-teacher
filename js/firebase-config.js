@@ -26,7 +26,7 @@ function loginWithEmail(email, password) {
   // Try Firebase first, fall back to demo mode
   return auth.signInWithEmailAndPassword(email, password).catch(function(err) {
     // Demo mode: if Firebase isn't configured, use local credentials
-    var valid = {email: 'admin@edupulse.dev', password: 'admin123', role: 'admin'};
+    var valid = {email: 'admin@edupulse.dev', password: 'Dhruba@2010', role: 'admin'};
     if (email === valid.email && password === valid.password) {
       sessionStorage.setItem('edupulse_demo', JSON.stringify({role: valid.role, email: valid.email}));
       return Promise.resolve({user: {uid: 'demo-admin', email: valid.email}});
@@ -355,7 +355,17 @@ function generateAttendanceData(filters) {
 
 // ── SETTINGS HELPERS ──
 function saveSettings(data) {
-  return dbSet('settings', data);
+  return fetch('http://localhost:3000/api/settings', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+    signal: AbortSignal.timeout(3000)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) return;
+    throw new Error(d.message || 'Failed to save settings');
+  }).catch(function() {
+    return dbSet('settings', data);
+  });
 }
 
 // ── SUBJECTS ──

@@ -17,3 +17,4 @@ os/output/
 scanner/*-key.json
 *.apk
 android/app/build/
+.gradle/

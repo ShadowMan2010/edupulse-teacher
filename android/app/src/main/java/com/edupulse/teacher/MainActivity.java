@@ -4,13 +4,16 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Shader;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -77,6 +80,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_API_PORT = "api_port";
     private static final String KEY_ID_TOKEN = "id_token";
     private static final String KEY_OTA_URL = "ota_url";
+    private static final String KEY_PENDING_APK = "pending_apk";
+    private static final int RC_INSTALL_PERMISSION = 1001;
     private static final String FIREBASE_API_KEY = "AIzaSyDPYjylSBhng6CRL77P0MXTUcuq7jBFnnA";
     private static final int RC_GOOGLE_SIGN_IN = 9001;
 
@@ -137,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private String apiBaseUrl;
     private boolean isScanning = false;
+    private MediaPlayer scanBeepPlayer, scanSuccessPlayer;
 
     private StudentAdapter studentAdapter;
 
@@ -150,6 +156,13 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
         checkAuthState();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try { if (scanBeepPlayer != null) scanBeepPlayer.release(); } catch (Exception ignored) {}
+        try { if (scanSuccessPlayer != null) scanSuccessPlayer.release(); } catch (Exception ignored) {}
     }
 
     private void initViews() {
@@ -238,6 +251,11 @@ public class MainActivity extends AppCompatActivity {
         studentAdapter = new StudentAdapter(scannedStudents, this::removeStudent, apiBaseUrl);
         summaryList.setAdapter(studentAdapter);
 
+        try {
+            scanBeepPlayer = MediaPlayer.create(this, R.raw.scan_beep);
+            scanSuccessPlayer = MediaPlayer.create(this, R.raw.scan_success);
+        } catch (Exception ignored) {}
+
         setupClickListeners();
         setupSpinners();
     }
@@ -276,16 +294,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupSpinners() {
         ArrayAdapter<String> sectionAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_item, SECTIONS) {
-            @Override public View getView(int pos, View cv, android.view.ViewGroup p) {
-                View v = super.getView(pos, cv, p);
-                ((TextView)v).setTextColor(Color.parseColor("#f8fafc"));
-                return v;
-            }
+                R.layout.spinner_item, SECTIONS) {
             @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
                 View v = super.getDropDownView(pos, cv, p);
-                ((TextView)v).setTextColor(Color.parseColor("#f8fafc"));
-                ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
+                if (v instanceof TextView)
+                    ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
                 return v;
             }
         };
@@ -343,14 +356,41 @@ public class MainActivity extends AppCompatActivity {
             splashTitle.post(() -> {
                 try {
                     android.graphics.Paint p = splashTitle.getPaint();
-                    float w = p.measureText(splashTitle.getText().toString());
-                    if (w < 1) w = splashTitle.getWidth();
-                    if (w < 1) w = 200;
+                    float tw = p.measureText(splashTitle.getText().toString());
+                    if (tw < 1) tw = splashTitle.getWidth();
+                    if (tw < 1) tw = 200;
+                    final float textWidth = tw;
+
+                    float gradientWidth = textWidth * 3;
+                    final float gw = gradientWidth;
                     Shader shader = new LinearGradient(
-                            0, 0, w, 0,
-                            new int[]{Color.parseColor("#00ffff"), Color.parseColor("#7c3aed")},
-                            null, Shader.TileMode.CLAMP);
+                            0, 0, gw, 0,
+                            new int[]{
+                                Color.parseColor("#00ffff"),
+                                Color.parseColor("#7c3aed"),
+                                Color.parseColor("#ec4899"),
+                                Color.parseColor("#00ffff")
+                            },
+                            new float[]{0f, 0.33f, 0.66f, 1f},
+                            Shader.TileMode.CLAMP);
                     p.setShader(shader);
+                    Matrix matrix = new Matrix();
+                    shader.setLocalMatrix(matrix);
+
+                    ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
+                    anim.setDuration(3000);
+                    anim.setRepeatCount(ValueAnimator.INFINITE);
+                    anim.setRepeatMode(ValueAnimator.REVERSE);
+                    anim.setInterpolator(null);
+                    anim.addUpdateListener(a -> {
+                        float t = a.getAnimatedFraction();
+                        float offset = -t * (gw - textWidth);
+                        Matrix m = new Matrix();
+                        m.setTranslate(offset, 0);
+                        shader.setLocalMatrix(m);
+                        splashTitle.invalidate();
+                    });
+                    anim.start();
                     splashTitle.invalidate();
                 } catch (Exception ignored) {}
             });
@@ -635,16 +675,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateClassSpinner() {
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_item, classList) {
-            @Override public View getView(int pos, View cv, android.view.ViewGroup p) {
-                View v = super.getView(pos, cv, p);
-                ((TextView)v).setTextColor(Color.parseColor("#f8fafc"));
-                return v;
-            }
+                R.layout.spinner_item, classList) {
             @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
                 View v = super.getDropDownView(pos, cv, p);
-                ((TextView)v).setTextColor(Color.parseColor("#f8fafc"));
-                ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
+                if (v instanceof TextView)
+                    ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
                 return v;
             }
         };
@@ -657,16 +692,11 @@ public class MainActivity extends AppCompatActivity {
         if (display.isEmpty()) display.add("No subjects");
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_spinner_item, display) {
-            @Override public View getView(int pos, View cv, android.view.ViewGroup p) {
-                View v = super.getView(pos, cv, p);
-                ((TextView)v).setTextColor(Color.parseColor("#f8fafc"));
-                return v;
-            }
+                R.layout.spinner_item, display) {
             @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
                 View v = super.getDropDownView(pos, cv, p);
-                ((TextView)v).setTextColor(Color.parseColor("#f8fafc"));
-                ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
+                if (v instanceof TextView)
+                    ((TextView)v).setBackgroundColor(Color.parseColor("#1a1a1e"));
                 return v;
             }
         };
@@ -856,6 +886,7 @@ public class MainActivity extends AppCompatActivity {
         scannedStudentIds.add(id);
         scannedStudents.add(new HashMap<>(cached));
         updateScanDisplay();
+        playScanBeep();
         Toast.makeText(this, "✓ " + cached.get("name"), Toast.LENGTH_SHORT).show();
         if (isScanning) new Handler().postDelayed(this::startQrScan, 800);
     }
@@ -871,6 +902,7 @@ public class MainActivity extends AppCompatActivity {
         scannedStudents.add(entry);
 
         updateScanDisplay();
+        playScanBeep();
         Toast.makeText(this, "✓ " + name, Toast.LENGTH_SHORT).show();
         if (isScanning) new Handler().postDelayed(this::startQrScan, 800);
     }
@@ -968,6 +1000,7 @@ public class MainActivity extends AppCompatActivity {
     private void showSuccess() {
         int count = scannedStudents.size();
         successSubtext.setText(count + " attendance records pushed successfully");
+        playSuccessSound();
 
         // Animate success icon
         ObjectAnimator scaleX = ObjectAnimator.ofFloat(successIcon, "scaleX", 0f, 1.2f, 1f);
@@ -999,6 +1032,26 @@ public class MainActivity extends AppCompatActivity {
     private void hideLoading() {
         loadingOverlay.animate().alpha(0f).setDuration(200)
                 .withEndAction(() -> loadingOverlay.setVisibility(View.GONE)).start();
+    }
+
+    // ─── SOUND ───────────────────────────────────────────
+
+    private void playScanBeep() {
+        try {
+            if (scanBeepPlayer != null) {
+                scanBeepPlayer.seekTo(0);
+                scanBeepPlayer.start();
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void playSuccessSound() {
+        try {
+            if (scanSuccessPlayer != null) {
+                scanSuccessPlayer.seekTo(0);
+                scanSuccessPlayer.start();
+            }
+        } catch (Exception ignored) {}
     }
 
     // ─── UTILITY ─────────────────────────────────────────
@@ -1105,7 +1158,7 @@ public class MainActivity extends AppCompatActivity {
                 conn.connect();
                 int fileLength = conn.getContentLength();
 
-                File dir = new File(getExternalCacheDir(), "updates");
+                File dir = new File(getCacheDir(), "updates");
                 dir.mkdirs();
                 File apkFile = new File(dir, "EduPulseTeacher.apk");
 
@@ -1138,18 +1191,35 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String pendingApk = prefs.getString(KEY_PENDING_APK, "");
+        if (!pendingApk.isEmpty()) {
+            prefs.edit().remove(KEY_PENDING_APK).apply();
+            File apkFile = new File(pendingApk);
+            if (apkFile.exists()) {
+                doInstallApk(apkFile);
+            }
+        }
+    }
+
     private void installApk(File apkFile) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!getPackageManager().canRequestPackageInstalls()) {
+                prefs.edit().putString(KEY_PENDING_APK, apkFile.getAbsolutePath()).apply();
                 Intent intent = new Intent(
                         android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                 intent.setData(Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
-                Toast.makeText(this, "Enable install from this source", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Enable install from this source, then tap UPDATE again", Toast.LENGTH_LONG).show();
                 return;
             }
         }
+        doInstallApk(apkFile);
+    }
 
+    private void doInstallApk(File apkFile) {
         Uri uri = FileProvider.getUriForFile(this,
                 getPackageName() + ".fileprovider", apkFile);
         Intent intent = new Intent(Intent.ACTION_VIEW);
