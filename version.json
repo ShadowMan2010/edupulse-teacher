@@ -1,8 +1,8 @@
 {
-  "version": 5,
-  "version_name": "5.0.0",
-  "apk_url": "https://github.com/ShadowMan2010/edupulse-teacher/releases/download/v5/edupulse-teacher.apk",
-  "changelog": "- Matrix digital rain background on splash & login screens\n- Glitch text effect on EDUPULSE title throughout app\n- CRT scan line overlay for retro cyberpunk feel\n- New DigitalLoader animation with pulsing ring, progress arcs, and cycling Matrix characters\n- Cyberpunk redesign with pure black background (#000000), #111111 cards with cyan borders\n- Fingerprint / biometric lock: enable after login, unlock with your fingerprint on future launches\n- OTA updates with progress bar\n- Monospace JetBrains Mono labels in uppercase\n- Inter & JetBrains Mono fonts throughout\n- Gradient buttons (cyan→purple)\n- Stat cards with accent bar\n- Pill-shaped status badges\n- Scan sound effects",
-  "release_date": "2026-07-09",
-  "min_android_version": 24
+  "version": "6.0.0",
+  "versionCode": 6,
+  "buildDate": "2026-07-09",
+  "minApi": 24,
+  "targetApi": 34,
+  "updateUrl": "https://api.github.com/repos/ShadowMan2010/edupulse-teacher/releases/latest"
 }

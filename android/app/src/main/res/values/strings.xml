@@ -1,6 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">EduPulse Teacher</string>
-    <string name="pwa_url">https://edupulse-attendance-qr.web.app</string>
-    <string name="update_url">https://edupulse-attendance-qr.web.app/version.json</string>
+    <string name="app_name">EduPulse</string>
+    <string name="teacher">Teacher</string>
+    <string name="teacher_sign_in">Teacher Sign In</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="sign_in">SIGN IN</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="connect_to_server">Connect to Server</string>
+    <string name="server_ip">Server IP</string>
+    <string name="port">Port</string>
+    <string name="connect">CONNECT</string>
+    <string name="scan_qr">SCAN\nQR</string>
+    <string name="scanned_students">SCANNED STUDENTS</string>
+    <string name="class_section">CLASS &amp; SUBJECT</string>
+    <string name="class_label">Class</string>
+    <string name="section_label">Sec</string>
+    <string name="subject_label">Subject</string>
+    <string name="scan_finished">SCAN FINISHED</string>
+    <string name="add_more">ADD MORE</string>
+    <string name="push_to_server">PUSH TO SERVER</string>
+    <string name="scan_summary">SCAN SUMMARY</string>
+    <string name="loading_connecting">Connecting…</string>
+    <string name="success_attendance">Attendance Pushed!</string>
+    <string name="done">DONE</string>
+    <string name="fingerprint_lock">FINGERPRINT LOCK</string>
+    <string name="use_password">USE PASSWORD</string>
+    <string name="update_available">Update Available</string>
+    <string name="update_now">UPDATE NOW</string>
+    <string name="later">LATER</string>
+    <string name="exit">EXIT</string>
+    <string name="last_scanned">LAST SCANNED</string>
+    <string name="login_error">Invalid email or password</string>
+    <string name="network_error">Network error. Check connection.</string>
+    <string name="connection_success">Connection successful</string>
+    <string name="connection_failed">Connection failed</string>
 </resources>

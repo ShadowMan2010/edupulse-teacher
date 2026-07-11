@@ -1,43 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.EduPulse" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:colorBackground">#000000</item>
+        <item name="colorSurface">#0DFFFFFF</item>
         <item name="colorPrimary">#00E5FF</item>
         <item name="colorPrimaryVariant">#0097A7</item>
         <item name="colorOnPrimary">#000000</item>
         <item name="colorSecondary">#BB00FF</item>
-        <item name="colorSecondaryVariant">#2D0044</item>
-        <item name="colorOnSecondary">#000000</item>
-        <item name="android:colorBackground">#000000</item>
-        <item name="colorSurface">#111111</item>
-        <item name="colorOnSurface">#E0E0E0</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>
-    </style>
-
-    <style name="Widget.EduPulse.Button" parent="Widget.MaterialComponents.Button">
-        <item name="android:background">@drawable/btn_gradient</item>
-        <item name="android:textColor">#000000</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="cornerRadius">12dp</item>
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:letterSpacing">0.12</item>
-    </style>
-
-    <style name="Widget.EduPulse.Button.Outline" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="strokeColor">#00E5FF</item>
-        <item name="strokeWidth">1dp</item>
-        <item name="android:textColor">#00E5FF</item>
-        <item name="cornerRadius">10dp</item>
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textSize">13sp</item>
-        <item name="android:letterSpacing">0.08</item>
-    </style>
-
-    <style name="Widget.EduPulse.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-        <item name="boxStrokeColor">#00E5FF</item>
-        <item name="boxStrokeWidth">1dp</item>
-        <item name="hintTextColor">#9E9E9E</item>
-        <item name="android:fontFamily">monospace</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:keepScreenOn">true</item>
     </style>
 </resources>

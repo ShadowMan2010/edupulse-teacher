@@ -1,161 +1,121 @@
 package com.edupulse.teacher;
 
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 public class MatrixRainView extends View {
 
-    private final Paint rainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint headPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static final String CHARS = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ{}[]<>/\\|!@#$%^&*()";
+    private static final int COLUMN_WIDTH_DP = 20;
+    private static final int SPEED = 50;
+
+    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint scanlinePaint = new Paint();
     private final Random random = new Random();
-    private final List<Drop> drops = new ArrayList<>();
-    private int columnCount = 0;
-    private float charSize;
-
-    private static final String CHARS = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ{}[]<>/\\|!@#$%^&*()";
-
-    private static class Drop {
-        int col;
-        float y;
-        float speed;
-        int length;
-        float alpha;
-        char[] chars;
-    }
+    private int columnCount;
+    private int columnWidth;
+    private int[] columns;
+    private float[] speeds;
+    private boolean running = true;
 
     public MatrixRainView(Context context) {
         super(context);
         init();
     }
+
     public MatrixRainView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
-    public MatrixRainView(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
+
+    public MatrixRainView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
         init();
     }
 
     private void init() {
-        rainPaint.setStyle(Paint.Style.FILL);
-        rainPaint.setColor(Color.parseColor("#00E5FF"));
-        rainPaint.setTypeface(Typeface.MONOSPACE);
+        float density = getResources().getDisplayMetrics().density;
+        columnWidth = (int) (COLUMN_WIDTH_DP * density);
 
-        headPaint.setStyle(Paint.Style.FILL);
-        headPaint.setColor(Color.parseColor("#CCFFFFFF"));
-        headPaint.setTypeface(Typeface.MONOSPACE);
+        textPaint.setTextSize(12 * density);
+        textPaint.setColor(Color.argb(160, 0, 229, 255));
+        textPaint.setTypeface(null);
+        textPaint.setStyle(Paint.Style.FILL);
 
         scanlinePaint.setStyle(Paint.Style.STROKE);
-        scanlinePaint.setStrokeWidth(1f);
-        scanlinePaint.setColor(Color.parseColor("#0AFFFFFF"));
+        scanlinePaint.setStrokeWidth(1);
+        scanlinePaint.setColor(Color.argb(10, 255, 255, 255));
 
-        ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
-        anim.setDuration(50);
-        anim.setRepeatCount(ValueAnimator.INFINITE);
-        anim.setInterpolator(new LinearInterpolator());
-        anim.addUpdateListener(a -> {
-            updateDrops();
-            invalidate();
-        });
-        anim.start();
+        setLayerType(LAYER_TYPE_HARDWARE, null);
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        charSize = Math.max(12, w / 40f);
-        rainPaint.setTextSize(charSize);
-        headPaint.setTextSize(charSize);
-        columnCount = (int) (w / (charSize * 0.8f));
-        drops.clear();
+        columnCount = w / columnWidth + 1;
+        columns = new int[columnCount];
+        speeds = new float[columnCount];
         for (int i = 0; i < columnCount; i++) {
-            drops.add(createDrop(h));
-        }
-    }
-
-    private Drop createDrop(int h) {
-        Drop d = new Drop();
-        d.col = random.nextInt(columnCount);
-        d.y = -random.nextFloat() * h;
-        d.speed = 4f + random.nextFloat() * 10f;
-        d.length = 5 + random.nextInt(15);
-        d.alpha = 0.15f + random.nextFloat() * 0.25f;
-        d.chars = new char[d.length];
-        for (int j = 0; j < d.length; j++) {
-            d.chars[j] = CHARS.charAt(random.nextInt(CHARS.length()));
-        }
-        return d;
-    }
-
-    private void updateDrops() {
-        int h = getHeight();
-        if (h <= 0) return;
-        for (Drop d : drops) {
-            d.y += d.speed;
-            if (random.nextFloat() < 0.05f) {
-                int pos = random.nextInt(d.length);
-                d.chars[pos] = CHARS.charAt(random.nextInt(CHARS.length()));
-            }
-            if (d.y - d.length * charSize > h) {
-                d.y = -d.length * charSize;
-                d.speed = 4f + random.nextFloat() * 10f;
-                d.length = 5 + random.nextInt(15);
-                d.alpha = 0.15f + random.nextFloat() * 0.25f;
-                d.chars = new char[d.length];
-                for (int j = 0; j < d.length; j++) {
-                    d.chars[j] = CHARS.charAt(random.nextInt(CHARS.length()));
-                }
-            }
+            columns[i] = random.nextInt(h);
+            speeds[i] = 1f + random.nextFloat() * 2f;
         }
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        int w = getWidth();
+        if (!running || columns == null) return;
+
+        float density = getResources().getDisplayMetrics().density;
         int h = getHeight();
-        if (w <= 0 || h <= 0 || drops.isEmpty()) return;
+        int w = getWidth();
 
-        float xStep = (float) w / columnCount;
+        for (int col = 0; col < columnCount; col++) {
+            float y = columns[col];
+            float x = col * columnWidth;
 
-        for (Drop d : drops) {
-            float x = d.col * xStep;
-            for (int i = 0; i < d.length; i++) {
-                float y = d.y - i * charSize;
-                if (y < -charSize || y > h + charSize) continue;
+            int charIndex = random.nextInt(CHARS.length());
+            char c = CHARS.charAt(charIndex);
 
-                char c = d.chars[i % d.chars.length];
-                float fade = 1f - (float) i / d.length;
-                int alpha = (int) (d.alpha * fade * 255);
-                alpha = Math.max(0, Math.min(255, alpha));
+            int alpha = (int) (80 + 175 * (1f - (y / h)));
+            textPaint.setColor(Color.argb(Math.min(255, alpha), 0, 229, 255));
+            canvas.drawText(String.valueOf(c), x, y, textPaint);
 
-                if (i == 0) {
-                    headPaint.setAlpha(220);
-                    headPaint.setColor(Color.parseColor("#FFFFFF"));
-                    canvas.drawText(String.valueOf(c), x, y, headPaint);
-                } else {
-                    rainPaint.setAlpha(alpha);
-                    canvas.drawText(String.valueOf(c), x, y, rainPaint);
-                }
+            if (random.nextInt(10) < 1) {
+                textPaint.setColor(Color.argb(255, 0, 229, 255));
+                canvas.drawText(String.valueOf(CHARS.charAt(random.nextInt(CHARS.length()))), x, y, textPaint);
+            }
+
+            columns[col] = (int) (y + speeds[col] * density * 0.5f);
+            if (columns[col] > h + columnWidth) {
+                columns[col] = -columnWidth;
+                speeds[col] = 1f + random.nextFloat() * 2f;
             }
         }
 
-        // CRT scan lines overlay
-        scanlinePaint.setAlpha(8);
-        for (int i = 0; i < h; i += 3) {
-            canvas.drawLine(0, i, w, i, scanlinePaint);
+        int scanlineSpacing = (int) (4 * density);
+        for (int y = 0; y < h; y += scanlineSpacing) {
+            canvas.drawLine(0, y, w, y, scanlinePaint);
         }
+
+        postInvalidateDelayed(SPEED);
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        running = true;
+        postInvalidate();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        running = false;
     }
 }

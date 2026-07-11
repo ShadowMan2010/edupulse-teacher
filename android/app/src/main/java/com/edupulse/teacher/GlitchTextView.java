@@ -2,6 +2,7 @@ package com.edupulse.teacher;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -9,200 +10,159 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
 
 import java.util.Random;
 
 public class GlitchTextView extends View {
 
-    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint glitchPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint glitchPaint2 = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Random random = new Random();
+    private static final int CYCLE_DURATION = 2500;
+    private static final String GLITCH_CHARS = "!@#$%^&*0123456789";
+    private static final int GLITCH_START_1 = 92;
+    private static final int GLITCH_END_1 = 100;
+    private static final int GLITCH_START_2 = 30;
+    private static final int GLITCH_END_2 = 35;
+    private static final int GLITCH_START_3 = 70;
+    private static final int GLITCH_END_3 = 73;
 
     private String text = "EDUPULSE";
-    private String glitchText = "";
-    private float textSize = 28f;
-    private int textColor = Color.parseColor("#00E5FF");
-    private Typeface typeface;
-
-    private boolean glitching = false;
-    private float glitchOffsetX = 3f;
-    private float glitchOffsetY = 2f;
-    private int glitchSliceY = 0;
-    private int glitchSliceHeight = 0;
-    private boolean showGlitchSlice = false;
-    private boolean showGlitchCopy = false;
-    private int glitchR = 255, glitchG = 0, glitchB = 255;
+    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint cyanGhostPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint magentaGhostPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Random random = new Random();
+    private final Rect textBounds = new Rect();
+    private boolean isGlitching = false;
+    private float glitchOffsetX = 0f;
+    private String displayText = "";
+    private ValueAnimator cycleAnimator;
 
     public GlitchTextView(Context context) {
         super(context);
-        init();
+        init(context, null);
     }
+
     public GlitchTextView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
-    }
-    public GlitchTextView(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-        init();
+        init(context, attrs);
     }
 
-    private void init() {
+    public GlitchTextView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init(context, attrs);
+    }
+
+    private void init(Context context, AttributeSet attrs) {
+        float density = getResources().getDisplayMetrics().density;
+
         textPaint.setStyle(Paint.Style.FILL);
-        textPaint.setColor(textColor);
-        textPaint.setTextSize(textSize);
-        textPaint.setSubpixelText(true);
-        textPaint.setLetterSpacing(0.15f);
+        textPaint.setColor(Color.argb(234, 255, 255, 255));
+        textPaint.setTypeface(Typeface.create("monospace", Typeface.BOLD));
+        textPaint.setTextSize(28 * density);
+        textPaint.setTextAlign(Paint.Align.LEFT);
 
-        glitchPaint.setStyle(Paint.Style.FILL);
-        glitchPaint.setTextSize(textSize);
-        glitchPaint.setSubpixelText(true);
-        glitchPaint.setAlpha(120);
+        cyanGhostPaint.setStyle(Paint.Style.FILL);
+        cyanGhostPaint.setColor(Color.argb(80, 0, 229, 255));
+        cyanGhostPaint.setTypeface(Typeface.create("monospace", Typeface.BOLD));
+        cyanGhostPaint.setTextSize(28 * density);
+        cyanGhostPaint.setTextAlign(Paint.Align.LEFT);
 
-        glitchPaint2.setStyle(Paint.Style.FILL);
-        glitchPaint2.setTextSize(textSize);
-        glitchPaint2.setSubpixelText(true);
-        glitchPaint2.setAlpha(100);
+        magentaGhostPaint.setStyle(Paint.Style.FILL);
+        magentaGhostPaint.setColor(Color.argb(80, 187, 0, 255));
+        magentaGhostPaint.setTypeface(Typeface.create("monospace", Typeface.BOLD));
+        magentaGhostPaint.setTextSize(28 * density);
+        magentaGhostPaint.setTextAlign(Paint.Align.LEFT);
 
-        startGlitchAnimation();
-    }
-
-    public void setText(String t) {
-        this.text = t;
-        requestLayout();
-        invalidate();
-    }
-
-    public void setTextColor(int color) {
-        this.textColor = color;
-        textPaint.setColor(color);
-        invalidate();
-    }
-
-    public void setTextSize(float size) {
-        this.textSize = size;
-        textPaint.setTextSize(size);
-        glitchPaint.setTextSize(size);
-        glitchPaint2.setTextSize(size);
-        requestLayout();
-        invalidate();
-    }
-
-    public void setTypeface(Typeface tf) {
-        this.typeface = tf;
-        textPaint.setTypeface(tf);
-        glitchPaint.setTypeface(tf);
-        glitchPaint2.setTypeface(tf);
-        invalidate();
-    }
-
-    private void startGlitchAnimation() {
-        ValueAnimator glitchTrigger = ValueAnimator.ofFloat(0f, 1f);
-        glitchTrigger.setDuration(2500);
-        glitchTrigger.setRepeatCount(ValueAnimator.INFINITE);
-        glitchTrigger.setInterpolator(new LinearInterpolator());
-        glitchTrigger.addUpdateListener(a -> {
-            float v = a.getAnimatedFraction();
-
-            boolean shouldGlitch = v > 0.92f || (v > 0.3f && v < 0.35f) || (v > 0.7f && v < 0.73f);
-
-            if (shouldGlitch && !glitching) {
-                glitching = true;
-                triggerGlitch();
-            } else if (!shouldGlitch) {
-                glitching = false;
-                showGlitchCopy = false;
-                showGlitchSlice = false;
-                invalidate();
+        if (attrs != null) {
+            TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.GlitchTextView);
+            String glitchText = a.getString(R.styleable.GlitchTextView_glitchText);
+            if (glitchText != null) {
+                text = glitchText;
             }
-        });
-        glitchTrigger.start();
-    }
-
-    private void triggerGlitch() {
-        int textHeight = getTextHeight();
-
-        glitchOffsetX = 2f + random.nextFloat() * 6f;
-        glitchOffsetY = 1f + random.nextFloat() * 3f;
-        glitchSliceY = random.nextInt(Math.max(1, textHeight));
-        glitchSliceHeight = 3 + random.nextInt(Math.max(2, textHeight / 4));
-        showGlitchSlice = true;
-        showGlitchCopy = random.nextBoolean();
-        glitchR = 0;
-        glitchG = random.nextBoolean() ? 255 : 0;
-        glitchB = 255;
-
-        StringBuilder sb = new StringBuilder(text);
-        if (random.nextFloat() < 0.3f) {
-            int pos = random.nextInt(text.length());
-            sb.setCharAt(pos, CHARS.charAt(random.nextInt(CHARS.length())));
+            a.recycle();
         }
-        glitchText = sb.toString();
 
-        invalidate();
+        displayText = text;
 
-        postDelayed(() -> {
-            showGlitchCopy = false;
-            showGlitchSlice = false;
-            invalidate();
-        }, 80 + random.nextInt(120));
-    }
-
-    private static final String CHARS = "!@#$%^&*()_+-={}[]|\\:;\"'<>,.?/~`";
-
-    private int getTextHeight() {
-        Rect bounds = new Rect();
-        textPaint.getTextBounds(text, 0, text.length(), bounds);
-        return bounds.height();
+        cycleAnimator = ValueAnimator.ofFloat(0f, 100f);
+        cycleAnimator.setDuration(CYCLE_DURATION);
+        cycleAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        cycleAnimator.addUpdateListener(a -> {
+            float progress = (float) a.getAnimatedValue();
+            updateGlitch(progress);
+        });
     }
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        Rect bounds = new Rect();
-        textPaint.getTextBounds(text, 0, text.length(), bounds);
-        int w = bounds.width() + getPaddingLeft() + getPaddingRight() + 20;
-        int h = bounds.height() + getPaddingTop() + getPaddingBottom() + 10;
-        setMeasuredDimension(
-            MeasureSpec.getSize(widthMeasureSpec),
-            resolveSize(h, heightMeasureSpec)
-        );
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        cycleAnimator.start();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        cycleAnimator.cancel();
+    }
+
+    private void updateGlitch(float progress) {
+        boolean inGlitchZone = false;
+        float offset = 0f;
+
+        if (progress >= GLITCH_START_1 && progress <= GLITCH_END_1) {
+            inGlitchZone = true;
+            offset = (progress - GLITCH_START_1) / (GLITCH_END_1 - GLITCH_START_1);
+        } else if (progress >= GLITCH_START_2 && progress <= GLITCH_END_2) {
+            inGlitchZone = true;
+            offset = (progress - GLITCH_START_2) / (GLITCH_END_2 - GLITCH_START_2);
+        } else if (progress >= GLITCH_START_3 && progress <= GLITCH_END_3) {
+            inGlitchZone = true;
+            offset = (progress - GLITCH_START_3) / (GLITCH_END_3 - GLITCH_START_3);
+        }
+
+        if (inGlitchZone) {
+            isGlitching = true;
+            float density = getResources().getDisplayMetrics().density;
+            glitchOffsetX = (random.nextFloat() - 0.5f) * 8 * density;
+
+            StringBuilder sb = new StringBuilder(text);
+            for (int i = 0; i < sb.length(); i++) {
+                if (random.nextFloat() < 0.3f) {
+                    sb.setCharAt(i, GLITCH_CHARS.charAt(random.nextInt(GLITCH_CHARS.length())));
+                }
+            }
+            displayText = sb.toString();
+        } else {
+            isGlitching = false;
+            glitchOffsetX = 0f;
+            displayText = text;
+        }
+
+        invalidate();
+    }
+
+    public void setGlitchText(String text) {
+        this.text = text;
+        this.displayText = text;
+        invalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+        float centerX = getWidth() / 2f;
+        float centerY = getHeight() / 2f;
 
-        int startX = getPaddingLeft();
-        int startY = getPaddingTop() + Math.abs((int) textPaint.ascent());
+        textPaint.setTextAlign(Paint.Align.CENTER);
+        cyanGhostPaint.setTextAlign(Paint.Align.CENTER);
+        magentaGhostPaint.setTextAlign(Paint.Align.CENTER);
 
-        if (showGlitchSlice) {
-            float sliceStart = startY + glitchSliceY;
+        Paint.FontMetrics fm = textPaint.getFontMetrics();
+        float textY = centerY - (fm.ascent + fm.descent) / 2f;
 
-            glitchPaint.setColor(Color.argb(100, glitchR, glitchG, glitchB));
-            glitchPaint.setTextSize(textSize - 1f);
-            float lx = startX + (random.nextBoolean() ? -glitchOffsetX : glitchOffsetX);
-            float ly = sliceStart;
-            canvas.save();
-            canvas.clipRect(0, sliceStart, getWidth(), sliceStart + glitchSliceHeight);
-            canvas.drawText(text, lx, startY, glitchPaint);
-            canvas.restore();
+        if (isGlitching) {
+            canvas.drawText(displayText, centerX - 2f + glitchOffsetX, textY, cyanGhostPaint);
+            canvas.drawText(displayText, centerX + 2f - glitchOffsetX, textY, magentaGhostPaint);
+            canvas.drawText(displayText, centerX, textY, textPaint);
+        } else {
+            canvas.drawText(displayText, centerX, textY, textPaint);
         }
-
-        if (showGlitchCopy) {
-            glitchPaint2.setColor(Color.argb(80, 0, 255, 255));
-            glitchPaint2.setTextSize(textSize + 1f);
-            float gx = startX + (random.nextBoolean() ? -glitchOffsetX * 1.5f : glitchOffsetX * 1.5f);
-            float gy = startY + (random.nextBoolean() ? -glitchOffsetY : glitchOffsetY);
-            canvas.drawText(text, gx, gy, glitchPaint2);
-
-            glitchPaint2.setColor(Color.argb(60, 255, 0, 255));
-            float gx2 = startX + (random.nextBoolean() ? -glitchOffsetX * 2f : glitchOffsetX * 2f);
-            float gy2 = startY + (random.nextBoolean() ? -glitchOffsetY * 2f : glitchOffsetY * 2f);
-            canvas.drawText(text, gx2, gy2, glitchPaint2);
-        }
-
-        textPaint.setColor(textColor);
-        canvas.drawText(text, startX, startY, textPaint);
     }
 }

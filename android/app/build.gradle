@@ -1,4 +1,6 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
 
 android {
     namespace 'com.edupulse.teacher'
@@ -8,8 +10,10 @@ android {
         applicationId 'com.edupulse.teacher'
         minSdk 24
         targetSdk 34
-        versionCode 5
-        versionName '5.0.0'
+        versionCode 6
+        versionName '6.0.0'
+
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     buildTypes {

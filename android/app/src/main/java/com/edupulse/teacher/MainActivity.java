@@ -1,29 +1,43 @@
 package com.edupulse.teacher;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.media.MediaPlayer;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -38,13 +52,19 @@ import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NetworkError;
+import com.android.volley.NoConnectionError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
+import com.android.volley.ServerError;
+import com.android.volley.TimeoutError;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.edupulse.teacher.R;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -60,10 +80,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.util.concurrent.Executor;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -71,1318 +88,1262 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String PREFS_NAME = "edupulse_teacher";
-    private static final String KEY_LOGGED_IN = "logged_in";
-    private static final String KEY_EMAIL = "email";
-    private static final String KEY_API_IP = "api_ip";
-    private static final String KEY_API_PORT = "api_port";
-    private static final String KEY_ID_TOKEN = "id_token";
-    private static final String KEY_OTA_URL = "ota_url";
-    private static final String KEY_PENDING_APK = "pending_apk";
-    private static final String KEY_BIOMETRIC_ENABLED = "biometric_enabled";
-    private static final int RC_INSTALL_PERMISSION = 1001;
+    private static final String TAG = "EduPulse";
     private static final String FIREBASE_API_KEY = "AIzaSyDPYjylSBhng6CRL77P0MXTUcuq7jBFnnA";
-    private static final int RC_GOOGLE_SIGN_IN = 9001;
-    private static final int RC_BIOMETRIC = 1002;
+    private static final String FIREBASE_AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + FIREBASE_API_KEY;
+    private static final String FIREBASE_IDP_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=" + FIREBASE_API_KEY;
+    private static final String GITHUB_API_URL = "https://api.github.com/repos/ShadowMan2010/edupulse-teacher/releases/latest";
+    private static final String PHOTO_BASE_URL = "https://edupulse-attendance-qr-default-rtdb.asia-southeast1.firebasedatabase.app/students/";
+    private static final String PREFS_NAME = "edupulse_teacher";
+    private static final int RC_SIGN_IN = 9001;
 
-    // Screens
-    private View splashContainer, loginContainer, connectContainer, mainContainer;
-    private View loadingOverlay, successOverlay, scanSummarySheet;
-    private TextView loadingText, loadingSubtext;
+    public static final List<String> SECTIONS = Arrays.asList("A", "B", "C", "D", "E");
 
-    // Login
-    private TextInputEditText loginEmail, loginPassword;
-    private Button loginButton;
-    private TextView loginError;
-    private com.google.android.gms.common.SignInButton googleSignInButton;
+    private RequestQueue requestQueue;
+    private SharedPreferences prefs;
     private GoogleSignInClient googleSignInClient;
-
-    // Connect
-    private TextInputEditText connectIp, connectPort;
-    private Button connectButton;
-    private TextView connectStatus;
-
-    // Main
-    private Spinner classSpinner, sectionSpinner, subjectSpinner;
-    private Button scanButton, scanFinishedButton;
-    private TextView scanCountText, lastScannedText, userEmailText, scanInfoText;
-    private Button disconnectButton;
-
-    // Splash
-    private View splashTitle;
-
-    // Summary
-    private RecyclerView summaryList;
-    private TextView summaryCountText;
-    private Button addMoreButton, pushButton;
-
-    // Biometric
-    private View biometricOverlay;
-    private TextView biometricStatusText;
-    private Button biometricUsePasswordButton;
     private BiometricPrompt biometricPrompt;
     private BiometricPrompt.PromptInfo biometricPromptInfo;
-    private Executor biometricExecutor;
+    private MediaPlayer beepPlayer;
+    private MediaPlayer successPlayer;
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    // Success
-    private TextView successSubtext;
-    private Button successDoneButton;
+    private String currentEmail = "";
+    private String currentIdToken = "";
+    private String apiBaseUrl = "";
+    private String currentClass = "";
+    private String currentSection = "A";
+    private String currentSubject = "";
+    private boolean isPushing = false;
 
-    // Update Overlay
-    private View updateOverlay;
-    private TextView updateTitleText, updateVersionText, updateChangelogText, updateProgressText;
-    private ProgressBar updateProgressBar;
-    private Button updateButton, updateLaterButton;
-
-    // Animation
-    private View successIcon;
-
-    // Data
     private List<String> scannedStudentIds = new ArrayList<>();
     private List<Map<String, String>> scannedStudents = new ArrayList<>();
     private List<String> classList = new ArrayList<>();
     private Map<String, List<String>> subjectsMap = new HashMap<>();
     private Map<String, Map<String, String>> studentsCache = new HashMap<>();
     private List<String> currentSubjects = new ArrayList<>();
-    private static final List<String> SECTIONS = Arrays.asList("A", "B", "C", "D", "E");
+    private ScanStudentAdapter studentAdapter;
+    private Map<String, Bitmap> photoCache = new HashMap<>();
 
-    private RequestQueue requestQueue;
-    private SharedPreferences prefs;
-    private String apiBaseUrl;
-    private boolean isScanning = false;
-    private MediaPlayer scanBeepPlayer, scanSuccessPlayer;
-
-    private StudentAdapter studentAdapter;
+    private View splashContainer, loginContainer, connectContainer, mainContainer;
+    private View scanSummarySheet, loadingOverlay, successOverlay, biometricOverlay, updateOverlay;
+    private View lastScannedCard, loadingCard, successCard, biometricCard, updateCard;
+    private View statCard, classSectionCard, topBarCard, connectCard, loginCard;
+    private Button signInButton, googleSignInButton, connectButton, scanButton, scanFinishedButton;
+    private Button pushButton, addMoreButton, successDoneButton, usePasswordButton;
+    private Button updateNowButton, updateLaterButton, exitButton;
+    private TextInputEditText emailField, passwordField, ipField, portField;
+    private TextView loginError, connectionStatus, scannedCount, classSubjectInfo;
+    private TextView lastScannedName, lastScannedDetail, summaryCount;
+    private TextView loadingText, loadingSubtext, successTitle, successSubtext;
+    private TextView biometricStatus, updateVersion, updateChangelog, updateProgressText;
+    private TextView userEmail;
+    private Spinner classSpinner, sectionSpinner, subjectSpinner;
+    private ImageView lastScannedPhoto;
+    private RecyclerView studentRecyclerView;
+    private ProgressBar updateProgressBar;
+    private ConfettiView confettiView;
+    private CyberBgView cyberBg;
+    private ScanPulseView scanPulse;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setTheme(R.style.Theme_EduPulse);
         setContentView(R.layout.activity_main);
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         requestQueue = Volley.newRequestQueue(this);
 
         initViews();
-        checkAuthState();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        try { if (scanBeepPlayer != null) scanBeepPlayer.release(); } catch (Exception ignored) {}
-        try { if (scanSuccessPlayer != null) scanSuccessPlayer.release(); } catch (Exception ignored) {}
+        initSounds();
+        initGoogleSignIn();
+        initBiometric();
+        setupSpinners();
+        setupClickListeners();
+        setupRecyclerView();
+        loadSavedState();
+        routeUser();
     }
 
     private void initViews() {
-        // Splash
         splashContainer = findViewById(R.id.splashContainer);
-        splashTitle = findViewById(R.id.splashTitle);
-
-        // Login
         loginContainer = findViewById(R.id.loginContainer);
-        loginEmail = findViewById(R.id.loginEmail);
-        loginPassword = findViewById(R.id.loginPassword);
-        loginButton = findViewById(R.id.loginButton);
-        loginError = findViewById(R.id.loginError);
-        googleSignInButton = findViewById(R.id.googleSignInButton);
-
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(FIREBASE_API_KEY)
-                .requestEmail()
-                .build();
-        googleSignInClient = GoogleSignIn.getClient(this, gso);
-
-        // Connect
         connectContainer = findViewById(R.id.connectContainer);
-        connectIp = findViewById(R.id.connectIp);
-        connectPort = findViewById(R.id.connectPort);
-        connectButton = findViewById(R.id.connectButton);
-        connectStatus = findViewById(R.id.connectStatus);
-
-        // Main
         mainContainer = findViewById(R.id.mainContainer);
+        scanSummarySheet = findViewById(R.id.scanSummarySheet);
+        loadingOverlay = findViewById(R.id.loadingOverlay);
+        successOverlay = findViewById(R.id.successOverlay);
+        biometricOverlay = findViewById(R.id.biometricOverlay);
+        updateOverlay = findViewById(R.id.updateOverlay);
+        lastScannedCard = findViewById(R.id.lastScannedCard);
+        loadingCard = findViewById(R.id.loadingCard);
+        successCard = findViewById(R.id.successCard);
+        biometricCard = findViewById(R.id.biometricCard);
+        updateCard = findViewById(R.id.updateCard);
+        statCard = findViewById(R.id.statCard);
+        classSectionCard = findViewById(R.id.classSectionCard);
+        topBarCard = findViewById(R.id.topBarCard);
+        connectCard = findViewById(R.id.connectCard);
+        loginCard = findViewById(R.id.loginCard);
+
+        signInButton = findViewById(R.id.signInButton);
+        googleSignInButton = findViewById(R.id.googleSignInButton);
+        connectButton = findViewById(R.id.connectButton);
+        scanButton = findViewById(R.id.scanButton);
+        scanFinishedButton = findViewById(R.id.scanFinishedButton);
+        pushButton = findViewById(R.id.pushButton);
+        addMoreButton = findViewById(R.id.addMoreButton);
+        successDoneButton = findViewById(R.id.successDoneButton);
+        usePasswordButton = findViewById(R.id.usePasswordButton);
+        updateNowButton = findViewById(R.id.updateNowButton);
+        updateLaterButton = findViewById(R.id.updateLaterButton);
+        exitButton = findViewById(R.id.exitButton);
+
+        emailField = findViewById(R.id.emailField);
+        passwordField = findViewById(R.id.passwordField);
+        ipField = findViewById(R.id.ipField);
+        portField = findViewById(R.id.portField);
+
+        loginError = findViewById(R.id.loginError);
+        connectionStatus = findViewById(R.id.connectionStatus);
+        scannedCount = findViewById(R.id.scannedCount);
+        classSubjectInfo = findViewById(R.id.classSubjectInfo);
+        lastScannedName = findViewById(R.id.lastScannedName);
+        lastScannedDetail = findViewById(R.id.lastScannedDetail);
+        summaryCount = findViewById(R.id.summaryCount);
+        loadingText = findViewById(R.id.loadingText);
+        loadingSubtext = findViewById(R.id.loadingSubtext);
+        successTitle = findViewById(R.id.successTitle);
+        successSubtext = findViewById(R.id.successSubtext);
+        biometricStatus = findViewById(R.id.biometricStatus);
+        updateVersion = findViewById(R.id.updateVersion);
+        updateChangelog = findViewById(R.id.updateChangelog);
+        updateProgressText = findViewById(R.id.updateProgressText);
+        userEmail = findViewById(R.id.userEmail);
+
+        lastScannedPhoto = findViewById(R.id.lastScannedPhoto);
+        studentRecyclerView = findViewById(R.id.studentRecyclerView);
+        updateProgressBar = findViewById(R.id.updateProgressBar);
+        confettiView = findViewById(R.id.confettiView);
+        cyberBg = findViewById(R.id.cyberBg);
+        scanPulse = findViewById(R.id.scanPulse);
+
         classSpinner = findViewById(R.id.classSpinner);
         sectionSpinner = findViewById(R.id.sectionSpinner);
         subjectSpinner = findViewById(R.id.subjectSpinner);
-        scanButton = findViewById(R.id.scanButton);
-        scanFinishedButton = findViewById(R.id.scanFinishedButton);
-        scanCountText = findViewById(R.id.scanCountText);
-        lastScannedText = findViewById(R.id.lastScannedText);
-        userEmailText = findViewById(R.id.userEmailText);
-        disconnectButton = findViewById(R.id.disconnectButton);
-        scanInfoText = findViewById(R.id.scanInfoText);
-
-        // Summary
-        scanSummarySheet = findViewById(R.id.scanSummarySheet);
-        summaryList = findViewById(R.id.summaryList);
-        summaryCountText = findViewById(R.id.summaryCountText);
-        addMoreButton = findViewById(R.id.addMoreButton);
-        pushButton = findViewById(R.id.pushButton);
-
-        // Loading
-        loadingOverlay = findViewById(R.id.loadingOverlay);
-        loadingText = findViewById(R.id.loadingText);
-        loadingSubtext = findViewById(R.id.loadingSubtext);
-
-        // Success
-        successOverlay = findViewById(R.id.successOverlay);
-        successIcon = findViewById(R.id.successIcon);
-        successSubtext = findViewById(R.id.successSubtext);
-        successDoneButton = findViewById(R.id.successDoneButton);
-
-        // Biometric
-        biometricOverlay = findViewById(R.id.biometricOverlay);
-        biometricStatusText = findViewById(R.id.biometricStatusText);
-        biometricUsePasswordButton = findViewById(R.id.biometricUsePasswordButton);
-
-        // Update Overlay
-        updateOverlay = findViewById(R.id.updateOverlay);
-        updateTitleText = findViewById(R.id.updateTitleText);
-        updateVersionText = findViewById(R.id.updateVersionText);
-        updateChangelogText = findViewById(R.id.updateChangelogText);
-        updateProgressBar = findViewById(R.id.updateProgressBar);
-        updateProgressText = findViewById(R.id.updateProgressText);
-        updateButton = findViewById(R.id.updateButton);
-        updateLaterButton = findViewById(R.id.updateLaterButton);
-
-        summaryList.setLayoutManager(new LinearLayoutManager(this));
-        studentAdapter = new StudentAdapter(scannedStudents, this::removeStudent, apiBaseUrl);
-        summaryList.setAdapter(studentAdapter);
-
-        setupBiometricPrompt();
-
-        try {
-            scanBeepPlayer = MediaPlayer.create(this, R.raw.scan_beep);
-            scanSuccessPlayer = MediaPlayer.create(this, R.raw.scan_success);
-        } catch (Exception ignored) {}
-
-        setupClickListeners();
-        setupSpinners();
     }
 
-    private void setupBiometricPrompt() {
-        biometricExecutor = command -> command.run();
+    private void initSounds() {
+        try {
+            beepPlayer = MediaPlayer.create(this, R.raw.scan_beep);
+            successPlayer = MediaPlayer.create(this, R.raw.scan_success);
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading sounds", e);
+        }
+    }
 
-        biometricPrompt = new BiometricPrompt(this, biometricExecutor,
-                new BiometricPrompt.AuthenticationCallback() {
+    private void initGoogleSignIn() {
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken("695473374968-7t0o5p7p7p7p7p7p7p7p7p7p7p7p7p7p.apps.googleusercontent.com")
+                .requestEmail()
+                .build();
+        googleSignInClient = GoogleSignIn.getClient(this, gso);
+    }
+
+    private void initBiometric() {
+        BiometricManager biometricManager = BiometricManager.from(this);
+        int canAuth = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK);
+        if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
+            return;
+        }
+
+        Executor executor = Executors.newSingleThreadExecutor();
+        biometricPrompt = new BiometricPrompt(this, executor, new BiometricPrompt.AuthenticationCallback() {
             @Override
             public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
-                runOnUiThread(() -> {
-                    biometricOverlay.setVisibility(View.GONE);
-                    proceedAfterBiometric();
+                mainHandler.post(() -> {
+                    animateBiometricExit();
+                    prefs.edit().putBoolean("biometric_enabled", true).apply();
                 });
             }
 
             @Override
             public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
-                runOnUiThread(() -> biometricStatusText.setText(errString));
+                mainHandler.post(() -> {
+                    biometricStatus.setText(errString);
+                });
             }
 
             @Override
             public void onAuthenticationFailed() {
                 super.onAuthenticationFailed();
-                runOnUiThread(() ->
-                    biometricStatusText.setText("Fingerprint not recognized. Try again."));
+                mainHandler.post(() -> biometricStatus.setText("Fingerprint not recognized"));
             }
         });
 
         biometricPromptInfo = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle("EduPulse")
-                .setSubtitle("Verify your identity")
-                .setDescription("Touch the fingerprint sensor to unlock")
+                .setTitle("EduPulse Teacher")
+                .setSubtitle("Authenticate to continue")
                 .setNegativeButtonText("Cancel")
-                .setConfirmationRequired(false)
                 .build();
-
-        biometricUsePasswordButton.setOnClickListener(v -> {
-            biometricOverlay.setVisibility(View.GONE);
-            prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, false).apply();
-            showLogin();
-        });
-    }
-
-    private boolean hasBiometricHardware() {
-        try {
-            BiometricManager manager = BiometricManager.from(this);
-            int result = manager.canAuthenticate();
-            return result == BiometricManager.BIOMETRIC_SUCCESS;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private void showBiometricAuth() {
-        biometricOverlay.setVisibility(View.VISIBLE);
-        biometricStatusText.setText("Touch the fingerprint sensor");
-        biometricPrompt.authenticate(biometricPromptInfo);
-    }
-
-    private void proceedAfterBiometric() {
-        boolean loggedIn = prefs.getBoolean(KEY_LOGGED_IN, false);
-        String ip = prefs.getString(KEY_API_IP, "");
-        String email = prefs.getString(KEY_EMAIL, "");
-
-        if (!email.isEmpty()) {
-            userEmailText.setText(email);
-        }
-
-        if (loggedIn && !ip.isEmpty()) {
-            apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
-            showMain();
-        } else if (loggedIn) {
-            showConnect();
-        } else {
-            showLogin();
-        }
-    }
-
-    private void promptEnableBiometric(String email) {
-        if (!hasBiometricHardware()) return;
-
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("Enable Fingerprint Lock?")
-                .setMessage("Use your fingerprint to quickly unlock EduPulse on future launches.")
-                .setPositiveButton("Enable", (dialog, which) ->
-                    prefs.edit()
-                            .putBoolean(KEY_BIOMETRIC_ENABLED, true)
-                            .putString(KEY_EMAIL, email)
-                            .apply())
-                .setNegativeButton("Not Now", null)
-                .show();
-    }
-
-    private void setupClickListeners() {
-        loginButton.setOnClickListener(v -> handleLogin());
-        googleSignInButton.setOnClickListener(v -> startGoogleSignIn());
-
-        connectButton.setOnClickListener(v -> handleConnect());
-
-        scanButton.setOnClickListener(v -> startQrScan());
-
-        scanFinishedButton.setOnClickListener(v -> showSummary());
-
-        addMoreButton.setOnClickListener(v -> {
-            scanSummarySheet.setVisibility(View.GONE);
-            scanFinishedButton.setVisibility(View.VISIBLE);
-            startQrScan();
-        });
-
-        pushButton.setOnClickListener(v -> pushAttendance());
-
-        successDoneButton.setOnClickListener(v -> {
-            successOverlay.setVisibility(View.GONE);
-            resetScanning();
-        });
-
-        disconnectButton.setOnClickListener(v -> logout());
-
-        updateButton.setOnClickListener(v -> {
-            String url = updateButton.getTag() != null ? updateButton.getTag().toString() : "";
-            downloadUpdate(url);
-        });
-        updateLaterButton.setOnClickListener(v -> updateOverlay.setVisibility(View.GONE));
     }
 
     private void setupSpinners() {
-        ArrayAdapter<String> sectionAdapter = new ArrayAdapter<String>(this,
-                R.layout.spinner_item, SECTIONS) {
-            @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
-                View v = super.getDropDownView(pos, cv, p);
-                if (v instanceof TextView)
-                    ((TextView)v).setBackgroundColor(Color.parseColor("#1F1F1F"));
-                return v;
-            }
-        };
+        ArrayAdapter<String> sectionAdapter = new ArrayAdapter<>(this,
+                R.layout.spinner_item, SECTIONS);
+        sectionAdapter.setDropDownViewResource(R.layout.spinner_dropdown);
         sectionSpinner.setAdapter(sectionAdapter);
 
         classSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (view instanceof TextView)
-                    ((TextView)view).setTextColor(Color.parseColor("#E0E0E0"));
                 if (position >= 0 && position < classList.size()) {
                     String cls = classList.get(position);
-                    updateSubjectsForClass(cls);
-                    prefetchStudentsForClass(cls);
+                    if (!cls.equals(currentClass)) {
+                        currentClass = cls;
+                        updateSubjectsForClass(cls);
+                        prefetchStudents(cls);
+                    }
                 }
-                updateScanInfoText();
             }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        sectionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                currentSection = SECTIONS.get(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
         subjectSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                updateScanInfoText();
+                if (position >= 0 && position < currentSubjects.size()) {
+                    currentSubject = currentSubjects.get(position);
+                }
             }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 
-    private void checkAuthState() {
-        boolean loggedIn = prefs.getBoolean(KEY_LOGGED_IN, false);
-        String ip = prefs.getString(KEY_API_IP, "");
-        boolean biometricEnabled = prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false);
+    private void setupClickListeners() {
+        signInButton.setOnClickListener(v -> loginWithEmail());
+        googleSignInButton.setOnClickListener(v -> signInWithGoogle());
+        connectButton.setOnClickListener(v -> testConnection());
+        scanButton.setOnClickListener(v -> startQrScan());
+        scanFinishedButton.setOnClickListener(v -> showSummarySheet());
+        pushButton.setOnClickListener(v -> pushAttendance());
+        addMoreButton.setOnClickListener(v -> hideSummarySheet());
+        successDoneButton.setOnClickListener(v -> resetAfterSuccess());
+        usePasswordButton.setOnClickListener(v -> {
+            animateBiometricExit();
+            prefs.edit().putBoolean("biometric_enabled", false).apply();
+        });
+        updateNowButton.setOnClickListener(v -> downloadUpdate());
+        updateLaterButton.setOnClickListener(v -> hideUpdateOverlay());
+        exitButton.setOnClickListener(v -> logout());
+    }
 
-        showSplash(true);
+    private void setupRecyclerView() {
+        studentAdapter = new ScanStudentAdapter(scannedStudents, studentId -> {
+            removeStudent(studentId);
+        });
+        studentRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        studentRecyclerView.setAdapter(studentAdapter);
+    }
 
-        new Handler().postDelayed(() -> {
-            if (biometricEnabled && hasBiometricHardware()) {
-                String email = prefs.getString(KEY_EMAIL, "");
-                if (!email.isEmpty()) userEmailText.setText(email);
-                showBiometricAuth();
-            } else if (loggedIn && !ip.isEmpty()) {
-                apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
-                String email = prefs.getString(KEY_EMAIL, "");
-                userEmailText.setText(email);
-                showMain();
-            } else if (loggedIn) {
-                showConnect();
-            } else {
-                showLogin();
+    private void loadSavedState() {
+        currentEmail = prefs.getString("email", "");
+        currentIdToken = prefs.getString("id_token", "");
+        String ip = prefs.getString("api_ip", "");
+        String port = prefs.getString("api_port", "3000");
+        if (!ip.isEmpty()) {
+            apiBaseUrl = "http://" + ip + ":" + port;
+            ipField.setText(ip);
+            portField.setText(port);
+        }
+    }
+
+    private void routeUser() {
+        if (prefs.getBoolean("logged_in", false) && !currentIdToken.isEmpty()) {
+            showSplash(() -> {
+                if (apiBaseUrl.isEmpty()) {
+                    showScreen("connect");
+                } else {
+                    showScreen("main");
+                    loadSubjects();
+                    checkUpdate();
+                    if (prefs.getBoolean("biometric_enabled", false)) {
+                        showBiometricLock();
+                    }
+                }
+            });
+        } else {
+            showSplash(() -> showScreen("login"));
+        }
+    }
+
+    private void showSplash(Runnable onComplete) {
+        showScreen("splash");
+        mainHandler.postDelayed(onComplete, 2000);
+    }
+
+    private void showScreen(String screen) {
+        splashContainer.setVisibility("splash".equals(screen) ? View.VISIBLE : View.GONE);
+        loginContainer.setVisibility("login".equals(screen) ? View.VISIBLE : View.GONE);
+        connectContainer.setVisibility("connect".equals(screen) ? View.VISIBLE : View.GONE);
+        mainContainer.setVisibility("main".equals(screen) ? View.VISIBLE : View.GONE);
+
+        if ("login".equals(screen)) {
+            animateScreenEntrance(loginCard);
+        } else if ("connect".equals(screen)) {
+            animateScreenEntrance(connectCard);
+        } else if ("main".equals(screen)) {
+            animateMultipleCards();
+        }
+    }
+
+    private void animateScreenEntrance(View card) {
+        card.setAlpha(0f);
+        card.setTranslationY(40f);
+        card.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(400)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    private ValueAnimator scanButtonPulse;
+
+    private void animateMultipleCards() {
+        View[] cards = {statCard, classSectionCard};
+        for (int i = 0; i < cards.length; i++) {
+            if (cards[i] != null) {
+                cards[i].setAlpha(0f);
+                cards[i].setTranslationY(40f);
+                cards[i].animate()
+                        .alpha(1f)
+                        .translationY(0f)
+                        .setDuration(400)
+                        .setStartDelay(i * 80L)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .withEndAction(() -> {})
+                        .start();
             }
-        }, 2000);
+        }
+        startScanButtonPulse();
     }
 
-    // ─── SPLASH ───────────────────────────────────────────
-
-    private void showSplash(boolean show) {
-        splashContainer.setVisibility(show ? View.VISIBLE : View.GONE);
+    private void startScanButtonPulse() {
+        if (scanButtonPulse != null) scanButtonPulse.cancel();
+        scanButtonPulse = ValueAnimator.ofFloat(1f, 1.05f);
+        scanButtonPulse.setDuration(1500);
+        scanButtonPulse.setRepeatCount(ValueAnimator.INFINITE);
+        scanButtonPulse.setRepeatMode(ValueAnimator.REVERSE);
+        scanButtonPulse.setInterpolator(new DecelerateInterpolator());
+        scanButtonPulse.addUpdateListener(a -> {
+            float scale = (float) a.getAnimatedValue();
+            scanButton.setScaleX(scale);
+            scanButton.setScaleY(scale);
+        });
+        scanButtonPulse.start();
     }
 
-    // ─── LOGIN ────────────────────────────────────────────
-
-    private void showLogin() {
-        showSplash(false);
-        loginContainer.setVisibility(View.VISIBLE);
-        connectContainer.setVisibility(View.GONE);
-        mainContainer.setVisibility(View.GONE);
-    }
-
-    private void handleLogin() {
-        String email = loginEmail.getText().toString().trim();
-        String password = loginPassword.getText().toString().trim();
+    private void loginWithEmail() {
+        String email = emailField.getText().toString().trim();
+        String password = passwordField.getText().toString().trim();
 
         if (email.isEmpty() || password.isEmpty()) {
-            showLoginError("Enter email and password");
+            loginError.setVisibility(View.VISIBLE);
+            loginError.setText("Enter email and password");
             return;
         }
 
-        showLoading("Signing in", "");
+        showLoading("Signing in...", "");
+        loginError.setVisibility(View.GONE);
 
-        JSONObject body = new JSONObject();
         try {
+            JSONObject body = new JSONObject();
             body.put("email", email);
             body.put("password", password);
             body.put("returnSecureToken", true);
+
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, FIREBASE_AUTH_URL, body,
+                    response -> {
+                        try {
+                            String idToken = response.getString("idToken");
+                            String userEmail = response.getString("email");
+                            onLoginSuccess(userEmail, idToken);
+                        } catch (JSONException e) {
+                            hideLoading();
+                            loginError.setVisibility(View.VISIBLE);
+                            loginError.setText("Parse error");
+                        }
+                    },
+                    error -> {
+                        hideLoading();
+                        loginError.setVisibility(View.VISIBLE);
+                        loginError.setText(getLoginErrorMessage(error));
+                    });
+
+            request.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1f));
+            requestQueue.add(request);
         } catch (JSONException e) {
             hideLoading();
-            showLoginError("Error creating request");
+            loginError.setVisibility(View.VISIBLE);
+            loginError.setText("Error creating request");
+        }
+    }
+
+    private void signInWithGoogle() {
+        Intent signInIntent = googleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+        if (scanResult != null) {
+            handleScanResult(scanResult);
             return;
         }
 
-        String url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + FIREBASE_API_KEY;
-
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, url, body,
-                response -> {
-                    hideLoading();
-                    try {
-                        String idToken = response.getString("idToken");
-                        String userEmail = response.getString("email");
-
-                        prefs.edit()
-                                .putBoolean(KEY_LOGGED_IN, true)
-                                .putString(KEY_EMAIL, userEmail)
-                                .putString(KEY_ID_TOKEN, idToken)
-                                .apply();
-
-                        userEmailText.setText(userEmail);
-                        promptEnableBiometric(userEmail);
-                        String ip = prefs.getString(KEY_API_IP, "");
-                        if (!ip.isEmpty()) {
-                            apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
-                            showMain();
-                        } else {
-                            showConnect();
-                        }
-                    } catch (JSONException e) {
-                        showLoginError("Invalid response from server");
-                    }
-                },
-                error -> {
-                    hideLoading();
-                    String msg = "Login failed";
-                    if (error.networkResponse != null && error.networkResponse.data != null) {
-                        try {
-                            String body2 = new String(error.networkResponse.data, "UTF-8");
-                            JSONObject err = new JSONObject(body2);
-                            String code = err.optJSONObject("error").optString("message", "");
-                            if ("EMAIL_NOT_FOUND".equals(code)) msg = "Email not registered";
-                            else if ("INVALID_PASSWORD".equals(code)) msg = "Wrong password";
-                            else if ("USER_DISABLED".equals(code)) msg = "Account disabled";
-                            else msg = code.replace("_", " ").toLowerCase();
-                        } catch (Exception ignored) {}
-                    }
-                    showLoginError(msg);
-                });
-
-        req.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1));
-        requestQueue.add(req);
-    }
-
-    private void showLoginError(String msg) {
-        loginError.setText(msg);
-        loginError.setVisibility(View.VISIBLE);
-    }
-
-    // ─── GOOGLE SIGN IN ──────────────────────────────────
-
-    private void startGoogleSignIn() {
-        Intent signInIntent = googleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_GOOGLE_SIGN_IN);
-    }
-
-    private void handleGoogleSignInResult(Intent data) {
-        showLoading("Signing in", "Google Sign-In");
-        Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-        try {
-            GoogleSignInAccount account = task.getResult(ApiException.class);
-            String idToken = account.getIdToken();
-            if (idToken != null) {
-                exchangeGoogleToken(idToken, account.getEmail());
-            } else {
-                hideLoading();
-                showLoginError("Google Sign-In failed - no ID token");
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account != null) {
+                    exchangeGoogleToken(account);
+                }
+            } catch (ApiException e) {
+                loginError.setVisibility(View.VISIBLE);
+                loginError.setText("Google sign-in failed");
             }
-        } catch (ApiException e) {
-            hideLoading();
-            showLoginError("Google Sign-In cancelled");
         }
     }
 
-    private void exchangeGoogleToken(String idToken, String email) {
-        JSONObject body = new JSONObject();
+    private void exchangeGoogleToken(GoogleSignInAccount account) {
+        showLoading("Signing in...", "");
+
         try {
-            body.put("postBody", "id_token=" + idToken + "&providerId=google.com");
+            JSONObject body = new JSONObject();
+            body.put("postBody", "id_token=" + account.getIdToken() + "&providerId=google.com");
             body.put("requestUri", "http://localhost");
             body.put("returnSecureToken", true);
+
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, FIREBASE_IDP_URL, body,
+                    response -> {
+                        try {
+                            String idToken = response.getString("idToken");
+                            String email = response.optString("email", account.getEmail());
+                            onLoginSuccess(email, idToken);
+                        } catch (JSONException e) {
+                            hideLoading();
+                            loginError.setVisibility(View.VISIBLE);
+                            loginError.setText("Parse error");
+                        }
+                    },
+                    error -> {
+                        hideLoading();
+                        loginError.setVisibility(View.VISIBLE);
+                        loginError.setText("Firebase exchange failed");
+                    });
+
+            request.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1f));
+            requestQueue.add(request);
         } catch (JSONException e) {
             hideLoading();
-            showLoginError("Error creating request");
-            return;
-        }
-
-        String url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=" + FIREBASE_API_KEY;
-
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, url, body,
-                response -> {
-                    hideLoading();
-                    try {
-                        String userEmail = response.optString("email", email);
-                        prefs.edit()
-                                .putBoolean(KEY_LOGGED_IN, true)
-                                .putString(KEY_EMAIL, userEmail)
-                                .putString(KEY_ID_TOKEN, response.optString("idToken", ""))
-                                .apply();
-                        userEmailText.setText(userEmail);
-                        promptEnableBiometric(userEmail);
-                        String ip = prefs.getString(KEY_API_IP, "");
-                        if (!ip.isEmpty()) {
-                            apiBaseUrl = "http://" + ip + ":" + prefs.getString(KEY_API_PORT, "3000");
-                            showMain();
-                        } else {
-                            showConnect();
-                        }
-                    } catch (Exception e) {
-                        showLoginError("Sign in failed");
-                    }
-                },
-                error -> {
-                    hideLoading();
-                    showLoginError("Google Sign-In failed");
-                });
-
-        req.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1));
-        requestQueue.add(req);
-    }
-
-    // ─── CONNECT ──────────────────────────────────────────
-
-    private void showConnect() {
-        showSplash(false);
-        loginContainer.setVisibility(View.GONE);
-        connectContainer.setVisibility(View.VISIBLE);
-        mainContainer.setVisibility(View.GONE);
-
-        String savedIp = prefs.getString(KEY_API_IP, "");
-        String savedPort = prefs.getString(KEY_API_PORT, "3000");
-        if (!savedIp.isEmpty()) {
-            connectIp.setText(savedIp);
-            connectPort.setText(savedPort);
+            loginError.setVisibility(View.VISIBLE);
+            loginError.setText("Error creating request");
         }
     }
 
-    private void handleConnect() {
-        String ip = connectIp.getText().toString().trim();
-        String portStr = connectPort.getText().toString().trim();
+    private void onLoginSuccess(String email, String idToken) {
+        currentEmail = email;
+        currentIdToken = idToken;
+
+        prefs.edit()
+                .putBoolean("logged_in", true)
+                .putString("email", email)
+                .putString("id_token", idToken)
+                .apply();
+
+        hideLoading();
+        userEmail.setText(email);
+
+        if (apiBaseUrl.isEmpty()) {
+            showScreen("connect");
+        } else {
+            showScreen("main");
+            loadSubjects();
+            checkUpdate();
+        }
+
+        if (isBiometricAvailable() && !prefs.getBoolean("biometric_enabled", false)) {
+            showBiometricEnrollmentPrompt();
+        }
+    }
+
+    private boolean isBiometricAvailable() {
+        BiometricManager biometricManager = BiometricManager.from(this);
+        return biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                == BiometricManager.BIOMETRIC_SUCCESS;
+    }
+
+    private void showBiometricEnrollmentPrompt() {
+        Toast.makeText(this, "Enable fingerprint for faster login?", Toast.LENGTH_LONG).show();
+    }
+
+    private void showBiometricLock() {
+        biometricOverlay.setVisibility(View.VISIBLE);
+        biometricOverlay.setAlpha(0f);
+        biometricOverlay.animate().alpha(1f).setDuration(300).start();
+        biometricStatus.setText("Touch the fingerprint sensor");
+        if (biometricPrompt != null) {
+            biometricPrompt.authenticate(biometricPromptInfo);
+        }
+    }
+
+    private void animateBiometricExit() {
+        biometricOverlay.animate()
+                .alpha(0f)
+                .scaleX(0.95f)
+                .scaleY(0.95f)
+                .setDuration(300)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(() -> biometricOverlay.setVisibility(View.GONE))
+                .start();
+    }
+
+    private void testConnection() {
+        String ip = ipField.getText().toString().trim();
+        String port = portField.getText().toString().trim();
 
         if (ip.isEmpty()) {
-            connectStatus.setText("Enter server IP");
-            connectStatus.setTextColor(Color.parseColor("#FF3B3B"));
+            connectionStatus.setText("Enter server IP");
+            connectionStatus.setVisibility(View.VISIBLE);
+            connectionStatus.setTextColor(Color.parseColor("#FF3B3B"));
             return;
         }
 
-        String finalPort = portStr.isEmpty() ? "3000" : portStr;
+        if (port.isEmpty()) port = "3000";
+        String finalPort = port;
 
-        String testUrl = "http://" + ip + ":" + finalPort + "/api/health";
-        showLoading("Connecting", "Testing connection to " + ip);
+        String baseUrl = "http://" + ip + ":" + finalPort;
+        showLoading("Testing connection...", baseUrl);
+        connectionStatus.setVisibility(View.GONE);
 
-        StringRequest req = new StringRequest(Request.Method.GET, testUrl,
+        StringRequest request = new StringRequest(Request.Method.GET, baseUrl + "/api/health",
                 response -> {
                     hideLoading();
-                    apiBaseUrl = "http://" + ip + ":" + finalPort;
+                    apiBaseUrl = baseUrl;
                     prefs.edit()
-                            .putString(KEY_API_IP, ip)
-                            .putString(KEY_API_PORT, finalPort)
+                            .putString("api_ip", ip)
+                            .putString("api_port", finalPort)
                             .apply();
-                    connectStatus.setText("✓ Connected");
-                    connectStatus.setTextColor(Color.parseColor("#00FF88"));
-                    new Handler().postDelayed(this::showMain, 600);
+                    connectionStatus.setText("Connection successful");
+                    connectionStatus.setTextColor(Color.parseColor("#00FF88"));
+                    connectionStatus.setVisibility(View.VISIBLE);
+                    showScreen("main");
+                    loadSubjects();
+                    checkUpdate();
                 },
                 error -> {
                     hideLoading();
-                    connectStatus.setText("✕ Connection failed. Check IP and port.");
-                    connectStatus.setTextColor(Color.parseColor("#FF3B3B"));
+                    connectionStatus.setText("Connection failed: " + getConnectionErrorMessage(error));
+                    connectionStatus.setTextColor(Color.parseColor("#FF3B3B"));
+                    connectionStatus.setVisibility(View.VISIBLE);
                 });
 
-        req.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
-        requestQueue.add(req);
-    }
-
-    // ─── MAIN ─────────────────────────────────────────────
-
-    private void showMain() {
-        showSplash(false);
-        loginContainer.setVisibility(View.GONE);
-        connectContainer.setVisibility(View.GONE);
-        mainContainer.setVisibility(View.VISIBLE);
-        lastScannedText.setVisibility(View.GONE);
-
-        loadSubjects();
-        checkForUpdate();
-
-        // Pulse animation on scan button
-        scanButton.post(() -> startPulseAnimation(scanButton));
-    }
-
-    private void startPulseAnimation(View v) {
-        if (v == null) return;
-        ObjectAnimator anim = ObjectAnimator.ofFloat(v, "scaleX", 1f, 1.05f, 1f);
-        anim.setDuration(1500);
-        anim.setRepeatCount(ObjectAnimator.INFINITE);
-        anim.setInterpolator(new DecelerateInterpolator());
-        anim.start();
-        ObjectAnimator animY = ObjectAnimator.ofFloat(v, "scaleY", 1f, 1.05f, 1f);
-        animY.setDuration(1500);
-        animY.setRepeatCount(ObjectAnimator.INFINITE);
-        animY.setInterpolator(new DecelerateInterpolator());
-        animY.start();
+        request.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1f));
+        requestQueue.add(request);
     }
 
     private void loadSubjects() {
-        if (apiBaseUrl == null || apiBaseUrl.isEmpty()) return;
+        if (apiBaseUrl.isEmpty()) return;
 
-        String url = apiBaseUrl + "/api/subjects";
-
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, url, null,
+        StringRequest request = new StringRequest(Request.Method.GET, apiBaseUrl + "/api/subjects",
                 response -> {
                     try {
-                        if (response.optBoolean("success", false)) {
-                            JSONObject data = response.optJSONObject("data");
-                            if (data == null) data = new JSONObject();
-
+                        JSONObject json = new JSONObject(response);
+                        if (json.optBoolean("success", false)) {
+                            JSONObject data = json.getJSONObject("data");
                             subjectsMap.clear();
                             classList.clear();
 
                             Iterator<String> keys = data.keys();
                             while (keys.hasNext()) {
                                 String cls = keys.next();
-                                JSONArray arr = data.optJSONArray(cls);
-                                List<String> subs = new ArrayList<>();
-                                if (arr != null) {
-                                    for (int i = 0; i < arr.length(); i++) {
-                                        subs.add(arr.getString(i));
-                                    }
-                                }
-                                subjectsMap.put(cls, subs);
                                 classList.add(cls);
+                                JSONArray subs = data.getJSONArray(cls);
+                                List<String> subList = new ArrayList<>();
+                                for (int i = 0; i < subs.length(); i++) {
+                                    subList.add(subs.getString(i));
+                                }
+                                subjectsMap.put(cls, subList);
                             }
-                            updateClassSpinner();
+
+                            ArrayAdapter<String> classAdapter = new ArrayAdapter<>(this,
+                                    R.layout.spinner_item, classList);
+                            classAdapter.setDropDownViewResource(R.layout.spinner_dropdown);
+                            classSpinner.setAdapter(classAdapter);
+
+                            if (!classList.isEmpty()) {
+                                currentClass = classList.get(0);
+                                updateSubjectsForClass(currentClass);
+                            }
                         }
                     } catch (JSONException e) {
-                        Log.e("EduPulse", "Error parsing subjects", e);
+                        Log.e(TAG, "Error parsing subjects", e);
                     }
                 },
-                error -> Log.e("EduPulse", "Failed to load subjects", error));
+                error -> Log.e(TAG, "Error loading subjects", error));
 
-        requestQueue.add(req);
-    }
-
-    private void updateClassSpinner() {
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                R.layout.spinner_item, classList) {
-            @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
-                View v = super.getDropDownView(pos, cv, p);
-                if (v instanceof TextView)
-                    ((TextView)v).setBackgroundColor(Color.parseColor("#1F1F1F"));
-                return v;
-            }
-        };
-        classSpinner.setAdapter(adapter);
+        request.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1f));
+        requestQueue.add(request);
     }
 
     private void updateSubjectsForClass(String cls) {
-        currentSubjects = subjectsMap.containsKey(cls) ? subjectsMap.get(cls) : new ArrayList<>();
-        List<String> display = new ArrayList<>(currentSubjects);
-        if (display.isEmpty()) display.add("No subjects");
+        currentSubjects = subjectsMap.get(cls);
+        if (currentSubjects == null) currentSubjects = new ArrayList<>();
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                R.layout.spinner_item, display) {
-            @Override public View getDropDownView(int pos, View cv, android.view.ViewGroup p) {
-                View v = super.getDropDownView(pos, cv, p);
-                if (v instanceof TextView)
-                    ((TextView)v).setBackgroundColor(Color.parseColor("#1F1F1F"));
-                return v;
-            }
-        };
-        subjectSpinner.setAdapter(adapter);
-        updateScanInfoText();
+        ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(this,
+                R.layout.spinner_item, currentSubjects);
+        subjectAdapter.setDropDownViewResource(R.layout.spinner_dropdown);
+        subjectSpinner.setAdapter(subjectAdapter);
     }
 
-    private void prefetchStudentsForClass(String cls) {
-        if (apiBaseUrl == null || apiBaseUrl.isEmpty()) return;
-        String url = apiBaseUrl + "/api/students?class=" + cls;
+    private void prefetchStudents(String cls) {
+        if (apiBaseUrl.isEmpty()) return;
 
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, url, null,
+        StringRequest request = new StringRequest(Request.Method.GET, apiBaseUrl + "/api/students?class=" + cls,
                 response -> {
-                    if (response.optBoolean("success", false)) {
-                        JSONArray data = response.optJSONArray("data");
-                        if (data == null) return;
-                        studentsCache.clear();
-                        for (int i = 0; i < data.length(); i++) {
-                            JSONObject s = data.optJSONObject(i);
-                            if (s != null) {
-                                String id = s.optString("id", "");
-                                if (!id.isEmpty()) {
-                                    Map<String, String> m = new HashMap<>();
-                                    m.put("id", id);
-                                    m.put("name", s.optString("name", ""));
-                                    m.put("class", s.optString("class", ""));
-                                    m.put("section", s.optString("section", ""));
-                                    m.put("photo", s.optString("photo", ""));
-                                    studentsCache.put(id, m);
-                                }
+                    try {
+                        JSONObject json = new JSONObject(response);
+                        if (json.optBoolean("success", false)) {
+                            JSONObject data = json.getJSONObject("data");
+                            studentsCache.clear();
+                            Iterator<String> keys = data.keys();
+                            while (keys.hasNext()) {
+                                String studentId = keys.next();
+                                JSONObject student = data.getJSONObject(studentId);
+                                Map<String, String> info = new HashMap<>();
+                                info.put("name", student.optString("name", ""));
+                                info.put("class", student.optString("class", ""));
+                                info.put("section", student.optString("section", ""));
+                                info.put("photo", student.optString("photo", ""));
+                                studentsCache.put(studentId, info);
                             }
                         }
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error parsing students", e);
                     }
                 },
-                error -> {});
-        req.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
-        requestQueue.add(req);
-    }
+                error -> Log.e(TAG, "Error prefetching students", error));
 
-    private void updateScanInfoText() {
-        String cls = classSpinner.getSelectedItem() != null ? classSpinner.getSelectedItem().toString() : "";
-        String sub = subjectSpinner.getSelectedItem() != null ? subjectSpinner.getSelectedItem().toString() : "";
-        if (!cls.isEmpty() && !sub.isEmpty() && !sub.equals("No subjects")) {
-            scanInfoText.setText("Class " + cls + "  ·  " + sub);
-            scanInfoText.setVisibility(View.VISIBLE);
-        } else if (!cls.isEmpty()) {
-            scanInfoText.setText("Class " + cls);
-            scanInfoText.setVisibility(View.VISIBLE);
-        } else {
-            scanInfoText.setVisibility(View.GONE);
-        }
+        request.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1f));
+        requestQueue.add(request);
     }
-
-    // ─── QR SCAN ──────────────────────────────────────────
 
     private void startQrScan() {
-        if (apiBaseUrl == null || apiBaseUrl.isEmpty()) {
-            Toast.makeText(this, "Not connected to server", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        isScanning = true;
         IntentIntegrator integrator = new IntentIntegrator(this);
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
         integrator.setPrompt("Scan student QR code");
         integrator.setCameraId(0);
-        integrator.setBeepEnabled(true);
+        integrator.setBeepEnabled(false);
         integrator.setBarcodeImageEnabled(false);
         integrator.setOrientationLocked(true);
         integrator.initiateScan();
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (requestCode == RC_GOOGLE_SIGN_IN) {
-            if (resultCode == RESULT_OK && data != null) {
-                handleGoogleSignInResult(data);
-            }
+    private void handleScanResult(IntentResult result) {
+        if (result == null || result.getContents() == null) return;
+
+        String contents = result.getContents();
+        String studentId = extractStudentId(contents);
+
+        if (studentId == null) {
+            Toast.makeText(this, "Invalid QR code", Toast.LENGTH_SHORT).show();
             return;
         }
-        IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
-        if (result != null) {
-            if (result.getContents() != null) {
-                handleScanResult(result.getContents());
-            }
+
+        if (scannedStudentIds.contains(studentId)) {
+            Toast.makeText(this, "Student already scanned", Toast.LENGTH_SHORT).show();
             return;
         }
-        super.onActivityResult(requestCode, resultCode, data);
+
+        processScannedStudent(studentId);
     }
 
-    private void handleScanResult(String qrData) {
+    private String extractStudentId(String qrData) {
         try {
             JSONObject json = new JSONObject(qrData);
-            String studentId = json.optString("student_id", "");
-            if (studentId.isEmpty()) {
-                Toast.makeText(this, "Invalid QR code", Toast.LENGTH_SHORT).show();
-                if (isScanning) startQrScan();
-                return;
-            }
-
-            // Check if already scanned
-            if (scannedStudentIds.contains(studentId)) {
-                Toast.makeText(this, "Already scanned", Toast.LENGTH_SHORT).show();
-                if (isScanning) startQrScan();
-                return;
-            }
-
-            String selectedClass = classSpinner.getSelectedItem() != null ? classSpinner.getSelectedItem().toString() : "";
-
-            // Try cache first
-            Map<String, String> cached = studentsCache.get(studentId);
-            if (cached != null) {
-                String studentClass = cached.get("class");
-                if (!selectedClass.isEmpty() && !selectedClass.equals(studentClass)) {
-                    Toast.makeText(this, "Student not in class " + selectedClass, Toast.LENGTH_LONG).show();
-                    if (isScanning) startQrScan();
-                    return;
-                }
-                addStudentToScanList(cached);
-                return;
-            }
-
-            fetchStudentInfo(studentId, selectedClass);
+            if (json.has("student_id")) return json.getString("student_id");
+            if (json.has("id")) return json.getString("id");
         } catch (JSONException e) {
-            Toast.makeText(this, "Invalid QR data", Toast.LENGTH_SHORT).show();
-            if (isScanning) startQrScan();
+            if (qrData.matches("^[A-Za-z0-9]+$")) return qrData;
+        }
+        return null;
+    }
+
+    private void processScannedStudent(String studentId) {
+        if (studentsCache.containsKey(studentId)) {
+            addScannedStudent(studentId, studentsCache.get(studentId));
+        } else {
+            fetchStudentDetails(studentId);
         }
     }
 
-    private void fetchStudentInfo(String studentId, String selectedClass) {
-        String url = apiBaseUrl + "/api/students/" + studentId;
+    private void fetchStudentDetails(String studentId) {
+        if (apiBaseUrl.isEmpty()) return;
 
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, url, null,
+        StringRequest request = new StringRequest(Request.Method.GET, apiBaseUrl + "/api/students/" + studentId,
                 response -> {
-                    if (response.optBoolean("success", false)) {
-                        JSONObject student = response.optJSONObject("data") != null
-                                ? response.optJSONObject("data")
-                                : response;
-                        String name = student.optString("name", "Unknown");
-                        String cls = student.optString("class", "");
-                        String section = student.optString("section", "");
-                        String photo = student.optString("photo", "");
-
-                        // Validate class
-                        if (!selectedClass.isEmpty() && !selectedClass.equals(cls)) {
-                            Toast.makeText(this, "Student not in class " + selectedClass, Toast.LENGTH_LONG).show();
-                            if (isScanning) startQrScan();
-                            return;
+                    try {
+                        JSONObject json = new JSONObject(response);
+                        if (json.optBoolean("success", false)) {
+                            JSONObject data = json.getJSONObject("data");
+                            Map<String, String> info = new HashMap<>();
+                            info.put("name", data.optString("name", "Unknown"));
+                            info.put("class", data.optString("class", ""));
+                            info.put("section", data.optString("section", ""));
+                            info.put("photo", data.optString("photo", ""));
+                            studentsCache.put(studentId, info);
+                            addScannedStudent(studentId, info);
                         }
-
-                        // If photo empty, try Firebase fallback
-                        if (photo == null || photo.isEmpty()) {
-                            fetchPhotoFromFirebase(studentId, name, cls, section, selectedClass);
-                            return;
-                        }
-
-                        addStudentToScanList(studentId, name, cls, section, photo);
-                    } else {
-                        Toast.makeText(this, "Student not found", Toast.LENGTH_SHORT).show();
-                        if (isScanning) startQrScan();
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error parsing student details", e);
+                        addScannedStudent(studentId, null);
                     }
                 },
-                error -> {
-                    Toast.makeText(this, "Failed to fetch student", Toast.LENGTH_SHORT).show();
-                    if (isScanning) startQrScan();
-                });
+                error -> addScannedStudent(studentId, null));
 
-        req.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
-        requestQueue.add(req);
+        request.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1f));
+        requestQueue.add(request);
     }
 
-    private void fetchPhotoFromFirebase(String studentId, String name, String cls, String section, String selectedClass) {
-        String fbUrl = "https://edupulse-attendance-qr-default-rtdb.asia-southeast1.firebasedatabase.app/students/"
-                + studentId + ".json";
-
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.GET, fbUrl, null,
-                response -> {
-                    String photo = response.optString("photo", "");
-                    addStudentToScanList(studentId, name, cls, section, photo);
-                },
-                error -> addStudentToScanList(studentId, name, cls, section, ""));
-        requestQueue.add(req);
-    }
-
-    private void addStudentToScanList(Map<String, String> cached) {
-        String id = cached.get("id");
-        scannedStudentIds.add(id);
-        scannedStudents.add(new HashMap<>(cached));
-        updateScanDisplay();
-        playScanBeep();
-        Toast.makeText(this, "✓ " + cached.get("name"), Toast.LENGTH_SHORT).show();
-        if (isScanning) new Handler().postDelayed(this::startQrScan, 800);
-    }
-
-    private void addStudentToScanList(String studentId, String name, String cls, String section, String photo) {
-        Map<String, String> entry = new HashMap<>();
-        entry.put("id", studentId);
-        entry.put("name", name);
-        entry.put("class", cls);
-        entry.put("section", section);
-        entry.put("photo", photo != null ? photo : "");
-        scannedStudentIds.add(studentId);
-        scannedStudents.add(entry);
-
-        updateScanDisplay();
-        playScanBeep();
-        Toast.makeText(this, "✓ " + name, Toast.LENGTH_SHORT).show();
-        if (isScanning) new Handler().postDelayed(this::startQrScan, 800);
-    }
-
-    private void updateScanDisplay() {
-        int count = scannedStudents.size();
-        scanCountText.setText(String.valueOf(count));
-
-        if (count > 0) {
-            showSummary();
+    private void addScannedStudent(String studentId, Map<String, String> info) {
+        String studentClass = info != null ? info.get("class") : "";
+        if (!studentClass.isEmpty() && !studentClass.equals(currentClass)) {
+            Toast.makeText(this, "Student is not in selected class", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        String name = info != null ? info.get("name") : "Unknown";
+        String section = info != null ? info.get("section") : currentSection;
+        String photo = info != null ? info.get("photo") : "";
+
+        if (scannedStudentIds.contains(studentId)) {
+            Toast.makeText(this, "Student already scanned", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        scannedStudentIds.add(studentId);
+
+        Map<String, String> student = new HashMap<>();
+        student.put("id", studentId);
+        student.put("name", name);
+        student.put("class", currentClass);
+        student.put("section", section);
+        student.put("photo", photo);
+        student.put("status", "present");
+        scannedStudents.add(student);
+
+        updateScannedUI();
+        playBeep();
+        loadStudentPhoto(studentId, photo);
+        updateLastScanned(student);
     }
 
-    // ─── SUMMARY ──────────────────────────────────────────
-
-    private void showSummary() {
-        summaryCountText.setText(scannedStudents.size() + " students scanned");
-        studentAdapter.notifyDataSetChanged();
-        scanSummarySheet.setVisibility(View.VISIBLE);
-    }
-
-    private void removeStudent(int position) {
-        if (position >= 0 && position < scannedStudents.size()) {
-            scannedStudentIds.remove(scannedStudents.get(position).get("id"));
-            scannedStudents.remove(position);
-            updateScanDisplay();
-            studentAdapter.notifyDataSetChanged();
-            summaryCountText.setText(scannedStudents.size() + " students scanned");
-            if (scannedStudents.isEmpty()) {
-                scanSummarySheet.setVisibility(View.GONE);
-                scanFinishedButton.setVisibility(View.GONE);
+    private void removeStudent(String studentId) {
+        for (int i = 0; i < scannedStudents.size(); i++) {
+            if (scannedStudents.get(i).get("id").equals(studentId)) {
+                scannedStudents.remove(i);
+                break;
             }
         }
+        scannedStudentIds.remove(studentId);
+        updateScannedUI();
     }
 
-    // ─── PUSH ─────────────────────────────────────────────
+    private void updateScannedUI() {
+        int count = scannedStudents.size();
+        scannedCount.setText(String.valueOf(count));
+        summaryCount.setText(String.valueOf(count));
+        studentAdapter.notifyDataSetChanged();
+
+        if (count > 0) {
+            scanFinishedButton.setVisibility(View.VISIBLE);
+        } else {
+            scanFinishedButton.setVisibility(View.GONE);
+            scanSummarySheet.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateLastScanned(Map<String, String> student) {
+        String name = student.get("name");
+        String detail = student.get("class") + " \u00b7 " + student.get("section");
+        lastScannedName.setText(name);
+        lastScannedDetail.setText(detail);
+        lastScannedCard.setVisibility(View.VISIBLE);
+    }
+
+    private void loadStudentPhoto(String studentId, String photoUrl) {
+        if (photoUrl == null || photoUrl.isEmpty()) {
+            loadPhotoFromFirebase(studentId);
+            return;
+        }
+
+        ImageRequest request = new ImageRequest(photoUrl,
+                bitmap -> {
+                    photoCache.put(studentId, bitmap);
+                    studentAdapter.notifyDataSetChanged();
+                    if (scannedStudents.size() > 0) {
+                        Map<String, String> last = scannedStudents.get(scannedStudents.size() - 1);
+                        if (last.get("id").equals(studentId)) {
+                            lastScannedPhoto.setImageBitmap(bitmap);
+                        }
+                    }
+                }, 0, 0, ImageView.ScaleType.CENTER_CROP, null,
+                error -> loadPhotoFromFirebase(studentId));
+        requestQueue.add(request);
+    }
+
+    private void loadPhotoFromFirebase(String studentId) {
+        String fbUrl = PHOTO_BASE_URL + studentId + ".json";
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, fbUrl, null,
+                response -> {
+                    String photoStr = response.optString("photo", "");
+                    if (!photoStr.isEmpty()) {
+                        ImageRequest imgReq = new ImageRequest(photoStr,
+                                bitmap -> {
+                                    photoCache.put(studentId, bitmap);
+                                    studentAdapter.notifyDataSetChanged();
+                                }, 0, 0, ImageView.ScaleType.CENTER_CROP, null, null);
+                        requestQueue.add(imgReq);
+                    }
+                },
+                error -> {});
+        requestQueue.add(request);
+    }
+
+    private void showSummarySheet() {
+        scanSummarySheet.setVisibility(View.VISIBLE);
+        scanSummarySheet.setTranslationY(scanSummarySheet.getHeight());
+        scanSummarySheet.animate()
+                .translationY(0)
+                .setDuration(300)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    private void hideSummarySheet() {
+        scanSummarySheet.animate()
+                .translationY(scanSummarySheet.getHeight())
+                .setDuration(250)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(() -> scanSummarySheet.setVisibility(View.GONE))
+                .start();
+    }
 
     private void pushAttendance() {
+        if (isPushing) return;
         if (scannedStudents.isEmpty()) return;
+        if (currentSubject.isEmpty()) {
+            Toast.makeText(this, "Select a subject", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        scanSummarySheet.setVisibility(View.GONE);
-        showLoading("Pushing Attendance", "0/" + scannedStudents.size());
+        isPushing = true;
+        pushButton.setEnabled(false);
+        showLoading("Pushing attendance...", scannedStudents.size() + " students");
 
-        String selectedClass = classSpinner.getSelectedItem() != null ? classSpinner.getSelectedItem().toString() : "";
-        String selectedSection = sectionSpinner.getSelectedItem() != null ? sectionSpinner.getSelectedItem().toString() : "";
-        String selectedSubject = subjectSpinner.getSelectedItem() != null ? subjectSpinner.getSelectedItem().toString() : "";
-
-        pushNext(0, selectedClass, selectedSection, selectedSubject);
+        pushNextStudent(0);
     }
 
-    private void pushNext(int index, String cls, String section, String subject) {
+    private void pushNextStudent(final int index) {
         if (index >= scannedStudents.size()) {
             hideLoading();
-            showSuccess();
+            isPushing = false;
+            pushButton.setEnabled(true);
+            playSuccess();
+            showSuccessOverlay();
             return;
         }
 
         Map<String, String> student = scannedStudents.get(index);
-        String url = apiBaseUrl + "/api/attendance/scan";
 
-        JSONObject body = new JSONObject();
         try {
+            JSONObject body = new JSONObject();
             body.put("student_id", student.get("id"));
-            body.put("class", cls);
-            body.put("section", section);
-            body.put("subject", subject);
+            body.put("class", student.get("class"));
+            body.put("section", student.get("section"));
+            body.put("subject", currentSubject);
+
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST,
+                    apiBaseUrl + "/api/attendance/scan", body,
+                    response -> {
+                        student.put("status", "pushed");
+                        studentAdapter.notifyDataSetChanged();
+                        pushNextStudent(index + 1);
+                    },
+                    error -> {
+                        student.put("status", "failed");
+                        studentAdapter.notifyDataSetChanged();
+                        pushNextStudent(index + 1);
+                    });
+
+            loadingSubtext.setText((index + 1) + "/" + scannedStudents.size());
+            loadingSubtext.setVisibility(View.VISIBLE);
+            request.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1f));
+            requestQueue.add(request);
         } catch (JSONException e) {
-            pushNext(index + 1, cls, section, subject);
+            pushNextStudent(index + 1);
+        }
+    }
+
+    private void resetAfterSuccess() {
+        successOverlay.setVisibility(View.GONE);
+        scannedStudentIds.clear();
+        scannedStudents.clear();
+        studentAdapter.notifyDataSetChanged();
+        updateScannedUI();
+        lastScannedCard.setVisibility(View.GONE);
+        scannedCount.setText("0");
+        summaryCount.setText("0");
+        scanSummarySheet.setVisibility(View.GONE);
+        scanFinishedButton.setVisibility(View.GONE);
+    }
+
+    private void showSuccessOverlay() {
+        successOverlay.setVisibility(View.VISIBLE);
+        successOverlay.setAlpha(0f);
+        successOverlay.animate().alpha(1f).setDuration(300).start();
+
+        successCard.setScaleX(0f);
+        successCard.setScaleY(0f);
+        successCard.animate()
+                .scaleX(1.2f)
+                .scaleY(1.2f)
+                .setDuration(400)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(() -> successCard.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(200)
+                        .start());
+
+        confettiView.burst();
+    }
+
+    private void checkUpdate() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                URL url = new URL(GITHUB_API_URL);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == 200) {
+                    java.io.BufferedReader reader = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) sb.append(line);
+                    reader.close();
+
+                    JSONObject release = new JSONObject(sb.toString());
+                    String tagName = release.optString("tag_name", "");
+                    String body = release.optString("body", "");
+                    JSONArray assets = release.optJSONArray("assets");
+
+                    int latestVersion = parseVersionCode(tagName);
+                    int currentVersion = getVersionCode();
+
+                    if (latestVersion > currentVersion && assets != null && assets.length() > 0) {
+                        String apkUrl = assets.getJSONObject(0).optString("browser_download_url", "");
+                        mainHandler.post(() -> showUpdateOverlay(tagName, body, apkUrl));
+                    }
+                }
+                conn.disconnect();
+            } catch (Exception e) {
+                Log.e(TAG, "Error checking update", e);
+            }
+        });
+    }
+
+    private int parseVersionCode(String tagName) {
+        try {
+            String v = tagName.replaceAll("[^0-9]", "");
+            if (v.isEmpty()) return 0;
+            return Integer.parseInt(v);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private int getVersionCode() {
+        try {
+            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return pInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            return 5;
+        }
+    }
+
+    private void showUpdateOverlay(String version, String changelog, String apkUrl) {
+        updateOverlay.setVisibility(View.VISIBLE);
+        updateVersion.setText(version);
+        updateChangelog.setText(changelog);
+        updateCard.setTranslationY(updateCard.getHeight());
+        updateCard.animate()
+                .translationY(0)
+                .setDuration(300)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+
+        prefs.edit().putString("ota_url", apkUrl).apply();
+    }
+
+    private void hideUpdateOverlay() {
+        updateCard.animate()
+                .translationY(updateCard.getHeight())
+                .setDuration(250)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(() -> updateOverlay.setVisibility(View.GONE))
+                .start();
+    }
+
+    private void downloadUpdate() {
+        String url = prefs.getString("ota_url", "");
+        if (url.isEmpty()) return;
+
+        updateNowButton.setEnabled(false);
+        updateProgressBar.setVisibility(View.VISIBLE);
+        updateProgressText.setVisibility(View.VISIBLE);
+        updateProgressText.setText("Downloading...");
+
+        DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        if (downloadManager == null) return;
+
+        Uri uri = Uri.parse(url);
+        DownloadManager.Request request = new DownloadManager.Request(uri);
+        request.setTitle("EduPulse Update");
+        request.setDescription("Downloading APK...");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        request.setDestinationInExternalFilesDir(this, null, "updates/edupulse-update.apk");
+
+        long downloadId = downloadManager.enqueue(request);
+
+        BroadcastReceiver receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                if (id == downloadId) {
+                    DownloadManager.Query query = new DownloadManager.Query();
+                    query.setFilterById(downloadId);
+                    Cursor cursor = downloadManager.query(query);
+                    if (cursor.moveToFirst()) {
+                        int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                        int status = cursor.getInt(statusIndex);
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            updateProgressText.setText("Installing...");
+                            installApk();
+                        }
+                    }
+                    cursor.close();
+                    unregisterReceiver(this);
+                }
+            }
+        };
+
+        registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                Context.RECEIVER_NOT_EXPORTED);
+    }
+
+    private void installApk() {
+        File updateDir = new File(getExternalFilesDir(null), "updates");
+        File apkFile = new File(updateDir, "edupulse-update.apk");
+
+        if (!apkFile.exists()) {
+            updateProgressText.setText("Download failed");
+            updateNowButton.setEnabled(true);
             return;
         }
 
-        int finalIndex = index;
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, url, body,
-                response -> {
-                    loadingSubtext.setText((finalIndex + 1) + "/" + scannedStudents.size() + " - " + student.get("name"));
-                    String status = response.optJSONObject("attendance") != null
-                            ? response.optJSONObject("attendance").optString("status", "")
-                            : "";
-                    if (!status.isEmpty()) {
-                        scannedStudents.get(finalIndex).put("status", status);
-                    }
-                    pushNext(finalIndex + 1, cls, section, subject);
-                },
-                error -> {
-                    loadingSubtext.setText((finalIndex + 1) + "/" + scannedStudents.size() + " - " + student.get("name"));
-                    pushNext(finalIndex + 1, cls, section, subject);
-                });
+        Uri apkUri = FileProvider.getUriForFile(this,
+                getPackageName() + ".fileprovider", apkFile);
 
-        req.setRetryPolicy(new DefaultRetryPolicy(5000, 0, 1));
-        requestQueue.add(req);
+        Intent installIntent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+        installIntent.setData(apkUri);
+        installIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(installIntent);
     }
-
-    // ─── SUCCESS ──────────────────────────────────────────
-
-    private void showSuccess() {
-        int count = scannedStudents.size();
-        successSubtext.setText(count + " attendance records pushed successfully");
-        playSuccessSound();
-
-        // Animate success icon
-        ObjectAnimator scaleX = ObjectAnimator.ofFloat(successIcon, "scaleX", 0f, 1.2f, 1f);
-        ObjectAnimator scaleY = ObjectAnimator.ofFloat(successIcon, "scaleY", 0f, 1.2f, 1f);
-        scaleX.setDuration(600);
-        scaleY.setDuration(600);
-        scaleX.setInterpolator(new DecelerateInterpolator());
-        scaleY.setInterpolator(new DecelerateInterpolator());
-        scaleX.start();
-        scaleY.start();
-
-        successOverlay.setVisibility(View.VISIBLE);
-
-        // Confetti burst!
-        ConfettiView confetti = findViewById(R.id.confettiView);
-        if (confetti != null) confetti.burst();
-    }
-
-    // ─── LOADING OVERLAY ─────────────────────────────────
 
     private void showLoading(String text, String subtext) {
         loadingText.setText(text);
         loadingSubtext.setText(subtext);
+        loadingSubtext.setVisibility(subtext.isEmpty() ? View.GONE : View.VISIBLE);
         loadingOverlay.setVisibility(View.VISIBLE);
         loadingOverlay.setAlpha(0f);
         loadingOverlay.animate().alpha(1f).setDuration(200).start();
     }
 
     private void hideLoading() {
-        loadingOverlay.animate().alpha(0f).setDuration(200)
-                .withEndAction(() -> loadingOverlay.setVisibility(View.GONE)).start();
+        loadingOverlay.animate()
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction(() -> loadingOverlay.setVisibility(View.GONE))
+                .start();
     }
 
-    // ─── SOUND ───────────────────────────────────────────
-
-    private void playScanBeep() {
+    private void playBeep() {
         try {
-            if (scanBeepPlayer != null) {
-                scanBeepPlayer.seekTo(0);
-                scanBeepPlayer.start();
+            if (beepPlayer != null) {
+                beepPlayer.seekTo(0);
+                beepPlayer.start();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.e(TAG, "Error playing beep", e);
+        }
     }
 
-    private void playSuccessSound() {
+    private void playSuccess() {
         try {
-            if (scanSuccessPlayer != null) {
-                scanSuccessPlayer.seekTo(0);
-                scanSuccessPlayer.start();
+            if (successPlayer != null) {
+                successPlayer.seekTo(0);
+                successPlayer.start();
             }
-        } catch (Exception ignored) {}
-    }
-
-    // ─── UTILITY ─────────────────────────────────────────
-
-    private void resetScanning() {
-        scannedStudents.clear();
-        scannedStudentIds.clear();
-        isScanning = false;
-        scanFinishedButton.setVisibility(View.GONE);
-        lastScannedText.setVisibility(View.GONE);
-        scanCountText.setText("0");
+        } catch (Exception e) {
+            Log.e(TAG, "Error playing success sound", e);
+        }
     }
 
     private void logout() {
-        prefs.edit()
-                .putBoolean(KEY_LOGGED_IN, false)
-                .apply();
-        resetScanning();
-        showLogin();
+        prefs.edit().clear().apply();
+        scannedStudentIds.clear();
+        scannedStudents.clear();
+        studentsCache.clear();
+        subjectsMap.clear();
+        classList.clear();
+        currentSubjects.clear();
+        photoCache.clear();
+        studentAdapter.notifyDataSetChanged();
+        apiBaseUrl = "";
+        currentIdToken = "";
+        showScreen("login");
     }
 
-    // ─── OTA UPDATE ──────────────────────────────────────
-
-    private void checkForUpdate() {
-        new Thread(() -> {
-            try {
-                URL url = new URL("https://api.github.com/repos/ShadowMan2010/edupulse-teacher/releases/latest");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(5000);
-                conn.setRequestProperty("Accept", "application/json");
-                int code = conn.getResponseCode();
-                if (code != 200) return;
-
-                java.io.BufferedReader reader = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(conn.getInputStream()));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
-                reader.close();
-
-                JSONObject release = new JSONObject(sb.toString());
-                int remoteVersion = parseVersion(release.optString("tag_name", "v1"));
-                int currentVersion = getPackageManager()
-                        .getPackageInfo(getPackageName(), 0).versionCode;
-
-                if (remoteVersion > currentVersion) {
-                    String apkUrl = "";
-                    JSONArray assets = release.optJSONArray("assets");
-                    if (assets != null) {
-                        for (int i = 0; i < assets.length(); i++) {
-                            JSONObject asset = assets.getJSONObject(i);
-                            if (asset.optString("name", "").endsWith(".apk")) {
-                                apkUrl = asset.optString("browser_download_url", "");
-                                break;
-                            }
-                        }
-                    }
-                    String changelog = release.optString("body", "New version available");
-                    String versionName = release.optString("tag_name", "v" + remoteVersion);
-
-                    String finalApkUrl = apkUrl;
-                    String finalChangelog = changelog;
-                    runOnUiThread(() -> showUpdateOverlay(versionName, finalChangelog, finalApkUrl));
-                }
-            } catch (Exception ignored) {}
-        }).start();
-    }
-
-    private void showUpdateOverlay(String version, String changelog, String apkUrl) {
-        updateVersionText.setText(version);
-        updateChangelogText.setText(changelog);
-        updateButton.setTag(apkUrl);
-        updateOverlay.setVisibility(View.VISIBLE);
-    }
-
-    private void showUpdateProgress(int percent) {
-        updateProgressBar.setVisibility(View.VISIBLE);
-        updateProgressText.setVisibility(View.VISIBLE);
-        updateProgressBar.setProgress(percent);
-        updateProgressText.setText(percent + "%");
-    }
-
-    private int parseVersion(String tag) {
-        try {
-            return Integer.parseInt(tag.replaceAll("[^0-9]", ""));
-        } catch (Exception e) {
-            return 0;
+    private String getLoginErrorMessage(VolleyError error) {
+        if (error instanceof NetworkError || error instanceof NoConnectionError) {
+            return "Network error. Check connection.";
+        } else if (error instanceof ServerError) {
+            return "Invalid email or password";
+        } else if (error instanceof TimeoutError) {
+            return "Connection timed out";
+        } else if (error instanceof AuthFailureError) {
+            return "Authentication failed";
         }
+        return "Login failed";
     }
 
-    private void downloadUpdate(String apkUrl) {
-        if (apkUrl == null || apkUrl.isEmpty()) {
-            Toast.makeText(this, "No APK found in release", Toast.LENGTH_SHORT).show();
-            return;
+    private String getConnectionErrorMessage(VolleyError error) {
+        if (error instanceof NetworkError || error instanceof NoConnectionError) {
+            return "Cannot reach server";
+        } else if (error instanceof TimeoutError) {
+            return "Connection timed out";
         }
-        updateButton.setEnabled(false);
-        updateButton.setText("DOWNLOADING...");
-        showUpdateProgress(0);
-
-        new Thread(() -> {
-            try {
-                URL url = new URL(apkUrl);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.connect();
-                int fileLength = conn.getContentLength();
-
-                File dir = new File(getCacheDir(), "updates");
-                dir.mkdirs();
-                File apkFile = new File(dir, "EduPulseTeacher.apk");
-
-                try (InputStream is = conn.getInputStream();
-                     FileOutputStream fos = new FileOutputStream(apkFile)) {
-                    byte[] buffer = new byte[8192];
-                    int count;
-                    long total = 0;
-                    while ((count = is.read(buffer)) > 0) {
-                        fos.write(buffer, 0, count);
-                        total += count;
-                        if (fileLength > 0) {
-                            final int pct = (int) (total * 100 / fileLength);
-                            runOnUiThread(() -> showUpdateProgress(pct));
-                        }
-                    }
-                }
-
-                runOnUiThread(() -> {
-                    updateOverlay.setVisibility(View.GONE);
-                    installApk(apkFile);
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    updateButton.setEnabled(true);
-                    updateButton.setText("UPDATE NOW");
-                    Toast.makeText(this, "Download failed", Toast.LENGTH_LONG).show();
-                });
-            }
-        }).start();
+        return "Unknown error";
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        String pendingApk = prefs.getString(KEY_PENDING_APK, "");
-        if (!pendingApk.isEmpty()) {
-            prefs.edit().remove(KEY_PENDING_APK).apply();
-            File apkFile = new File(pendingApk);
-            if (apkFile.exists()) {
-                doInstallApk(apkFile);
-            }
-        }
-    }
-
-    private void installApk(File apkFile) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (!getPackageManager().canRequestPackageInstalls()) {
-                prefs.edit().putString(KEY_PENDING_APK, apkFile.getAbsolutePath()).apply();
-                Intent intent = new Intent(
-                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
-                Toast.makeText(this, "Enable install from this source, then tap UPDATE again", Toast.LENGTH_LONG).show();
-                return;
-            }
-        }
-        doInstallApk(apkFile);
-    }
-
-    private void doInstallApk(File apkFile) {
-        Uri uri = FileProvider.getUriForFile(this,
-                getPackageName() + ".fileprovider", apkFile);
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setDataAndType(uri, "application/vnd.android.package-archive");
-        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
-    }
-
-    // ─── STUDENT ADAPTER (inner class) ──────────────────
-
-    private static class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.ViewHolder> {
-        private final List<Map<String, String>> students;
-        private final OnRemoveListener listener;
-        private final String baseUrl;
+    private class ScanStudentAdapter extends RecyclerView.Adapter<ScanStudentAdapter.ViewHolder> {
+        private List<Map<String, String>> students;
+        private OnRemoveListener removeListener;
 
         interface OnRemoveListener {
-            void onRemove(int position);
+            void onRemove(String studentId);
         }
 
-        StudentAdapter(List<Map<String, String>> students, OnRemoveListener listener, String baseUrl) {
+        ScanStudentAdapter(List<Map<String, String>> students, OnRemoveListener listener) {
             this.students = students;
-            this.listener = listener;
-            this.baseUrl = baseUrl != null ? baseUrl : "";
+            this.removeListener = listener;
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = getLayoutInflater().inflate(R.layout.item_student_scan, parent, false);
+            return new ViewHolder(view);
         }
 
         @Override
-        public ViewHolder onCreateViewHolder(android.view.ViewGroup parent, int viewType) {
-            android.view.View v = android.view.LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_student_scan, parent, false);
-            return new ViewHolder(v);
-        }
-
-        @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
-            Map<String, String> s = students.get(position);
-            holder.name.setText(s.get("name"));
-            String detail = "Class " + s.get("class");
-            if (s.containsKey("section") && !s.get("section").isEmpty()) {
-                detail += " · Section " + s.get("section");
-            }
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            Map<String, String> student = students.get(position);
+            holder.name.setText(student.get("name"));
+            String detail = student.get("class") + " \u00b7 " + student.get("section")
+                    + " \u00b7 #" + student.get("id");
             holder.detail.setText(detail);
 
-            String photo = s.get("photo");
-            if (photo != null && !photo.isEmpty()) {
-                if (photo.startsWith("http") || photo.startsWith("data:image")) {
-                    loadPhoto(holder.photo, photo);
-                } else if (photo.startsWith("/")) {
-                    loadPhoto(holder.photo, baseUrl + photo);
-                } else {
-                    holder.photo.setImageDrawable(null);
-                }
+            String status = student.get("status");
+            if ("pushed".equals(status)) {
+                holder.statusBadge.setText("PUSHED");
+                holder.statusBadge.setTextColor(Color.parseColor("#00FF88"));
+                holder.statusBadge.setBackground(createBadgeBg("#0a2e1a"));
+            } else if ("failed".equals(status)) {
+                holder.statusBadge.setText("FAILED");
+                holder.statusBadge.setTextColor(Color.parseColor("#FF3B3B"));
+                holder.statusBadge.setBackground(createBadgeBg("#2d0000"));
+            } else if ("late".equals(status)) {
+                holder.statusBadge.setText("LATE");
+                holder.statusBadge.setTextColor(Color.parseColor("#f59e0b"));
+                holder.statusBadge.setBackground(createBadgeBg("#2d1f00"));
+            } else if ("early".equals(status)) {
+                holder.statusBadge.setText("EARLY");
+                holder.statusBadge.setTextColor(Color.parseColor("#00E5FF"));
+                holder.statusBadge.setBackground(createBadgeBg("#003333"));
             } else {
-                holder.photo.setImageDrawable(null);
+                holder.statusBadge.setText("PRESENT");
+                holder.statusBadge.setTextColor(Color.parseColor("#00E5FF"));
+                holder.statusBadge.setBackground(createBadgeBg("#003333"));
             }
 
-            // Status badge
-            String status = s.get("status");
-            if (status != null && !status.isEmpty()) {
-                holder.statusBadge.setVisibility(View.VISIBLE);
-                holder.statusBadge.setText(status.toUpperCase());
-                switch (status) {
-                    case "late":
-                        holder.statusBadge.setTextColor(Color.parseColor("#f59e0b"));
-                        holder.statusBadge.setBackgroundColor(Color.parseColor("#2d1f00"));
-                        break;
-                    case "early":
-                        holder.statusBadge.setTextColor(Color.parseColor("#00E5FF"));
-                        holder.statusBadge.setBackgroundColor(Color.parseColor("#003333"));
-                        break;
-                    case "present":
-                        holder.statusBadge.setTextColor(Color.parseColor("#00FF88"));
-                        holder.statusBadge.setBackgroundColor(Color.parseColor("#0a2e1a"));
-                        break;
-                    default:
-                        holder.statusBadge.setTextColor(Color.parseColor("#9E9E9E"));
-                        holder.statusBadge.setBackgroundColor(Color.parseColor("#1F1F1F"));
-                }
+            String studentId = student.get("id");
+            Bitmap cached = photoCache.get(studentId);
+            if (cached != null) {
+                holder.photo.setImageBitmap(cached);
             } else {
-                holder.statusBadge.setVisibility(View.GONE);
-            }
-        }
-
-        private void loadPhoto(ImageView iv, String url) {
-            if (url.startsWith("data:image")) {
-                byte[] decoded = android.util.Base64.decode(url.substring(url.indexOf(",") + 1), android.util.Base64.DEFAULT);
-                Bitmap bmp = BitmapFactory.decodeByteArray(decoded, 0, decoded.length);
-                if (bmp != null) {
-                    iv.setImageBitmap(bmp);
-                    return;
+                String photoUrl = student.get("photo");
+                if (photoUrl != null && !photoUrl.isEmpty()) {
+                    loadPhotoToImageView(photoUrl, holder.photo);
                 }
             }
-            try {
-                java.net.URL u = new java.net.URL(url);
-                android.os.AsyncTask.execute(() -> {
-                    try {
-                        Bitmap bmp = BitmapFactory.decodeStream(u.openStream());
-                        if (bmp != null) {
-                            iv.post(() -> iv.setImageBitmap(bmp));
-                        }
-                    } catch (Exception ignored) {}
-                });
-            } catch (Exception ignored) {}
+
+            holder.removeButton.setVisibility(View.VISIBLE);
+            holder.removeButton.setOnClickListener(v -> {
+                if (removeListener != null) {
+                    removeListener.onRemove(student.get("id"));
+                }
+            });
         }
 
         @Override
@@ -1392,21 +1353,42 @@ public class MainActivity extends AppCompatActivity {
 
         class ViewHolder extends RecyclerView.ViewHolder {
             ImageView photo;
-            TextView name, detail, removeBtn, statusBadge;
-            ViewHolder(android.view.View itemView) {
+            TextView name, detail, statusBadge, removeButton;
+
+            ViewHolder(View itemView) {
                 super(itemView);
                 photo = itemView.findViewById(R.id.studentPhoto);
                 name = itemView.findViewById(R.id.studentName);
                 detail = itemView.findViewById(R.id.studentDetail);
                 statusBadge = itemView.findViewById(R.id.statusBadge);
-                removeBtn = itemView.findViewById(R.id.removeButton);
-                removeBtn.setOnClickListener(v -> {
-                    int pos = getAdapterPosition();
-                    if (pos != RecyclerView.NO_POSITION) {
-                        listener.onRemove(pos);
-                    }
-                });
+                removeButton = itemView.findViewById(R.id.removeButton);
             }
         }
+    }
+
+    private void loadPhotoToImageView(String url, ImageView imageView) {
+        ImageRequest request = new ImageRequest(url,
+                bitmap -> {
+                    imageView.setImageBitmap(bitmap);
+                    imageView.setVisibility(View.VISIBLE);
+                },
+                0, 0, ImageView.ScaleType.CENTER_CROP, null, null);
+        requestQueue.add(request);
+    }
+
+    private GradientDrawable createBadgeBg(String colorHex) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setShape(GradientDrawable.RECTANGLE);
+        drawable.setCornerRadius(100);
+        drawable.setColor(Color.parseColor(colorHex));
+        return drawable;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (beepPlayer != null) beepPlayer.release();
+        if (successPlayer != null) successPlayer.release();
+        if (requestQueue != null) requestQueue.cancelAll(request -> true);
     }
 }

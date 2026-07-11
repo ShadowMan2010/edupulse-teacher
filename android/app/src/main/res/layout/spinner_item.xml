@@ -3,8 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="12dp"
+    android:textColor="#FFFFFF"
     android:textSize="14sp"
-    android:fontFamily="sans-serif"
-    android:textColor="#E0E0E0"
-    android:ellipsize="end"
-    android:maxLines="1" />
+    android:fontFamily="sans-serif" />

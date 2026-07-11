@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="?android:attr/listPreferredItemHeight"
     android:padding="12dp"
+    android:textColor="#FFFFFF"
     android:textSize="14sp"
     android:fontFamily="sans-serif"
-    android:textColor="#E0E0E0"
-    android:background="#1F1F1F"
-    android:ellipsize="end"
-    android:maxLines="1" />
+    android:background="#1A1A1A" />

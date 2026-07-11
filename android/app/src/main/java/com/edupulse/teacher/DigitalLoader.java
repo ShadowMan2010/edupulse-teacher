@@ -5,7 +5,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
@@ -15,154 +14,153 @@ import java.util.Random;
 
 public class DigitalLoader extends View {
 
-    private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint ringGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static final String CHARS = "0123456789ABCDEF";
+
+    private final Paint outerRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint arcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint innerArcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint charPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint centerCharPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint orbitCharPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint scanlinePaint = new Paint();
-    private final Random random = new Random();
-    private final RectF arcRect = new RectF();
 
+    private float ringScale = 1f;
     private float rotation = 0f;
-    private float pulseScale = 1f;
-    private float innerProgress = 0f;
-    private char currentChar = '>';
-
-    private static final String CHARS = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ{}[]<>/\\|!@#$%^&*()_+-=";
+    private float progress = 0f;
+    private char centerChar = '0';
+    private final Random random = new Random();
+    private ValueAnimator scaleAnimator;
+    private ValueAnimator progressAnimator;
+    private ValueAnimator charAnimator;
 
     public DigitalLoader(Context context) {
         super(context);
         init();
     }
+
     public DigitalLoader(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
-    public DigitalLoader(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
+
+    public DigitalLoader(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
         init();
     }
 
     private void init() {
-        ringPaint.setStyle(Paint.Style.STROKE);
-        ringPaint.setStrokeWidth(4f);
-        ringPaint.setColor(Color.parseColor("#00E5FF"));
-        ringPaint.setStrokeCap(Paint.Cap.ROUND);
+        float density = getResources().getDisplayMetrics().density;
 
-        ringGlowPaint.setStyle(Paint.Style.STROKE);
-        ringGlowPaint.setStrokeWidth(8f);
-        ringGlowPaint.setColor(Color.parseColor("#2200E5FF"));
-        ringGlowPaint.setStrokeCap(Paint.Cap.ROUND);
+        outerRingPaint.setStyle(Paint.Style.STROKE);
+        outerRingPaint.setStrokeWidth(2 * density);
+        outerRingPaint.setColor(Color.argb(40, 0, 229, 255));
+        outerRingPaint.setStrokeCap(Paint.Cap.ROUND);
+
+        arcPaint.setStyle(Paint.Style.STROKE);
+        arcPaint.setStrokeWidth(2.5f * density);
+        arcPaint.setColor(Color.argb(255, 0, 229, 255));
+        arcPaint.setStrokeCap(Paint.Cap.ROUND);
 
         innerArcPaint.setStyle(Paint.Style.STROKE);
-        innerArcPaint.setStrokeWidth(3f);
-        innerArcPaint.setColor(Color.parseColor("#007BFF"));
+        innerArcPaint.setStrokeWidth(1.5f * density);
+        innerArcPaint.setColor(Color.argb(180, 0, 229, 255));
         innerArcPaint.setStrokeCap(Paint.Cap.ROUND);
 
-        charPaint.setStyle(Paint.Style.FILL);
-        charPaint.setColor(Color.parseColor("#00E5FF"));
-        charPaint.setTypeface(android.graphics.Typeface.MONOSPACE);
-        charPaint.setTextAlign(Paint.Align.CENTER);
+        centerCharPaint.setTextAlign(Paint.Align.CENTER);
+        centerCharPaint.setColor(Color.argb(255, 0, 229, 255));
+        centerCharPaint.setTypeface(null);
+
+        orbitCharPaint.setTextAlign(Paint.Align.CENTER);
+        orbitCharPaint.setColor(Color.argb(120, 0, 229, 255));
+        orbitCharPaint.setTextSize(8 * density);
 
         scanlinePaint.setStyle(Paint.Style.STROKE);
-        scanlinePaint.setStrokeWidth(1f);
-        scanlinePaint.setColor(Color.parseColor("#0AFFFFFF"));
+        scanlinePaint.setStrokeWidth(1);
+        scanlinePaint.setColor(Color.argb(8, 255, 255, 255));
 
-        ValueAnimator rotAnim = ValueAnimator.ofFloat(0f, 360f);
-        rotAnim.setDuration(2000);
-        rotAnim.setRepeatCount(ValueAnimator.INFINITE);
-        rotAnim.setInterpolator(new LinearInterpolator());
-        rotAnim.addUpdateListener(a -> {
+        scaleAnimator = ValueAnimator.ofFloat(0.9f, 1.1f);
+        scaleAnimator.setDuration(1500);
+        scaleAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        scaleAnimator.setRepeatMode(ValueAnimator.REVERSE);
+        scaleAnimator.addUpdateListener(a -> {
+            ringScale = (float) a.getAnimatedValue();
+            invalidate();
+        });
+
+        progressAnimator = ValueAnimator.ofFloat(0f, 360f);
+        progressAnimator.setDuration(2000);
+        progressAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        progressAnimator.setInterpolator(new LinearInterpolator());
+        progressAnimator.addUpdateListener(a -> {
             rotation = (float) a.getAnimatedValue();
             invalidate();
         });
-        rotAnim.start();
 
-        ValueAnimator pulseAnim = ValueAnimator.ofFloat(0.9f, 1.1f);
-        pulseAnim.setDuration(800);
-        pulseAnim.setRepeatCount(ValueAnimator.INFINITE);
-        pulseAnim.setRepeatMode(ValueAnimator.REVERSE);
-        pulseAnim.setInterpolator(new LinearInterpolator());
-        pulseAnim.addUpdateListener(a -> {
-            pulseScale = (float) a.getAnimatedValue();
+        charAnimator = ValueAnimator.ofFloat(0f, 1f);
+        charAnimator.setDuration(500);
+        charAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        charAnimator.addUpdateListener(a -> {
+            centerChar = CHARS.charAt(random.nextInt(CHARS.length()));
             invalidate();
         });
-        pulseAnim.start();
+    }
 
-        ValueAnimator progressAnim = ValueAnimator.ofFloat(0f, 1f);
-        progressAnim.setDuration(3000);
-        progressAnim.setRepeatCount(ValueAnimator.INFINITE);
-        progressAnim.setInterpolator(new LinearInterpolator());
-        progressAnim.addUpdateListener(a -> {
-            innerProgress = (float) a.getAnimatedValue();
-            invalidate();
-        });
-        progressAnim.start();
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        scaleAnimator.start();
+        progressAnimator.start();
+        charAnimator.start();
+    }
 
-        postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                currentChar = CHARS.charAt(random.nextInt(CHARS.length()));
-                postDelayed(this, 100 + random.nextInt(300));
-            }
-        }, 200);
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        scaleAnimator.cancel();
+        progressAnimator.cancel();
+        charAnimator.cancel();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        int w = getWidth();
-        int h = getHeight();
-        int cx = w / 2;
-        int cy = h / 2;
-        int radius = Math.min(w, h) / 2 - 12;
+        float density = getResources().getDisplayMetrics().density;
+        float cx = getWidth() / 2f;
+        float cy = getHeight() / 2f;
+        float baseRadius = Math.min(getWidth(), getHeight()) / 2f - 4 * density;
 
         canvas.save();
-        canvas.scale(pulseScale, pulseScale, cx, cy);
+        canvas.scale(ringScale, ringScale, cx, cy);
 
-        // Glow ring
-        ringGlowPaint.setAlpha(15);
-        canvas.drawCircle(cx, cy, radius, ringGlowPaint);
+        canvas.drawCircle(cx, cy, baseRadius, outerRingPaint);
 
-        // Outer ring with gap
-        float startAngle = rotation;
-        float sweepAngle = 320f + (float) (Math.sin(innerProgress * Math.PI * 2) * 30f);
-        arcRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
-        ringPaint.setAlpha(200);
-        canvas.drawArc(arcRect, startAngle, sweepAngle, false, ringPaint);
+        RectF arcRect = new RectF(cx - baseRadius, cy - baseRadius, cx + baseRadius, cy + baseRadius);
+        canvas.drawArc(arcRect, rotation - 90, 270f, false, arcPaint);
 
-        // Inner progress arc (opposite direction)
-        float innerStart = -rotation * 0.7f;
-        float innerSweep = 60f + innerProgress * 180f;
-        innerArcPaint.setAlpha(120);
-        int innerR = (int) (radius * 0.7f);
-        RectF innerRect = new RectF(cx - innerR, cy - innerR, cx + innerR, cy + innerR);
-        canvas.drawArc(innerRect, innerStart, innerSweep, false, innerArcPaint);
-
-        // Matrix character in center
-        float charSize = radius * 0.5f;
-        charPaint.setTextSize(charSize);
-        charPaint.setAlpha(180);
-        canvas.drawText(String.valueOf(currentChar), cx, cy + charSize * 0.35f, charPaint);
-
-        // Small secondary chars around ring
-        charPaint.setTextSize(9f);
-        for (int i = 0; i < 8; i++) {
-            double angle = Math.toRadians(rotation * 0.5f + i * 45f);
-            float cx2 = cx + (float) (radius * 1.25f * Math.cos(angle));
-            float cy2 = cy + (float) (radius * 1.25f * Math.sin(angle));
-            charPaint.setAlpha(40 + (int) (Math.sin(innerProgress * Math.PI * 2 + i) * 30));
-            canvas.drawText(
-                String.valueOf(CHARS.charAt((int) (System.currentTimeMillis() / 200 + i * 7) % CHARS.length())),
-                cx2, cy2, charPaint);
-        }
+        float innerRadius = baseRadius * 0.7f;
+        RectF innerArcRect = new RectF(cx - innerRadius, cy - innerRadius, cx + innerRadius, cy + innerRadius);
+        canvas.drawArc(innerArcRect, rotation - 90 + 45, 180f, false, innerArcPaint);
 
         canvas.restore();
 
-        // Scan lines overlay
-        scanlinePaint.setAlpha(6);
-        for (int i = 0; i < h; i += 4) {
-            canvas.drawLine(0, i, w, i, scanlinePaint);
+        float centerTextSize = 16 * density;
+        centerCharPaint.setTextSize(centerTextSize);
+        Paint.FontMetrics fm = centerCharPaint.getFontMetrics();
+        float textY = cy - (fm.ascent + fm.descent) / 2f;
+        canvas.drawText(String.valueOf(centerChar), cx, textY, centerCharPaint);
+
+        for (int i = 0; i < 4; i++) {
+            float angle = (rotation + i * 90f);
+            float rad = (float) Math.toRadians(angle);
+            float orbitRadius = baseRadius + 8 * density;
+            float ox = cx + (float) Math.cos(rad) * orbitRadius;
+            float oy = cy + (float) Math.sin(rad) * orbitRadius;
+            canvas.drawText(String.valueOf(CHARS.charAt(random.nextInt(CHARS.length()))), ox, oy, orbitCharPaint);
+        }
+
+        int h = getHeight();
+        int w = getWidth();
+        int scanlineSpacing = (int) (4 * density);
+        for (int y = 0; y < h; y += scanlineSpacing) {
+            canvas.drawLine(0, y, w, y, scanlinePaint);
         }
     }
 }

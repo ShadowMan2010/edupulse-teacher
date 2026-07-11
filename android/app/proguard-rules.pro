@@ -1,15 +1,30 @@
-# Keep all custom view classes (used in XML layouts)
+-optimizationpasses 5
+-dontusemixedcaseclassnames
+-dontskipnonpubliclibraryclasses
+-dontpreverify
+-verbose
+-optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
+
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+
 -keep class com.edupulse.teacher.** { *; }
 
-# Keep ZXing (QR scanning library)
+-keep class * extends androidx.appcompat.app.AppCompatActivity { *; }
+
 -keep class com.google.zxing.** { *; }
--keep class com.journeyapps.** { *; }
+-keep class com.journeyapps.barcodescanner.** { *; }
 
-# Keep Gson/JSON serialization
--keep class org.json.** { *; }
-
-# Keep Volley
--keep class com.android.volley.** { *; }
-
-# Keep Google Sign-In
 -keep class com.google.android.gms.** { *; }
+
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+-dontwarn com.google.zxing.**
+-dontwarn com.journeyapps.barcodescanner.**
+-dontwarn com.google.android.gms.**
+
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator CREATOR;
+}
