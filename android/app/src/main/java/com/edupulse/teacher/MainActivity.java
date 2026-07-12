@@ -138,7 +138,8 @@ public class MainActivity extends AppCompatActivity {
     private View scanSummarySheet, loadingOverlay, successOverlay, biometricOverlay, updateOverlay;
     private View lastScannedCard, loadingCard, successCard, biometricCard, updateCard;
     private View statCard, classSectionCard, topBarCard, connectCard, loginCard;
-    private Button signInButton, googleSignInButton, connectButton, scanButton, scanFinishedButton;
+    private Button signInButton, connectButton, scanButton, scanFinishedButton;
+    private View googleSignInButton;
     private Button pushButton, addMoreButton, successDoneButton, usePasswordButton;
     private Button updateNowButton, updateLaterButton, exitButton;
     private TextInputEditText emailField, passwordField, ipField, portField;
