@@ -44,6 +44,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+
+import com.airbnb.lottie.LottieAnimationView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
@@ -138,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
     private Button pushButton, addMoreButton, successDoneButton, usePasswordButton;
     private Button updateNowButton, updateLaterButton, exitButton;
     private TextInputEditText emailField, passwordField, ipField, portField;
+    private LottieAnimationView successAnimation;
     private TextView loginError, connectionStatus, scannedCount, classSubjectInfo;
     private TextView lastScannedName, lastScannedDetail, summaryCount;
     private TextView loadingText, loadingSubtext, successTitle, successSubtext;
@@ -219,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
         summaryCount = findViewById(R.id.summaryCount);
         loadingText = findViewById(R.id.loadingText);
         loadingSubtext = findViewById(R.id.loadingSubtext);
+        successAnimation = findViewById(R.id.successAnimation);
         successTitle = findViewById(R.id.successTitle);
         successSubtext = findViewById(R.id.successSubtext);
         biometricStatus = findViewById(R.id.biometricStatus);
@@ -1052,6 +1056,8 @@ public class MainActivity extends AppCompatActivity {
                         .setDuration(200)
                         .start());
 
+        successAnimation.setProgress(0f);
+        successAnimation.playAnimation();
         confettiView.burst();
     }
 

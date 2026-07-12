@@ -32,7 +32,7 @@
                 android:id="@+id/splashLogo"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
-                android:src="@drawable/ic_launcher_foreground"
+                android:src="@drawable/logo"
                 android:contentDescription="@string/app_name" />
 
             <com.edupulse.teacher.GlitchTextView
@@ -90,7 +90,7 @@
                     android:id="@+id/loginLogo"
                     android:layout_width="80dp"
                     android:layout_height="80dp"
-                    android:src="@drawable/ic_launcher_foreground"
+                    android:src="@drawable/logo"
                     android:contentDescription="@string/app_name" />
 
                 <com.edupulse.teacher.GlitchTextView
@@ -231,7 +231,7 @@
                 android:id="@+id/connectLogo"
                 android:layout_width="96dp"
                 android:layout_height="96dp"
-                android:src="@drawable/ic_launcher_foreground"
+                android:src="@drawable/logo"
                 android:contentDescription="@string/app_name" />
 
             <TextView
@@ -372,7 +372,7 @@
                     android:id="@+id/mainLogo"
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:src="@drawable/ic_launcher_foreground"
+                    android:src="@drawable/logo"
                     android:contentDescription="@string/app_name" />
 
                 <TextView
@@ -606,7 +606,7 @@
                                 android:layout_width="40dp"
                                 android:layout_height="40dp"
                                 android:scaleType="centerCrop"
-                                android:src="@drawable/ic_launcher_foreground" />
+                                android:src="@drawable/logo" />
 
                             <LinearLayout
                                 android:layout_width="0dp"
@@ -809,21 +809,14 @@
                 android:orientation="vertical"
                 android:gravity="center">
 
-                <FrameLayout
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:background="@drawable/bg_success_circle"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:text="✓"
-                        android:textColor="#000000"
-                        android:textSize="36sp"
-                        android:textStyle="bold" />
-                </FrameLayout>
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/successAnimation"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:layout_marginBottom="16dp"
+                    app:lottie_rawRes="@raw/check"
+                    app:lottie_autoPlay="true"
+                    app:lottie_loop="false" />
 
                 <TextView
                     android:id="@+id/successTitle"

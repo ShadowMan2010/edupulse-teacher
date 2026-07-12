@@ -25,6 +25,9 @@
 -dontwarn com.journeyapps.barcodescanner.**
 -dontwarn com.google.android.gms.**
 
+-keep class com.airbnb.lottie.** { *; }
+-dontwarn com.airbnb.lottie.**
+
 -keepclassmembers class * implements android.os.Parcelable {
     public static final android.os.Parcelable$Creator CREATOR;
 }
