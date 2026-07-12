@@ -3,7 +3,4 @@
     <declare-styleable name="GlassCardView">
         <attr name="showTopBarAccent" format="boolean" />
     </declare-styleable>
-    <declare-styleable name="GlitchTextView">
-        <attr name="glitchText" format="string" />
-    </declare-styleable>
 </resources>

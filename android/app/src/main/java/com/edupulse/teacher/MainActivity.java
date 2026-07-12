@@ -1,9 +1,5 @@
 package com.edupulse.teacher;
 
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
-import android.animation.PropertyValuesHolder;
-import android.animation.ValueAnimator;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -17,25 +13,17 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaPlayer;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
-import android.view.animation.LinearInterpolator;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -153,9 +141,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView lastScannedPhoto;
     private RecyclerView studentRecyclerView;
     private ProgressBar updateProgressBar;
-    private ConfettiView confettiView;
-    private CyberBgView cyberBg;
-    private ScanPulseView scanPulse;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -251,9 +237,7 @@ public class MainActivity extends AppCompatActivity {
         lastScannedPhoto = findViewById(R.id.lastScannedPhoto);
         studentRecyclerView = findViewById(R.id.studentRecyclerView);
         updateProgressBar = findViewById(R.id.updateProgressBar);
-        confettiView = findViewById(R.id.confettiView);
-        cyberBg = findViewById(R.id.cyberBg);
-        scanPulse = findViewById(R.id.scanPulse);
+
 
         classSpinner = findViewById(R.id.classSpinner);
         sectionSpinner = findViewById(R.id.sectionSpinner);
@@ -425,11 +409,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showSplash(Runnable onComplete) {
-        showScreen("splash");
-        mainHandler.postDelayed(onComplete, 1000);
-    }
-
     private void showScreen(String screen) {
         splashContainer.setVisibility("splash".equals(screen) ? View.VISIBLE : View.GONE);
         loginContainer.setVisibility("login".equals(screen) ? View.VISIBLE : View.GONE);
@@ -450,8 +429,6 @@ public class MainActivity extends AppCompatActivity {
         card.setTranslationY(0f);
     }
 
-    private ValueAnimator scanButtonPulse;
-
     private void animateMultipleCards() {
         View[] cards = {statCard, classSectionCard};
         for (int i = 0; i < cards.length; i++) {
@@ -468,22 +445,6 @@ public class MainActivity extends AppCompatActivity {
                         .start();
             }
         }
-        startScanButtonPulse();
-    }
-
-    private void startScanButtonPulse() {
-        if (scanButtonPulse != null) scanButtonPulse.cancel();
-        scanButtonPulse = ValueAnimator.ofFloat(1f, 1.05f);
-        scanButtonPulse.setDuration(1500);
-        scanButtonPulse.setRepeatCount(ValueAnimator.INFINITE);
-        scanButtonPulse.setRepeatMode(ValueAnimator.REVERSE);
-        scanButtonPulse.setInterpolator(new DecelerateInterpolator());
-        scanButtonPulse.addUpdateListener(a -> {
-            float scale = (float) a.getAnimatedValue();
-            scanButton.setScaleX(scale);
-            scanButton.setScaleY(scale);
-        });
-        scanButtonPulse.start();
     }
 
     private void loginWithEmail() {
@@ -1074,7 +1035,6 @@ public class MainActivity extends AppCompatActivity {
 
         successAnimation.setProgress(0f);
         successAnimation.playAnimation();
-        confettiView.burst();
     }
 
     private void checkUpdate() {

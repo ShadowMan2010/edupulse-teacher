@@ -63,14 +63,14 @@ public class GlassCardView extends FrameLayout {
         borderWidth = BORDER_WIDTH_DP * density;
 
         fillPaint.setStyle(Paint.Style.FILL);
-        fillPaint.setColor(Color.argb(13, 255, 255, 255));
+        fillPaint.setColor(Color.argb(25, 255, 255, 255));
 
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setStrokeWidth(borderWidth);
-        borderPaint.setColor(Color.argb(20, 255, 255, 255));
+        borderPaint.setColor(Color.argb(30, 255, 255, 255));
 
         highlightPaint.setStyle(Paint.Style.FILL);
-        highlightPaint.setColor(Color.argb(12, 255, 255, 255));
+        highlightPaint.setColor(Color.argb(20, 255, 255, 255));
 
         shadowPaint.setStyle(Paint.Style.FILL);
         shadowPaint.setColor(Color.argb(64, 0, 0, 0));
@@ -119,7 +119,7 @@ public class GlassCardView extends FrameLayout {
             canvas.drawRoundRect(accentRect, cornerRadius, cornerRadius, accentPaint);
         }
 
-        canvas.drawColor(Color.argb(13, 255, 255, 255));
+        canvas.drawColor(Color.argb(25, 255, 255, 255));
 
         canvas.restore();
 

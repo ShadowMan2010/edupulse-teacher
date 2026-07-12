@@ -12,21 +12,14 @@
         android:id="@+id/splashContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="visible">
-
-        <com.edupulse.teacher.MatrixRainView
-            android:id="@+id/splashMatrixRain"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:alpha="0.25" />
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:orientation="vertical"
-            android:gravity="center"
-            android:animateLayoutChanges="true">
+            android:gravity="center">
 
             <ImageView
                 android:id="@+id/splashLogo"
@@ -35,12 +28,17 @@
                 android:src="@drawable/logo_small"
                 android:contentDescription="@string/app_name" />
 
-            <com.edupulse.teacher.GlitchTextView
+            <TextView
                 android:id="@+id/splashGlitch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                app:glitchText="EDUPULSE" />
+                android:text="EDUPULSE"
+                android:textColor="#EAFFFFFF"
+                android:textSize="28sp"
+                android:fontFamily="monospace"
+                android:textStyle="bold"
+                android:letterSpacing="0.12" />
 
             <TextView
                 android:id="@+id/splashTeacher"
@@ -52,11 +50,6 @@
                 android:fontFamily="monospace"
                 android:letterSpacing="0.15" />
 
-            <com.edupulse.teacher.DigitalLoader
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginTop="20dp" />
-
         </LinearLayout>
     </FrameLayout>
 
@@ -66,12 +59,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone">
-
-        <com.edupulse.teacher.MatrixRainView
-            android:id="@+id/loginMatrixRain"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:alpha="0.2" />
 
         <ScrollView
             android:layout_width="match_parent"
@@ -93,12 +80,17 @@
                     android:src="@drawable/logo_small"
                     android:contentDescription="@string/app_name" />
 
-                <com.edupulse.teacher.GlitchTextView
+                <TextView
                     android:id="@+id/loginGlitch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    app:glitchText="EDUPULSE" />
+                    android:text="EDUPULSE"
+                    android:textColor="#EAFFFFFF"
+                    android:textSize="28sp"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12" />
 
                 <TextView
                     android:id="@+id/loginTeacherLabel"
@@ -110,12 +102,11 @@
                     android:fontFamily="sans-serif"
                     android:layout_marginBottom="32dp" />
 
-                <FrameLayout
+                <com.edupulse.teacher.GlassCardView
                     android:id="@+id/loginCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:background="@drawable/bg_card_glass">
+                    android:padding="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -206,7 +197,7 @@
                             android:visibility="gone" />
 
                     </LinearLayout>
-                </FrameLayout>
+                </com.edupulse.teacher.GlassCardView>
             </LinearLayout>
         </ScrollView>
     </FrameLayout>
@@ -244,12 +235,11 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="32dp" />
 
-            <FrameLayout
+            <com.edupulse.teacher.GlassCardView
                 android:id="@+id/connectCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:background="@drawable/bg_card_glass">
+                android:padding="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -332,7 +322,7 @@
                         android:visibility="gone" />
 
                 </LinearLayout>
-            </FrameLayout>
+            </com.edupulse.teacher.GlassCardView>
         </LinearLayout>
     </ScrollView>
 
@@ -345,22 +335,15 @@
         android:background="#000000"
         android:visibility="gone">
 
-        <!-- CyberBgView as background -->
-        <com.edupulse.teacher.CyberBgView
-            android:id="@+id/cyberBg"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="top" />
-
         <!-- Top bar -->
-        <FrameLayout
+        <com.edupulse.teacher.GlassCardView
             android:id="@+id/topBarCard"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="@drawable/bg_card_glass"
             android:paddingHorizontal="16dp"
             android:layout_marginBottom="8dp"
-            android:elevation="8dp">
+            android:elevation="8dp"
+            app:showTopBarAccent="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -414,7 +397,7 @@
                     android:paddingHorizontal="12dp" />
 
             </LinearLayout>
-        </FrameLayout>
+        </com.edupulse.teacher.GlassCardView>
 
         <ScrollView
             android:layout_width="match_parent"
@@ -429,11 +412,10 @@
                 android:paddingBottom="20dp">
 
                 <!-- Stat bar -->
-                <FrameLayout
+                <com.edupulse.teacher.GlassCardView
                     android:id="@+id/statCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_stat_card_glass"
                     android:padding="16dp"
                     android:layout_marginBottom="12dp">
 
@@ -478,14 +460,13 @@
                             android:fontFamily="monospace"
                             android:gravity="end" />
                     </LinearLayout>
-                </FrameLayout>
+                </com.edupulse.teacher.GlassCardView>
 
                 <!-- Class & Subject section -->
-                <FrameLayout
+                <com.edupulse.teacher.GlassCardView
                     android:id="@+id/classSectionCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_card_glass"
                     android:padding="16dp"
                     android:layout_marginBottom="12dp">
 
@@ -538,7 +519,7 @@
                             android:background="@drawable/bg_field_glass"
                             android:paddingHorizontal="12dp" />
                     </LinearLayout>
-                </FrameLayout>
+                </com.edupulse.teacher.GlassCardView>
 
                 <!-- Scan button area -->
                 <FrameLayout
@@ -546,12 +527,6 @@
                     android:layout_height="200dp"
                     android:layout_marginBottom="12dp"
                     android:layout_gravity="center">
-
-                    <com.edupulse.teacher.ScanPulseView
-                        android:id="@+id/scanPulse"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:layout_gravity="center" />
 
                     <Button
                         android:id="@+id/scanButton"
@@ -571,11 +546,10 @@
                 </FrameLayout>
 
                 <!-- Last scanned card -->
-                <FrameLayout
+                <com.edupulse.teacher.GlassCardView
                     android:id="@+id/lastScannedCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_card_glass"
                     android:padding="16dp"
                     android:layout_marginBottom="12dp"
                     android:visibility="gone">
@@ -633,7 +607,7 @@
                             </LinearLayout>
                         </LinearLayout>
                     </LinearLayout>
-                </FrameLayout>
+                </com.edupulse.teacher.GlassCardView>
 
                 <!-- Scan Finished button -->
                 <Button
@@ -755,9 +729,11 @@
                 android:orientation="vertical"
                 android:gravity="center">
 
-                <com.edupulse.teacher.DigitalLoader
-                    android:layout_width="48dp"
-                    android:layout_height="48dp" />
+                <ProgressBar
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:indeterminateTint="#00E5FF"
+                    style="?android:attr/progressBarStyle" />
 
                 <TextView
                     android:id="@+id/loadingText"
@@ -788,11 +764,6 @@
         android:layout_height="match_parent"
         android:background="#CC000000"
         android:visibility="gone">
-
-        <com.edupulse.teacher.ConfettiView
-            android:id="@+id/confettiView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
 
         <FrameLayout
             android:id="@+id/successCard"
@@ -862,12 +833,11 @@
         android:background="#E6000000"
         android:visibility="gone">
 
-        <FrameLayout
+        <com.edupulse.teacher.GlassCardView
             android:id="@+id/biometricCard"
             android:layout_width="240dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:background="@drawable/bg_card_glass"
             android:padding="24dp"
             android:elevation="24dp">
 
@@ -915,7 +885,7 @@
                     android:background="@drawable/bg_card_glass"
                     android:stateListAnimator="@null" />
             </LinearLayout>
-        </FrameLayout>
+        </com.edupulse.teacher.GlassCardView>
     </FrameLayout>
 
     <!-- === UPDATE OVERLAY === -->
@@ -926,12 +896,11 @@
         android:background="#CC000000"
         android:visibility="gone">
 
-        <FrameLayout
+        <com.edupulse.teacher.GlassCardView
             android:id="@+id/updateCard"
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:background="@drawable/bg_card_glass"
             android:padding="20dp"
             android:elevation="24dp">
 
@@ -1033,7 +1002,7 @@
                         android:layout_marginStart="6dp" />
                 </LinearLayout>
             </LinearLayout>
-        </FrameLayout>
+        </com.edupulse.teacher.GlassCardView>
     </FrameLayout>
 
 </FrameLayout>
