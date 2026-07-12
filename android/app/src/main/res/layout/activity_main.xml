@@ -32,7 +32,7 @@
                 android:id="@+id/splashLogo"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
-                android:src="@drawable/logo"
+                android:src="@drawable/logo_small"
                 android:contentDescription="@string/app_name" />
 
             <com.edupulse.teacher.GlitchTextView
@@ -90,7 +90,7 @@
                     android:id="@+id/loginLogo"
                     android:layout_width="80dp"
                     android:layout_height="80dp"
-                    android:src="@drawable/logo"
+                    android:src="@drawable/logo_small"
                     android:contentDescription="@string/app_name" />
 
                 <com.edupulse.teacher.GlitchTextView
@@ -231,7 +231,7 @@
                 android:id="@+id/connectLogo"
                 android:layout_width="96dp"
                 android:layout_height="96dp"
-                android:src="@drawable/logo"
+                android:src="@drawable/logo_small"
                 android:contentDescription="@string/app_name" />
 
             <TextView
@@ -372,7 +372,7 @@
                     android:id="@+id/mainLogo"
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:src="@drawable/logo"
+                    android:src="@drawable/logo_small"
                     android:contentDescription="@string/app_name" />
 
                 <TextView
@@ -606,7 +606,7 @@
                                 android:layout_width="40dp"
                                 android:layout_height="40dp"
                                 android:scaleType="centerCrop"
-                                android:src="@drawable/logo" />
+                                android:src="@drawable/logo_small" />
 
                             <LinearLayout
                                 android:layout_width="0dp"
