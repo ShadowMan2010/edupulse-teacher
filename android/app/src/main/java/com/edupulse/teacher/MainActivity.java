@@ -389,7 +389,8 @@ public class MainActivity extends AppCompatActivity {
         if (!crashLog.isEmpty()) {
             EduPulseApp.clearCrash(prefs);
             Log.e(TAG, "Previous crash:\n" + crashLog);
-            Toast.makeText(this, "App crashed! Check logcat for details.", Toast.LENGTH_LONG).show();
+            String firstLine = crashLog.contains("\n") ? crashLog.substring(0, crashLog.indexOf("\n")) : crashLog;
+            Toast.makeText(this, "Last crash: " + firstLine, Toast.LENGTH_LONG).show();
         }
         if (prefs.getBoolean("logged_in", false) && !currentIdToken.isEmpty()) {
             showSplash(() -> {
