@@ -410,26 +410,24 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Last crash: " + firstLine, Toast.LENGTH_LONG).show();
         }
         if (prefs.getBoolean("logged_in", false) && !currentIdToken.isEmpty()) {
-            showSplash(() -> {
-                if (apiBaseUrl.isEmpty()) {
-                    showScreen("connect");
-                } else {
-                    showScreen("main");
-                    loadSubjects();
-                    checkUpdate();
-                    if (prefs.getBoolean("biometric_enabled", false)) {
-                        showBiometricLock();
-                    }
+            if (apiBaseUrl.isEmpty()) {
+                showScreen("connect");
+            } else {
+                showScreen("main");
+                loadSubjects();
+                checkUpdate();
+                if (prefs.getBoolean("biometric_enabled", false)) {
+                    showBiometricLock();
                 }
-            });
+            }
         } else {
-            showSplash(() -> showScreen("login"));
+            showScreen("login");
         }
     }
 
     private void showSplash(Runnable onComplete) {
         showScreen("splash");
-        mainHandler.postDelayed(onComplete, 2000);
+        mainHandler.postDelayed(onComplete, 1000);
     }
 
     private void showScreen(String screen) {
@@ -448,14 +446,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void animateScreenEntrance(View card) {
-        card.setAlpha(0f);
-        card.setTranslationY(40f);
-        card.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(400)
-                .setInterpolator(new DecelerateInterpolator())
-                .start();
+        card.setAlpha(1f);
+        card.setTranslationY(0f);
     }
 
     private ValueAnimator scanButtonPulse;
