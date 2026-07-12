@@ -82,6 +82,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -156,22 +158,36 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setTheme(R.style.Theme_EduPulse);
-        setContentView(R.layout.activity_main);
+        try {
+            super.onCreate(savedInstanceState);
+            setTheme(R.style.Theme_EduPulse);
+            setContentView(R.layout.activity_main);
 
-        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        requestQueue = Volley.newRequestQueue(this);
+            prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            requestQueue = Volley.newRequestQueue(this);
 
-        initViews();
-        initSounds();
-        initGoogleSignIn();
-        initBiometric();
-        setupSpinners();
-        setupClickListeners();
-        setupRecyclerView();
-        loadSavedState();
-        routeUser();
+            initViews();
+            initSounds();
+            initGoogleSignIn();
+            initBiometric();
+            setupSpinners();
+            setupClickListeners();
+            setupRecyclerView();
+            loadSavedState();
+            routeUser();
+        } catch (Throwable t) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            t.printStackTrace(pw);
+            String stack = sw.toString();
+            Log.e(TAG, "onCreate crash: " + stack);
+            android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+            builder.setTitle("Startup Error");
+            builder.setMessage(stack.length() > 1000 ? stack.substring(0, 1000) : stack);
+            builder.setPositiveButton("EXIT", (d, w) -> finish());
+            builder.setCancelable(false);
+            builder.show();
+        }
     }
 
     private void initViews() {
