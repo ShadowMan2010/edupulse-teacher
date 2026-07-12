@@ -385,6 +385,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void routeUser() {
+        String crashLog = EduPulseApp.getLastCrash(prefs);
+        if (!crashLog.isEmpty()) {
+            EduPulseApp.clearCrash(prefs);
+            Log.e(TAG, "Previous crash:\n" + crashLog);
+            Toast.makeText(this, "App crashed! Check logcat for details.", Toast.LENGTH_LONG).show();
+        }
         if (prefs.getBoolean("logged_in", false) && !currentIdToken.isEmpty()) {
             showSplash(() -> {
                 if (apiBaseUrl.isEmpty()) {
