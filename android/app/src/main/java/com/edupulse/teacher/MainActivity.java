@@ -761,12 +761,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void startQrScan() {
         IntentIntegrator integrator = new IntentIntegrator(this);
+        integrator.setCaptureActivity(PortraitCaptureActivity.class);
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
         integrator.setPrompt("Scan student QR code");
         integrator.setCameraId(0);
         integrator.setBeepEnabled(false);
         integrator.setBarcodeImageEnabled(false);
-        integrator.setOrientationLocked(true);
         integrator.initiateScan();
     }
 
@@ -1052,6 +1052,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkUpdate() {
+        String dismissed = prefs.getString("dismissed_update", "");
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 URL url = new URL(GITHUB_API_URL);
@@ -1073,6 +1074,8 @@ public class MainActivity extends AppCompatActivity {
                     String body = release.optString("body", "");
                     JSONArray assets = release.optJSONArray("assets");
 
+                    if (tagName.equals(dismissed)) return;
+
                     int latestVersion = parseVersionCode(tagName);
                     int currentVersion = getVersionCode();
 
@@ -1090,9 +1093,14 @@ public class MainActivity extends AppCompatActivity {
 
     private int parseVersionCode(String tagName) {
         try {
-            String v = tagName.replaceAll("[^0-9]", "");
-            if (v.isEmpty()) return 0;
-            return Integer.parseInt(v);
+            String clean = tagName.startsWith("v") ? tagName.substring(1) : tagName;
+            String[] parts = clean.split("\\.");
+            if (parts.length == 2) {
+                return Integer.parseInt(parts[0]) * 1000 + Integer.parseInt(parts[1]);
+            }
+            String digits = tagName.replaceAll("[^0-9]", "");
+            if (digits.isEmpty()) return 0;
+            return Integer.parseInt(digits) * 1000;
         } catch (NumberFormatException e) {
             return 0;
         }
@@ -1122,6 +1130,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void hideUpdateOverlay() {
+        String tag = updateVersion.getText().toString();
+        if (!tag.isEmpty()) {
+            prefs.edit().putString("dismissed_update", tag).apply();
+        }
         updateCard.animate()
                 .translationY(updateCard.getHeight())
                 .setDuration(250)
