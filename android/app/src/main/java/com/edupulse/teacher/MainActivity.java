@@ -394,19 +394,28 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Last crash: " + firstLine, Toast.LENGTH_LONG).show();
         }
         if (prefs.getBoolean("logged_in", false) && !currentIdToken.isEmpty()) {
-            if (apiBaseUrl.isEmpty()) {
-                showScreen("connect");
-            } else {
-                showScreen("main");
-                loadSubjects();
-                checkUpdate();
-                if (prefs.getBoolean("biometric_enabled", false)) {
-                    showBiometricLock();
+            showSplash(() -> {
+                if (apiBaseUrl.isEmpty()) {
+                    showScreen("connect");
+                } else {
+                    showScreen("main");
+                    loadSubjects();
+                    checkUpdate();
+                    if (prefs.getBoolean("biometric_enabled", false)) {
+                        showBiometricLock();
+                    }
                 }
-            }
+            });
         } else {
-            showScreen("login");
+            showSplash(() -> showScreen("login"));
         }
+    }
+
+    private void showSplash(Runnable onComplete) {
+        showScreen("splash");
+        GlassCardView card = findViewById(R.id.splashCard);
+        if (card != null) card.startSheenAnimation();
+        mainHandler.postDelayed(onComplete, 1500);
     }
 
     private void showScreen(String screen) {
@@ -432,16 +441,21 @@ public class MainActivity extends AppCompatActivity {
     private void animateMultipleCards() {
         View[] cards = {statCard, classSectionCard};
         for (int i = 0; i < cards.length; i++) {
-            if (cards[i] != null) {
-                cards[i].setAlpha(0f);
-                cards[i].setTranslationY(40f);
-                cards[i].animate()
+            final View card = cards[i];
+            if (card != null) {
+                card.setAlpha(0f);
+                card.setTranslationY(40f);
+                card.animate()
                         .alpha(1f)
                         .translationY(0f)
                         .setDuration(400)
                         .setStartDelay(i * 80L)
                         .setInterpolator(new DecelerateInterpolator())
-                        .withEndAction(() -> {})
+                        .withEndAction(() -> {
+                            if (card instanceof GlassCardView) {
+                                ((GlassCardView) card).startSheenAnimation();
+                            }
+                        })
                         .start();
             }
         }

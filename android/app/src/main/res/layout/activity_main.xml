@@ -12,45 +12,54 @@
         android:id="@+id/splashContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone">
+        android:visibility="visible"
+        android:background="#000000">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <com.edupulse.teacher.GlassCardView
+            android:id="@+id/splashCard"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
             android:layout_gravity="center"
-            android:orientation="vertical"
-            android:gravity="center">
+            android:padding="24dp"
+            android:elevation="20dp">
 
-            <ImageView
-                android:id="@+id/splashLogo"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:src="@drawable/logo_small"
-                android:contentDescription="@string/app_name" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
 
-            <TextView
-                android:id="@+id/splashGlitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="EDUPULSE"
-                android:textColor="#EAFFFFFF"
-                android:textSize="28sp"
-                android:fontFamily="monospace"
-                android:textStyle="bold"
-                android:letterSpacing="0.12" />
+                <ImageView
+                    android:id="@+id/splashLogo"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/logo_small"
+                    android:contentDescription="@string/app_name"
+                    android:alpha="0.95" />
 
-            <TextView
-                android:id="@+id/splashTeacher"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/teacher"
-                android:textColor="#8CFFFFFF"
-                android:textSize="16sp"
-                android:fontFamily="monospace"
-                android:letterSpacing="0.15" />
+                <TextView
+                    android:id="@+id/splashGlitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="EDUPULSE"
+                    android:textColor="#EAFFFFFF"
+                    android:textSize="20sp"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12" />
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/splashTeacher"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/teacher"
+                    android:textColor="#8CFFFFFF"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.15" />
+            </LinearLayout>
+        </com.edupulse.teacher.GlassCardView>
     </FrameLayout>
 
     <!-- === LOGIN SCREEN === -->
