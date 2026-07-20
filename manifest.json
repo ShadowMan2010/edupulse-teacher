@@ -2,7 +2,7 @@
   "name": "EduPulse Attendance",
   "short_name": "EduPulse",
   "description": "Teacher attendance scanner for EduPulse",
-  "start_url": "/pages/teacher/scan.html",
+  "start_url": "/pages/teacher/dashboard.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0b",

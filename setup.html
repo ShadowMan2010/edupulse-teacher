@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduPulse — School Setup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0b; color: #f8fafc;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .bg-grid {
+      position: fixed; inset: 0;
+      background-image: radial-gradient(rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px; pointer-events: none; z-index: 0;
+    }
+    .card {
+      position: relative; z-index: 1;
+      background: rgba(17,17,19,0.85);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 40px; width: 420px;
+      backdrop-filter: blur(12px);
+    }
+    h1 { font-size: 24px; color: #00E5FF; margin-bottom: 4px; }
+    .sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 24px; }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; background: rgba(255,255,255,0.03);
+      border-radius: 8px; margin-bottom: 20px;
+      font-size: 13px;
+    }
+    .info-row .label { color: rgba(255,255,255,0.4); }
+    .info-row .value { color: #00E5FF; font-weight: bold; }
+    .input-group { margin-bottom: 18px; }
+    label { display: block; font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 6px; letter-spacing: 1px; }
+    input {
+      width: 100%; padding: 12px 14px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      color: #f8fafc; font-family: 'Courier New', monospace;
+      font-size: 14px; outline: none; transition: border 0.2s;
+    }
+    input:focus { border-color: #00E5FF; }
+    .btn {
+      width: 100%; padding: 12px; border-radius: 8px;
+      border: none; background: #00E5FF; color: #000;
+      font-family: 'Courier New', monospace; font-size: 13px;
+      font-weight: bold; cursor: pointer; letter-spacing: 1px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .error { color: #FF3B3B; font-size: 11px; margin-top: 10px; display: none; }
+    .success { color: #00FF88; font-size: 11px; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="card">
+  <h1>⚙️ Setup</h1>
+  <p class="sub">Configure your school to get started</p>
+
+  <div class="info-row">
+    <span class="label">School ID</span>
+    <span class="value" id="schoolIdDisplay">—</span>
+  </div>
+
+  <div class="input-group">
+    <label>School Name</label>
+    <input type="text" id="schoolNameInput" placeholder="e.g. Springfield High School" autofocus>
+  </div>
+
+  <button class="btn" id="setupBtn" onclick="doSetup()">COMPLETE SETUP</button>
+  <div class="error" id="errorMsg"></div>
+  <div class="success" id="successMsg">✓ School configured! Redirecting...</div>
+</div>
+
+<script>
+  var API_BASE = window.location.origin + '/api';
+
+  fetch(API_BASE + '/setup-status').then(function(r) { return r.json(); }).then(function(d) {
+    if (!d.setup_needed) { window.location.href = '/pages/login.html'; return; }
+    document.getElementById('schoolIdDisplay').textContent = d.schoolId || '—';
+  }).catch(function() {
+    document.getElementById('schoolIdDisplay').textContent = 'Cannot reach server';
+  });
+
+  function doSetup() {
+    var name = document.getElementById('schoolNameInput').value.trim();
+    if (!name) { showError('Please enter your school name'); return; }
+    document.getElementById('setupBtn').disabled = true;
+    document.getElementById('setupBtn').textContent = '⏳ SAVING...';
+
+    fetch(API_BASE + '/setup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ school_name: name })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success) {
+        document.getElementById('successMsg').style.display = 'block';
+        setTimeout(function() { window.location.href = '/pages/login.html'; }, 1500);
+      } else {
+        showError(d.error || 'Setup failed');
+        document.getElementById('setupBtn').disabled = false;
+        document.getElementById('setupBtn').textContent = 'COMPLETE SETUP';
+      }
+    }).catch(function(e) {
+      showError(e.message || 'Cannot reach server');
+      document.getElementById('setupBtn').disabled = false;
+      document.getElementById('setupBtn').textContent = 'COMPLETE SETUP';
+    });
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('errorMsg');
+    el.textContent = msg; el.style.display = 'block';
+  }
+</script>
+</body>
+</html>

@@ -2,22 +2,30 @@
   "rules": {
     ".read": "auth != null",
     ".write": "auth != null",
+    "schools": {
+      "$schoolId": {
+        ".read": true,
+        ".write": true,
+        "attendance": {
+          ".indexOn": ["date"]
+        }
+      }
+    },
+    "schoolId": {
+      ".read": true,
+      ".write": true
+    },
     "subjects": {
-      ".read": "auth != null",
+      ".read": true,
       ".write": "auth != null"
     },
     "settings": {
       ".read": "auth != null",
       ".write": "auth != null"
     },
-    "students": {
-      ".read": "auth != null",
-      ".write": "auth != null"
-    },
-    "attendance": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      ".indexOn": ["date"]
+    "pending_registrations": {
+      ".read": true,
+      ".write": true
     },
     "users": {
       ".read": "auth != null",
@@ -26,6 +34,10 @@
         ".read": "$uid === auth.uid",
         ".write": "$uid === auth.uid"
       }
+    },
+    "teachers": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }

@@ -33,7 +33,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.airbnb.lottie.LottieAnimationView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
@@ -103,7 +102,9 @@ public class MainActivity extends AppCompatActivity {
     private BiometricPrompt.PromptInfo biometricPromptInfo;
     private MediaPlayer beepPlayer;
     private MediaPlayer successPlayer;
+    private MediaPlayer notifPlayer;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Handler updateProgressHandler = new Handler(Looper.getMainLooper());
 
     private String currentEmail = "";
     private String currentIdToken = "";
@@ -130,17 +131,38 @@ public class MainActivity extends AppCompatActivity {
     private View googleSignInButton;
     private Button pushButton, addMoreButton, successDoneButton, usePasswordButton;
     private Button updateNowButton, updateLaterButton, exitButton;
-    private TextInputEditText emailField, passwordField, ipField, portField;
-    private LottieAnimationView successAnimation;
+    private TextInputEditText emailField, passwordField, ipField, portField, schoolIdField;
+    private ImageView successAnimation;
     private TextView loginError, connectionStatus, scannedCount, classSubjectInfo;
     private TextView lastScannedName, lastScannedDetail, summaryCount;
     private TextView loadingText, loadingSubtext, successTitle, successSubtext;
     private TextView biometricStatus, updateVersion, updateChangelog, updateProgressText;
     private TextView userEmail;
-    private Spinner classSpinner, sectionSpinner, subjectSpinner;
+    private Button classSelectButton, sectionSelectButton, subjectSelectButton;
+    private TextView loginTeacherLabel;
     private ImageView lastScannedPhoto;
     private RecyclerView studentRecyclerView;
     private ProgressBar updateProgressBar;
+    private View updateNotification;
+    private TextView updateNotifyClose;
+    private long updateDownloadId = -1;
+    private String pendingUpdateTag = "";
+    private String pendingUpdateBody = "";
+    private String pendingUpdateUrl = "";
+    private BroadcastReceiver fcmReceiver;
+
+    // Student portal views
+    private View studentContainer, studentInfoCard, studentStatsGrid, studentTopBar;
+    private TextView studentNameDisplay, studentDetailDisplay;
+    private TextView statTotal, statPresent, statLate, statAbsent;
+    private RecyclerView studentAttendanceList;
+    private TextView noRecordsText;
+    private Button studentLogoutButton, studentModeToggle, studentSignInButton;
+    private TextInputEditText rollField, dobField;
+    private LinearLayout teacherLoginFields, studentLoginFields;
+    private boolean isStudentMode = false;
+    private String currentStudentId = "";
+    private List<Map<String, String>> studentAttendanceData = new ArrayList<>();
 
 
     @Override
@@ -157,8 +179,8 @@ public class MainActivity extends AppCompatActivity {
             initSounds();
             initGoogleSignIn();
             initBiometric();
-            setupSpinners();
             setupClickListeners();
+            setupSelectionButtons();
             setupRecyclerView();
             loadSavedState();
             routeUser();
@@ -215,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
         passwordField = findViewById(R.id.passwordField);
         ipField = findViewById(R.id.ipField);
         portField = findViewById(R.id.portField);
+        schoolIdField = findViewById(R.id.schoolIdField);
 
         loginError = findViewById(R.id.loginError);
         connectionStatus = findViewById(R.id.connectionStatus);
@@ -239,15 +262,42 @@ public class MainActivity extends AppCompatActivity {
         updateProgressBar = findViewById(R.id.updateProgressBar);
 
 
-        classSpinner = findViewById(R.id.classSpinner);
-        sectionSpinner = findViewById(R.id.sectionSpinner);
-        subjectSpinner = findViewById(R.id.subjectSpinner);
+        classSelectButton = findViewById(R.id.classSelectButton);
+        sectionSelectButton = findViewById(R.id.sectionSelectButton);
+        subjectSelectButton = findViewById(R.id.subjectSelectButton);
+
+        updateNotification = findViewById(R.id.updateNotification);
+        updateNotifyClose = findViewById(R.id.updateNotifyClose);
+
+        loginTeacherLabel = findViewById(R.id.loginTeacherLabel);
+
+        // Student portal views
+        studentContainer = findViewById(R.id.studentContainer);
+        studentTopBar = findViewById(R.id.studentTopBar);
+        studentInfoCard = findViewById(R.id.studentInfoCard);
+        studentStatsGrid = findViewById(R.id.studentStatsGrid);
+        studentNameDisplay = findViewById(R.id.studentNameDisplay);
+        studentDetailDisplay = findViewById(R.id.studentDetailDisplay);
+        statTotal = findViewById(R.id.statTotal);
+        statPresent = findViewById(R.id.statPresent);
+        statLate = findViewById(R.id.statLate);
+        statAbsent = findViewById(R.id.statAbsent);
+        studentAttendanceList = findViewById(R.id.studentAttendanceList);
+        noRecordsText = findViewById(R.id.noRecordsText);
+        studentLogoutButton = findViewById(R.id.studentLogoutButton);
+        studentModeToggle = findViewById(R.id.studentModeToggle);
+        studentSignInButton = findViewById(R.id.studentSignInButton);
+        rollField = findViewById(R.id.rollField);
+        dobField = findViewById(R.id.dobField);
+        teacherLoginFields = findViewById(R.id.teacherLoginFields);
+        studentLoginFields = findViewById(R.id.studentLoginFields);
     }
 
     private void initSounds() {
         try {
             beepPlayer = MediaPlayer.create(this, R.raw.scan_beep);
             successPlayer = MediaPlayer.create(this, R.raw.scan_success);
+            notifPlayer = MediaPlayer.create(this, R.raw.scan_notify);
         } catch (Exception e) {
             Log.e(TAG, "Error loading sounds", e);
         }
@@ -301,49 +351,65 @@ public class MainActivity extends AppCompatActivity {
                 .build();
     }
 
-    private void setupSpinners() {
-        ArrayAdapter<String> sectionAdapter = new ArrayAdapter<>(this,
-                R.layout.spinner_item, SECTIONS);
-        sectionAdapter.setDropDownViewResource(R.layout.spinner_dropdown);
-        sectionSpinner.setAdapter(sectionAdapter);
+    private void setupSelectionButtons() {
+        sectionSelectButton.setText(currentSection.isEmpty() ? "A" : currentSection);
+        if (!classList.isEmpty() && currentClass.isEmpty()) {
+            currentClass = classList.get(0);
+        }
+        if (!currentClass.isEmpty()) {
+            classSelectButton.setText(currentClass);
+        }
 
-        classSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position >= 0 && position < classList.size()) {
-                    String cls = classList.get(position);
-                    if (!cls.equals(currentClass)) {
-                        currentClass = cls;
-                        updateSubjectsForClass(cls);
-                        prefetchStudents(cls);
-                    }
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+        classSelectButton.setOnClickListener(v -> {
+            if (classList.isEmpty()) return;
+            String[] items = classList.toArray(new String[0]);
+            int checked = classList.indexOf(currentClass);
+            new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+                    .setTitle("Select Class")
+                    .setSingleChoiceItems(items, checked < 0 ? 0 : checked, (d, which) -> {
+                        String cls = classList.get(which);
+                        if (!cls.equals(currentClass)) {
+                            currentClass = cls;
+                            classSelectButton.setText(cls);
+                            updateSubjectsForClass(cls);
+                            prefetchStudents(cls);
+                        }
+                        d.dismiss();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
         });
 
-        sectionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                currentSection = SECTIONS.get(position);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+        sectionSelectButton.setOnClickListener(v -> {
+            String[] items = SECTIONS.toArray(new String[0]);
+            int checked = SECTIONS.indexOf(currentSection);
+            new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+                    .setTitle("Select Section")
+                    .setSingleChoiceItems(items, checked < 0 ? 0 : checked, (d, which) -> {
+                        currentSection = SECTIONS.get(which);
+                        sectionSelectButton.setText(currentSection);
+                        d.dismiss();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
         });
 
-        subjectSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position >= 0 && position < currentSubjects.size()) {
-                    currentSubject = currentSubjects.get(position);
-                }
+        subjectSelectButton.setOnClickListener(v -> {
+            if (currentSubjects.isEmpty()) {
+                Toast.makeText(this, "No subjects available", Toast.LENGTH_SHORT).show();
+                return;
             }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+            String[] items = currentSubjects.toArray(new String[0]);
+            int checked = currentSubjects.indexOf(currentSubject);
+            new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+                    .setTitle("Select Subject")
+                    .setSingleChoiceItems(items, checked < 0 ? 0 : checked, (d, which) -> {
+                        currentSubject = currentSubjects.get(which);
+                        subjectSelectButton.setText(currentSubject);
+                        d.dismiss();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
         });
     }
 
@@ -363,6 +429,19 @@ public class MainActivity extends AppCompatActivity {
         updateNowButton.setOnClickListener(v -> downloadUpdate());
         updateLaterButton.setOnClickListener(v -> hideUpdateOverlay());
         exitButton.setOnClickListener(v -> logout());
+        updateNotification.setOnClickListener(v -> {
+            hideUpdateNotification();
+            showUpdateOverlay(pendingUpdateTag, pendingUpdateBody, pendingUpdateUrl);
+        });
+        updateNotifyClose.setOnClickListener(v -> {
+            hideUpdateNotification();
+            prefs.edit().putString("dismissed_update", pendingUpdateTag).apply();
+        });
+
+        // Student portal
+        studentModeToggle.setOnClickListener(v -> toggleStudentMode());
+        studentSignInButton.setOnClickListener(v -> loginStudent());
+        studentLogoutButton.setOnClickListener(v -> studentLogout());
     }
 
     private void setupRecyclerView() {
@@ -401,6 +480,7 @@ public class MainActivity extends AppCompatActivity {
                     showScreen("main");
                     loadSubjects();
                     checkUpdate();
+                    registerFcmTokenWithServer();
                     if (prefs.getBoolean("biometric_enabled", false)) {
                         showBiometricLock();
                     }
@@ -423,6 +503,7 @@ public class MainActivity extends AppCompatActivity {
         loginContainer.setVisibility("login".equals(screen) ? View.VISIBLE : View.GONE);
         connectContainer.setVisibility("connect".equals(screen) ? View.VISIBLE : View.GONE);
         mainContainer.setVisibility("main".equals(screen) ? View.VISIBLE : View.GONE);
+        studentContainer.setVisibility("student".equals(screen) ? View.VISIBLE : View.GONE);
 
         if ("login".equals(screen)) {
             animateScreenEntrance(loginCard);
@@ -591,6 +672,7 @@ public class MainActivity extends AppCompatActivity {
             showScreen("main");
             loadSubjects();
             checkUpdate();
+            registerFcmTokenWithServer();
         }
 
         if (isBiometricAvailable() && !prefs.getBoolean("biometric_enabled", false)) {
@@ -629,9 +711,267 @@ public class MainActivity extends AppCompatActivity {
                 .start();
     }
 
+    // ── Student Portal Methods ──
+
+    private void toggleStudentMode() {
+        isStudentMode = !isStudentMode;
+        if (isStudentMode) {
+            teacherLoginFields.setVisibility(View.GONE);
+            googleSignInButton.setVisibility(View.GONE);
+            studentLoginFields.setVisibility(View.VISIBLE);
+            studentModeToggle.setText(R.string.switch_to_teacher);
+            loginTeacherLabel.setText(R.string.student_portal);
+        } else {
+            teacherLoginFields.setVisibility(View.VISIBLE);
+            googleSignInButton.setVisibility(View.VISIBLE);
+            studentLoginFields.setVisibility(View.GONE);
+            studentModeToggle.setText(R.string.student_portal);
+            loginTeacherLabel.setText(R.string.teacher_sign_in);
+        }
+        loginError.setVisibility(View.GONE);
+    }
+
+    private void loginStudent() {
+        String roll = rollField.getText().toString().trim();
+        String dob = dobField.getText().toString().trim();
+
+        if (roll.isEmpty() || dob.isEmpty()) {
+            loginError.setVisibility(View.VISIBLE);
+            loginError.setText("Enter roll number and DOB (YYYY-MM-DD)");
+            return;
+        }
+
+        if (apiBaseUrl.isEmpty()) {
+            loginError.setVisibility(View.VISIBLE);
+            loginError.setText("Connect to server first");
+            return;
+        }
+
+        showLoading("Signing in...", "");
+        loginError.setVisibility(View.GONE);
+
+        try {
+            JSONObject body = new JSONObject();
+            body.put("roll_no", roll);
+            body.put("dob", dob);
+
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST,
+                    apiBaseUrl + "/api/student/login", body,
+                    response -> {
+                        hideLoading();
+                        try {
+                            if (response.optBoolean("success", false)) {
+                                JSONObject data = response.getJSONObject("data");
+                                currentStudentId = data.getString("id");
+                                String name = data.optString("name", "");
+                                String rollNo = data.optString("roll_no", "");
+                                String cls = data.optString("class", "");
+                                String section = data.optString("section", "");
+
+                                showStudentDashboard(name, rollNo, cls, section);
+                            } else {
+                                loginError.setVisibility(View.VISIBLE);
+                                loginError.setText(response.optString("error", getString(R.string.invalid_credentials)));
+                            }
+                        } catch (JSONException e) {
+                            loginError.setVisibility(View.VISIBLE);
+                            loginError.setText("Parse error");
+                        }
+                    },
+                    error -> {
+                        hideLoading();
+                        loginError.setVisibility(View.VISIBLE);
+                        loginError.setText(getLoginErrorMessage(error));
+                    });
+
+            request.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1f));
+            requestQueue.add(request);
+        } catch (JSONException e) {
+            hideLoading();
+            loginError.setVisibility(View.VISIBLE);
+            loginError.setText("Error creating request");
+        }
+    }
+
+    private void showStudentDashboard(String name, String rollNo, String cls, String section) {
+        studentNameDisplay.setText(name);
+        studentDetailDisplay.setText("Roll " + rollNo + "  ·  Class " + cls + (section.isEmpty() ? "" : " " + section));
+
+        showScreen("student");
+        loadStudentStats();
+        loadStudentAttendance();
+    }
+
+    private void loadStudentStats() {
+        if (currentStudentId.isEmpty() || apiBaseUrl.isEmpty()) return;
+
+        StringRequest request = new StringRequest(Request.Method.GET,
+                apiBaseUrl + "/api/student/" + currentStudentId + "/stats",
+                response -> {
+                    try {
+                        JSONObject json = new JSONObject(response);
+                        if (json.optBoolean("success", false)) {
+                            JSONObject data = json.getJSONObject("data");
+                            statTotal.setText(String.valueOf(data.optInt("total", 0)));
+                            statPresent.setText(String.valueOf(data.optInt("present", 0)));
+                            statLate.setText(String.valueOf(data.optInt("late", 0)));
+                            statAbsent.setText(String.valueOf(data.optInt("absent", 0)));
+                        }
+                    } catch (JSONException ignored) {}
+                },
+                error -> {});
+
+        request.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1f));
+        requestQueue.add(request);
+    }
+
+    private void loadStudentAttendance() {
+        if (currentStudentId.isEmpty() || apiBaseUrl.isEmpty()) return;
+
+        StringRequest request = new StringRequest(Request.Method.GET,
+                apiBaseUrl + "/api/student/" + currentStudentId + "/attendance?limit=50",
+                response -> {
+                    try {
+                        JSONObject json = new JSONObject(response);
+                        if (json.optBoolean("success", false)) {
+                            JSONArray arr = json.getJSONArray("data");
+                            studentAttendanceData.clear();
+                            for (int i = 0; i < arr.length(); i++) {
+                                JSONObject item = arr.getJSONObject(i);
+                                Map<String, String> map = new HashMap<>();
+                                map.put("date", item.optString("date", ""));
+                                map.put("time", item.optString("time", ""));
+                                map.put("status", item.optString("status", ""));
+                                map.put("subject", item.optString("subject", ""));
+                                studentAttendanceData.add(map);
+                            }
+                            showStudentAttendanceList();
+                        }
+                    } catch (JSONException ignored) {}
+                },
+                error -> {});
+
+        request.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1f));
+        requestQueue.add(request);
+    }
+
+    private void showStudentAttendanceList() {
+        if (studentAttendanceData.isEmpty()) {
+            noRecordsText.setVisibility(View.VISIBLE);
+            studentAttendanceList.setVisibility(View.GONE);
+            return;
+        }
+        noRecordsText.setVisibility(View.GONE);
+        studentAttendanceList.setVisibility(View.VISIBLE);
+        studentAttendanceList.setLayoutManager(new LinearLayoutManager(this));
+        studentAttendanceList.setAdapter(new StudentAttendanceAdapter(studentAttendanceData));
+    }
+
+    private void studentLogout() {
+        currentStudentId = "";
+        studentAttendanceData.clear();
+        rollField.setText("");
+        dobField.setText("");
+        if (isStudentMode) {
+            isStudentMode = false;
+            teacherLoginFields.setVisibility(View.VISIBLE);
+            googleSignInButton.setVisibility(View.VISIBLE);
+            studentLoginFields.setVisibility(View.GONE);
+            studentModeToggle.setText(R.string.student_portal);
+            loginTeacherLabel.setText(R.string.teacher_sign_in);
+        }
+        showScreen("login");
+    }
+
+    // Student attendance adapter
+    private class StudentAttendanceAdapter extends RecyclerView.Adapter<StudentAttendanceAdapter.ViewHolder> {
+        private List<Map<String, String>> items;
+
+        StudentAttendanceAdapter(List<Map<String, String>> items) {
+            this.items = items;
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = getLayoutInflater().inflate(R.layout.item_student_scan, parent, false);
+            return new ViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            Map<String, String> item = items.get(position);
+            String date = item.get("date");
+            String status = item.get("status");
+            String time = item.get("time");
+            String subject = item.get("subject");
+
+            holder.nameText.setText(date);
+            holder.detailText.setText(time != null && !time.isEmpty() ? time : "");
+            holder.photoView.setVisibility(View.GONE);
+
+            int statusColor;
+            String badgeText;
+            switch (status != null ? status : "") {
+                case "present":
+                    statusColor = Color.parseColor("#00FF88");
+                    badgeText = "PRESENT";
+                    break;
+                case "late":
+                    statusColor = Color.parseColor("#F59E0B");
+                    badgeText = "LATE";
+                    break;
+                case "absent":
+                    statusColor = Color.parseColor("#FF3B3B");
+                    badgeText = "ABSENT";
+                    break;
+                case "half-day":
+                    statusColor = Color.parseColor("#BB00FF");
+                    badgeText = "HALF DAY";
+                    break;
+                default:
+                    statusColor = Color.parseColor("#8CFFFFFF");
+                    badgeText = status != null ? status.toUpperCase() : "";
+            }
+
+            holder.statusBadge.setText(badgeText);
+            holder.statusBadge.setTextColor(statusColor);
+            GradientDrawable bg = new GradientDrawable();
+            bg.setCornerRadius(50);
+            bg.setColor(Color.parseColor("#1AFFFFFF"));
+            holder.statusBadge.setBackground(bg);
+            holder.removeButton.setVisibility(View.GONE);
+            holder.itemView.setBackground(null);
+
+            if (subject != null && !subject.isEmpty()) {
+                holder.detailText.setText((time != null ? time : "") + "  ·  " + subject);
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return items.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            ImageView photoView;
+            TextView nameText, detailText, statusBadge, removeButton;
+
+            ViewHolder(View v) {
+                super(v);
+                photoView = v.findViewById(R.id.studentPhoto);
+                nameText = v.findViewById(R.id.studentName);
+                detailText = v.findViewById(R.id.studentDetail);
+                statusBadge = v.findViewById(R.id.statusBadge);
+                removeButton = v.findViewById(R.id.removeButton);
+            }
+        }
+    }
+
     private void testConnection() {
         String ip = ipField.getText().toString().trim();
         String port = portField.getText().toString().trim();
+        String enteredSchoolId = schoolIdField.getText().toString().trim();
 
         if (ip.isEmpty()) {
             connectionStatus.setText("Enter server IP");
@@ -651,6 +991,24 @@ public class MainActivity extends AppCompatActivity {
                 response -> {
                     hideLoading();
                     apiBaseUrl = baseUrl;
+                    try {
+                        JSONObject healthJson = new JSONObject(response);
+                        String serverSchoolId = healthJson.optString("schoolId", "");
+
+                        if (!enteredSchoolId.isEmpty() && !enteredSchoolId.equals(serverSchoolId)) {
+                            connectionStatus.setText("School ID mismatch. Check your School ID.");
+                            connectionStatus.setTextColor(Color.parseColor("#FF3B3B"));
+                            connectionStatus.setVisibility(View.VISIBLE);
+                            return;
+                        }
+
+                        if (!serverSchoolId.isEmpty()) {
+                            prefs.edit().putString("school_id", serverSchoolId).apply();
+                            TextView schoolIdDisplay = findViewById(R.id.schoolIdDisplay);
+                            schoolIdDisplay.setText("ID: " + serverSchoolId.substring(0, Math.min(8, serverSchoolId.length())) + "...");
+                            schoolIdDisplay.setVisibility(View.VISIBLE);
+                        }
+                    } catch (JSONException ignored) {}
                     prefs.edit()
                             .putString("api_ip", ip)
                             .putString("api_port", finalPort)
@@ -697,13 +1055,11 @@ public class MainActivity extends AppCompatActivity {
                                 subjectsMap.put(cls, subList);
                             }
 
-                            ArrayAdapter<String> classAdapter = new ArrayAdapter<>(this,
-                                    R.layout.spinner_item, classList);
-                            classAdapter.setDropDownViewResource(R.layout.spinner_dropdown);
-                            classSpinner.setAdapter(classAdapter);
-
                             if (!classList.isEmpty()) {
-                                currentClass = classList.get(0);
+                                if (currentClass.isEmpty() || !classList.contains(currentClass)) {
+                                    currentClass = classList.get(0);
+                                }
+                                classSelectButton.setText(currentClass);
                                 updateSubjectsForClass(currentClass);
                             }
                         }
@@ -721,10 +1077,10 @@ public class MainActivity extends AppCompatActivity {
         currentSubjects = subjectsMap.get(cls);
         if (currentSubjects == null) currentSubjects = new ArrayList<>();
 
-        ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(this,
-                R.layout.spinner_item, currentSubjects);
-        subjectAdapter.setDropDownViewResource(R.layout.spinner_dropdown);
-        subjectSpinner.setAdapter(subjectAdapter);
+        if (!currentSubjects.contains(currentSubject)) {
+            currentSubject = "";
+            subjectSelectButton.setText("Select Subject");
+        }
     }
 
     private void prefetchStudents(String cls) {
@@ -865,6 +1221,7 @@ public class MainActivity extends AppCompatActivity {
 
         updateScannedUI();
         playBeep();
+        playNotify();
         loadStudentPhoto(studentId, photo);
         updateLastScanned(student);
     }
@@ -1046,9 +1403,6 @@ public class MainActivity extends AppCompatActivity {
                         .scaleY(1f)
                         .setDuration(200)
                         .start());
-
-        successAnimation.setProgress(0f);
-        successAnimation.playAnimation();
     }
 
     private void checkUpdate() {
@@ -1081,7 +1435,7 @@ public class MainActivity extends AppCompatActivity {
 
                     if (latestVersion > currentVersion && assets != null && assets.length() > 0) {
                         String apkUrl = assets.getJSONObject(0).optString("browser_download_url", "");
-                        mainHandler.post(() -> showUpdateOverlay(tagName, body, apkUrl));
+                        mainHandler.post(() -> showUpdateNotification(tagName, body, apkUrl));
                     }
                 }
                 conn.disconnect();
@@ -1142,17 +1496,48 @@ public class MainActivity extends AppCompatActivity {
                 .start();
     }
 
+    private void showUpdateNotification(String tag, String changelog, String url) {
+        pendingUpdateTag = tag;
+        pendingUpdateBody = changelog;
+        pendingUpdateUrl = url;
+        updateNotification.setVisibility(View.VISIBLE);
+        updateNotification.setAlpha(0f);
+        updateNotification.animate().alpha(1f).setDuration(300).start();
+    }
+
+    private void hideUpdateNotification() {
+        updateNotification.animate()
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction(() -> updateNotification.setVisibility(View.GONE))
+                .start();
+    }
+
     private void downloadUpdate() {
         String url = prefs.getString("ota_url", "");
+        if (url.isEmpty()) url = pendingUpdateUrl;
         if (url.isEmpty()) return;
 
+        downloadUpdateFromUrl(url);
+    }
+
+    private void downloadUpdateFromUrl(String url) {
         updateNowButton.setEnabled(false);
+        updateLaterButton.setEnabled(false);
         updateProgressBar.setVisibility(View.VISIBLE);
+        updateProgressBar.setProgress(0);
         updateProgressText.setVisibility(View.VISIBLE);
-        updateProgressText.setText("Downloading...");
+        updateProgressText.setText("0%");
+
+        hideUpdateNotification();
 
         DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-        if (downloadManager == null) return;
+        if (downloadManager == null) {
+            updateProgressText.setText("Download failed");
+            updateNowButton.setEnabled(true);
+            updateLaterButton.setEnabled(true);
+            return;
+        }
 
         Uri uri = Uri.parse(url);
         DownloadManager.Request request = new DownloadManager.Request(uri);
@@ -1161,22 +1546,30 @@ public class MainActivity extends AppCompatActivity {
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
         request.setDestinationInExternalFilesDir(this, null, "updates/edupulse-update.apk");
 
-        long downloadId = downloadManager.enqueue(request);
+        updateDownloadId = downloadManager.enqueue(request);
+        startUpdateProgressPolling();
 
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                if (id == downloadId) {
+                if (id == updateDownloadId) {
                     DownloadManager.Query query = new DownloadManager.Query();
-                    query.setFilterById(downloadId);
+                    query.setFilterById(updateDownloadId);
                     Cursor cursor = downloadManager.query(query);
                     if (cursor.moveToFirst()) {
                         int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
                         int status = cursor.getInt(statusIndex);
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
                             updateProgressText.setText("Installing...");
+                            updateProgressBar.setProgress(100);
+                            updateProgressHandler.removeCallbacksAndMessages(null);
                             installApk();
+                        } else if (status == DownloadManager.STATUS_FAILED) {
+                            updateProgressText.setText("Download failed");
+                            updateNowButton.setEnabled(true);
+                            updateLaterButton.setEnabled(true);
+                            updateProgressHandler.removeCallbacksAndMessages(null);
                         }
                     }
                     cursor.close();
@@ -1187,6 +1580,40 @@ public class MainActivity extends AppCompatActivity {
 
         registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
                 Context.RECEIVER_NOT_EXPORTED);
+    }
+
+    private void startUpdateProgressPolling() {
+        if (updateDownloadId == -1) return;
+        DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        if (downloadManager == null) return;
+
+        DownloadManager.Query query = new DownloadManager.Query();
+        query.setFilterById(updateDownloadId);
+        Cursor cursor = downloadManager.query(query);
+
+        if (cursor.moveToFirst()) {
+            int statusCol = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+            if (statusCol >= 0) {
+                int status = cursor.getInt(statusCol);
+                if (status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PAUSED || status == DownloadManager.STATUS_PENDING) {
+                    long total = 0;
+                    long downloaded = 0;
+                    int totalCol = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
+                    int downCol = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                    if (totalCol >= 0) total = cursor.getLong(totalCol);
+                    if (downCol >= 0) downloaded = cursor.getLong(downCol);
+                    if (total > 0) {
+                        int progress = (int) (downloaded * 100 / total);
+                        updateProgressBar.setProgress(progress);
+                        updateProgressText.setText(progress + "%");
+                    }
+                    cursor.close();
+                    updateProgressHandler.postDelayed(this::startUpdateProgressPolling, 1000);
+                    return;
+                }
+            }
+        }
+        cursor.close();
     }
 
     private void installApk() {
@@ -1233,6 +1660,17 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error playing beep", e);
+        }
+    }
+
+    private void playNotify() {
+        try {
+            if (notifPlayer != null) {
+                notifPlayer.seekTo(0);
+                notifPlayer.start();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error playing notification sound", e);
         }
     }
 
@@ -1393,10 +1831,80 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        registerFcmReceiver();
+        checkFcmPendingUpdate();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (fcmReceiver != null) {
+            unregisterReceiver(fcmReceiver);
+            fcmReceiver = null;
+        }
+    }
+
+    private void registerFcmReceiver() {
+        fcmReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String tag = intent.getStringExtra(EduPulseFcmService.EXTRA_TAG);
+                String body = intent.getStringExtra(EduPulseFcmService.EXTRA_BODY);
+                String url = intent.getStringExtra(EduPulseFcmService.EXTRA_URL);
+                if (tag != null && url != null) {
+                    showUpdateNotification(tag, body, url);
+                }
+            }
+        };
+        registerReceiver(fcmReceiver, new IntentFilter(EduPulseFcmService.ACTION_UPDATE_AVAILABLE),
+                Context.RECEIVER_NOT_EXPORTED);
+    }
+
+    private void checkFcmPendingUpdate() {
+        SharedPreferences prefs = getSharedPreferences("edupulse_fcm", MODE_PRIVATE);
+        String tag = prefs.getString(EduPulseFcmService.EXTRA_TAG, "");
+        String url = prefs.getString(EduPulseFcmService.EXTRA_URL, "");
+        if (!tag.isEmpty() && !url.isEmpty()) {
+            String dismissed = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .getString("dismissed_update", "");
+            if (!tag.equals(dismissed)) {
+                String body = prefs.getString(EduPulseFcmService.EXTRA_BODY, "");
+                showUpdateNotification(tag, body, url);
+                prefs.edit().remove(EduPulseFcmService.EXTRA_TAG)
+                        .remove(EduPulseFcmService.EXTRA_BODY)
+                        .remove(EduPulseFcmService.EXTRA_URL)
+                        .apply();
+            }
+        }
+    }
+
+    private void registerFcmTokenWithServer() {
+        if (apiBaseUrl.isEmpty()) return;
+        String token = getSharedPreferences("edupulse_fcm", MODE_PRIVATE)
+                .getString(EduPulseFcmService.KEY_FCM_TOKEN, "");
+        if (token.isEmpty()) return;
+        JSONObject body = new JSONObject();
+        try {
+            body.put("token", token);
+            body.put("teacher_id", currentEmail != null ? currentEmail : "");
+            body.put("device", "android");
+        } catch (Exception ignored) {}
+        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST,
+                apiBaseUrl + "/api/fcm/token", body,
+                response -> {},
+                error -> Log.e(TAG, "FCM token register failed: " + error.getMessage()));
+        requestQueue.add(req);
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        updateProgressHandler.removeCallbacksAndMessages(null);
         if (beepPlayer != null) beepPlayer.release();
         if (successPlayer != null) successPlayer.release();
+        if (notifPlayer != null) notifPlayer.release();
         if (requestQueue != null) requestQueue.cancelAll(request -> true);
     }
 }

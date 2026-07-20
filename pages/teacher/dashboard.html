@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>document.documentElement.style.background='#0a0a0b';document.documentElement.style.visibility='hidden'</script>
+  <noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0a0b;color:#f8fafc;font-family:sans-serif;font-size:1.2rem;z-index:99999">EduPulse requires JavaScript to be enabled.</div></noscript>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduPulse Teacher</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="../../js/firebase-config.js"></script>
+  <script src="../../js/auth-guard.js"></script>
+  <style>
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .glass-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 40px; width: 420px; max-width: 90vw;
+      backdrop-filter: blur(12px); text-align: center;
+    }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { font-size: 20px; color: #f8fafc; margin-bottom: 6px; letter-spacing: 2px; text-transform: uppercase; }
+    .sub { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 24px; }
+    .info {
+      font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6;
+      margin-bottom: 24px; padding: 16px; border-radius: 12px;
+      background: rgba(0,229,255,0.04); border: 1px solid rgba(0,229,255,0.1);
+    }
+    .btn {
+      display: inline-block; padding: 14px 28px; border-radius: 12px;
+      border: 1px solid rgba(0,229,255,0.3); background: rgba(0,229,255,0.08);
+      color: #00E5FF; font-family: 'Courier New', monospace;
+      font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      text-decoration: none; cursor: pointer; transition: 0.2s;
+      margin: 4px;
+    }
+    .btn:hover { background: rgba(0,229,255,0.14); }
+    .btn-primary { background: rgba(0,229,255,0.12); }
+    .btn-outline { border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); }
+    #userEmail { color: #00E5FF; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="glass-card">
+    <div class="icon">📱</div>
+    <h1>Teacher Portal</h1>
+    <p class="sub">Welcome, <span id="userEmail">—</span></p>
+    <div class="info">
+      Attendance scanning is done via the <strong>EduPulse Android app</strong>.<br>
+      Download the app on your device to scan QR codes and mark attendance.
+    </div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px">
+      <a class="btn btn-primary" href="https://github.com/ShadowMan2010/edupulse-teacher/releases/latest" target="_blank">📥 Download App</a>
+      <a class="btn btn-outline" href="../admin/attendance.html">📊 View Attendance</a>
+      <button class="btn btn-outline" onclick="logout()">← Logout</button>
+    </div>
+  </div>
+  <script>
+    function initPage(user) {
+      document.getElementById('userEmail').textContent = user.email;
+      document.documentElement.style.visibility = 'visible';
+    }
+    var _demo = sessionStorage.getItem('edupulse_demo');
+    if (_demo) { var d = JSON.parse(_demo); initPage({email: d.email}); }
+    auth.onAuthStateChanged(function(u) { if (u) initPage(u); });
+    function logout() {
+      sessionStorage.removeItem('edupulse_demo');
+      logoutUser().then(function() { window.location.href = '../login.html'; });
+    }
+    setTimeout(function() { document.documentElement.style.visibility = 'visible'; }, 3000);
+  </script>
+</body>
+</html>

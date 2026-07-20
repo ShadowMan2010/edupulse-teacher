@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduPulse — Registration</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --sidebar-bg: rgba(17,17,19,0.85);
+      --accent: #00E5FF;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --radius: 12px;
+      --border: rgba(255,255,255,0.08);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { background: var(--bg); color-scheme: dark; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+    }
+    .bg-grid {
+      position: fixed; inset: 0;
+      background-image: radial-gradient(rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none; z-index: 0;
+    }
+    .sidebar {
+      width: 220px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      position: fixed; top: 0; left: 0; bottom: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 16px; letter-spacing: 2px;
+      color: var(--accent); text-transform: uppercase;
+      margin-bottom: 32px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-brand img.logo { width: 32px; height: 32px; border-radius: 6px; }
+    .sidebar-nav { flex: 1; }
+    .sidebar-section-title {
+      font-size: 9px; letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.25);
+      text-transform: uppercase; margin-bottom: 8px; margin-top: 16px;
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      color: var(--text-muted); text-decoration: none;
+      font-size: 13px; transition: all 0.15s; cursor: pointer;
+    }
+    .sidebar-link:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+    .sidebar-link.active { background: rgba(0,229,255,0.06); color: var(--accent); }
+    .link-icon { font-size: 14px; width: 20px; text-align: center; }
+    .sidebar-footer {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .sidebar-footer .meta { font-size: 9px; color: rgba(255,255,255,0.2); text-align: center; }
+    .main-content {
+      margin-left: 220px;
+      flex: 1;
+      position: relative; z-index: 1;
+      padding: 28px 36px;
+      min-height: 100vh;
+    }
+    .page-header { margin-bottom: 24px; }
+    .page-header h1 {
+      font-size: 20px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 4px;
+    }
+    .page-header .subtitle {
+      font-size: 11px; color: rgba(255,255,255,0.35);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .tabs {
+      display: flex; gap: 4px; margin-bottom: 24px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 4px;
+      max-width: 400px;
+    }
+    .tab {
+      flex: 1; padding: 10px; text-align: center;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      border-radius: 8px; cursor: pointer; transition: all 0.15s;
+      color: var(--text-muted); border: none; background: none;
+      font-family: 'Courier New', monospace;
+    }
+    .tab.active { background: rgba(0,229,255,0.1); color: var(--accent); }
+    .form-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      display: none;
+    }
+    .form-card.active { display: block; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 16px; }
+    .form-row .form-group { margin-bottom: 0; }
+    label {
+      display: block; font-size: 9px; text-transform: uppercase;
+      letter-spacing: 1.2px; color: rgba(255,255,255,0.35); margin-bottom: 5px;
+    }
+    input, select {
+      width: 100%; height: 42px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; padding: 0 12px;
+      color: var(--text); font-family: 'Courier New', monospace;
+      font-size: 13px; outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    input:focus, select:focus { border-color: var(--accent); background: rgba(0,229,255,0.04); }
+    input::placeholder { color: rgba(255,255,255,0.15); }
+    select option { background: #111; color: #fff; }
+    .subjects-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px; margin-top: 2px;
+    }
+    .subjects-grid label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; text-transform: none; letter-spacing: 0;
+      color: rgba(255,255,255,0.75); cursor: pointer;
+      padding: 5px 8px;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px; transition: all 0.15s;
+    }
+    .subjects-grid label:hover { border-color: rgba(0,229,255,0.2); background: rgba(0,229,255,0.04); }
+    .subjects-grid input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--accent); }
+    .photo-area { display: flex; align-items: center; gap: 14px; }
+    .photo-upload {
+      width: 80px; height: 80px;
+      border: 1px dashed rgba(255,255,255,0.12);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.02);
+      flex-shrink: 0; overflow: hidden;
+    }
+    .photo-upload:hover { border-color: rgba(0,229,255,0.3); background: rgba(0,229,255,0.04); }
+    .photo-upload img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-upload .ph-icon { font-size: 22px; opacity: 0.3; }
+    .photo-upload .ph-label { font-size: 7px; color: rgba(255,255,255,0.25); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .photo-hint { font-size: 9px; color: rgba(255,255,255,0.2); }
+    .password-hint { font-size: 8px; color: rgba(255,255,255,0.15); margin-top: 4px; }
+    .btn {
+      height: 46px; padding: 0 32px;
+      border: 1px solid rgba(0,229,255,0.3);
+      background: rgba(0,229,255,0.08);
+      color: var(--accent); font-family: 'Courier New', monospace;
+      font-size: 12px; text-transform: uppercase;
+      letter-spacing: 2px; border-radius: 12px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn:hover { background: rgba(0,229,255,0.14); border-color: var(--accent); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-primary { background: rgba(0,229,255,0.12); }
+    .message {
+      margin-top: 16px; padding: 14px 16px;
+      border-radius: 8px; font-size: 11px;
+      display: none; line-height: 1.5;
+    }
+    .message.success { display: block; background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.15); color: #00FF88; }
+    .message.error { display: block; background: rgba(255,59,59,0.06); border: 1px solid rgba(255,59,59,0.15); color: #FF3B3B; }
+    .loading { display: none; text-align: center; margin-top: 14px; }
+    .loading.active { display: block; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(0,229,255,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 768px) {
+      .sidebar { width: 56px; padding: 16px 10px; }
+      .sidebar .sidebar-brand span, .sidebar .sidebar-section-title, .sidebar .sidebar-link span:not(.link-icon), .sidebar-footer .meta { display: none; }
+      .sidebar-brand img.logo { width: 28px; height: 28px; }
+      .main-content { margin-left: 56px; padding: 20px 16px; }
+      .form-row { grid-template-columns: 1fr; }
+      .subjects-grid { grid-template-columns: 1fr 1fr; }
+      .form-card { padding: 20px; }
+      .tabs { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="logo_small.png" alt="EduPulse" class="logo">
+      <span>EduPulse</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Register</div>
+        <a class="sidebar-link active" onclick="switchTab('student')"><span class="link-icon">◈</span> <span>Student</span></a>
+        <a class="sidebar-link" onclick="switchTab('teacher')"><span class="link-icon">◉</span> <span>Teacher</span></a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="meta">EduPulse Attendance System</div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 id="pageTitle">Student Registration</h1>
+      <div class="subtitle" id="pageSubtitle">EduPulse Identity Card</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--accent);letter-spacing:1px" id="schoolNameDisplay"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tabStudent" onclick="switchTab('student')">Student</button>
+      <button class="tab" id="tabTeacher" onclick="switchTab('teacher')">Teacher</button>
+    </div>
+
+    <!-- STUDENT FORM -->
+    <div class="form-card active" id="formStudent">
+      <form id="studentForm" onsubmit="return false;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="sName" required placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label>Roll Number *</label>
+            <input type="text" id="sRoll" required placeholder="101">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Class *</label>
+            <select id="sClass" required>
+              <option value="">Select</option>
+              <option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              <option value="8">8</option><option value="9">9</option><option value="10">10</option>
+              <option value="11">11</option><option value="12">12</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Section *</label>
+            <select id="sSection" required>
+              <option value="">Select</option>
+              <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+              <option value="D">D</option><option value="E">E</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Photo</label>
+          <div class="photo-area">
+            <div class="photo-upload" onclick="document.getElementById('sPhotoInput').click()">
+              <span class="ph-icon" id="sPhotoPlaceholder">📷</span>
+              <span class="ph-label">Upload</span>
+              <img id="sPhotoPreview" style="display:none">
+            </div>
+            <input type="file" id="sPhotoInput" accept="image/*" style="display:none" onchange="previewPhoto(event,'s')">
+            <input type="hidden" id="sPhotoCropData">
+            <span class="photo-hint">Optional — will appear on scanner app</span>
+          </div>
+        </div>
+        <div class="form-group" id="sCropGroup" style="display:none">
+          <label>Crop Photo</label>
+          <div style="max-height:300px;overflow:hidden;border-radius:8px;background:rgba(0,0,0,0.3)">
+            <img id="sCropImage" style="max-width:100%">
+          </div>
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:8px">
+            <button type="button" class="btn" onclick="cancelCrop('s')" style="width:auto;height:34px;padding:0 14px;font-size:10px;border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.5)">Cancel</button>
+            <button type="button" class="btn" onclick="applyCrop('s')" style="width:auto;height:34px;padding:0 14px;font-size:10px">✓ Apply</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subjects</label>
+          <div class="subjects-grid" id="sSubjectsContainer">
+            <span style="font-size:10px;color:rgba(255,255,255,0.2);grid-column:1/-1">Select a class first</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Guardian Name</label>
+            <input type="text" id="sGuardian" placeholder="Jane Doe">
+          </div>
+          <div class="form-group">
+            <label>Guardian Phone</label>
+            <input type="tel" id="sPhone" placeholder="9876543210">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="sEmail" placeholder="john@school.edu">
+        </div>
+        <button class="btn btn-primary" id="sSubmitBtn" onclick="submitStudent()">Submit Registration</button>
+      </form>
+      <div class="loading" id="sLoading">
+        <div class="spinner"></div>
+        <span style="font-size:10px;color:rgba(255,255,255,0.35)">Submitting...</span>
+      </div>
+      <div class="message" id="sMessage"></div>
+    </div>
+
+    <!-- TEACHER FORM -->
+    <div class="form-card" id="formTeacher">
+      <form id="teacherForm" onsubmit="return false;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="tName" required placeholder="Jane Smith">
+          </div>
+          <div class="form-group">
+            <label>Email (Login ID) *</label>
+            <input type="email" id="tEmail" required placeholder="teacher@school.edu">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password *</label>
+            <input type="password" id="tPassword" required minlength="6" placeholder="Min 6 characters">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="tPhone" placeholder="9876543210">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Photo</label>
+          <div class="photo-area">
+            <div class="photo-upload" onclick="document.getElementById('tPhotoInput').click()">
+              <span class="ph-icon" id="tPhotoPlaceholder">📷</span>
+              <span class="ph-label">Upload</span>
+              <img id="tPhotoPreview" style="display:none">
+            </div>
+            <input type="file" id="tPhotoInput" accept="image/*" style="display:none" onchange="previewPhoto(event,'t')">
+            <input type="hidden" id="tPhotoCropData">
+            <span class="photo-hint">Optional</span>
+          </div>
+        </div>
+        <div class="form-group" id="tCropGroup" style="display:none">
+          <label>Crop Photo</label>
+          <div style="max-height:300px;overflow:hidden;border-radius:8px;background:rgba(0,0,0,0.3)">
+            <img id="tCropImage" style="max-width:100%">
+          </div>
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:8px">
+            <button type="button" class="btn" onclick="cancelCrop('t')" style="width:auto;height:34px;padding:0 14px;font-size:10px;border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.5)">Cancel</button>
+            <button type="button" class="btn" onclick="applyCrop('t')" style="width:auto;height:34px;padding:0 14px;font-size:10px">✓ Apply</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Assigned Classes</label>
+          <div class="subjects-grid" id="tClassesContainer" style="grid-template-columns:1fr 1fr 1fr 1fr">
+            <label><input type="checkbox" value="5"> 5</label>
+            <label><input type="checkbox" value="6"> 6</label>
+            <label><input type="checkbox" value="7"> 7</label>
+            <label><input type="checkbox" value="8"> 8</label>
+            <label><input type="checkbox" value="9"> 9</label>
+            <label><input type="checkbox" value="10"> 10</label>
+            <label><input type="checkbox" value="11"> 11</label>
+            <label><input type="checkbox" value="12"> 12</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subjects Teaching</label>
+          <div class="subjects-grid" id="tSubjectsContainer">
+            <span style="font-size:10px;color:rgba(255,255,255,0.2);grid-column:1/-1">Loading subjects from settings...</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="tSubmitBtn" onclick="submitTeacher()">Create Teacher Account</button>
+      </form>
+      <div class="loading" id="tLoading">
+        <div class="spinner"></div>
+        <span style="font-size:10px;color:rgba(255,255,255,0.35)">Creating account...</span>
+      </div>
+      <div class="message" id="tMessage"></div>
+    </div>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDPYjylSBhng6CRL77P0MXTUcuq7jBFnnA",
+      authDomain: "edupulse-attendance-qr.firebaseapp.com",
+      databaseURL: "https://edupulse-attendance-qr-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "edupulse-attendance-qr",
+      storageBucket: "edupulse-attendance-qr.firebasestorage.app",
+      messagingSenderId: "364157582130",
+      appId: "1:364157582130:web:43ff3767b54cb29cc5b52b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const storage = firebase.storage();
+    const auth = firebase.auth();
+
+    // ── School ID from URL or localStorage ──
+    const urlParams = new URLSearchParams(window.location.search);
+    var SCHOOL_ID = urlParams.get('schoolId') || localStorage.getItem('edupulse_school_id') || '';
+    if (SCHOOL_ID) localStorage.setItem('edupulse_school_id', SCHOOL_ID);
+
+    // ── School info ──
+    var SCHOOL_NAME = '';
+    var API_BASE = window.location.origin + '/api';
+    fetch(API_BASE + '/school-info').then(function(r) { return r.json(); }).then(function(d) {
+      if (d.school_name) { SCHOOL_NAME = d.school_name; document.getElementById('schoolNameDisplay').textContent = d.school_name; }
+    }).catch(function() {
+      if (SCHOOL_ID) {
+        firebase.database().ref('schools/' + SCHOOL_ID + '/settings/school_name').once('value', function(s) {
+          if (s.val()) { SCHOOL_NAME = s.val(); document.getElementById('schoolNameDisplay').textContent = s.val(); }
+        });
+      }
+    });
+
+    function schoolPath(path) {
+      return SCHOOL_ID ? 'schools/' + SCHOOL_ID + '/' + path : path;
+    }
+
+    var _subjectsData = {};
+    db.ref(schoolPath('subjects')).once('value', function(snap) {
+      _subjectsData = snap.val() || {};
+      renderTeacherSubjects();
+    });
+
+    // ── Tabs ──
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.form-card').forEach(function(c) { c.classList.remove('active'); });
+      document.getElementById('tab' + (tab === 'student' ? 'Student' : 'Teacher')).classList.add('active');
+      document.getElementById('form' + (tab === 'student' ? 'Student' : 'Teacher')).classList.add('active');
+      document.getElementById('pageTitle').textContent = tab === 'student' ? 'Student Registration' : 'Teacher Registration';
+      document.getElementById('pageSubtitle').textContent = tab === 'student' ? 'EduPulse Identity Card' : 'Create Web & App Login';
+      document.querySelectorAll('.sidebar-link').forEach(function(l) { l.classList.remove('active'); });
+      var links = document.querySelectorAll('.sidebar-link');
+      links[tab === 'student' ? 0 : 1].classList.add('active');
+    }
+
+    // ── Student Subjects (from settings) ──
+    document.getElementById('sClass') && document.getElementById('sClass').addEventListener('change', function() {
+      const cls = this.value;
+      const container = document.getElementById('sSubjectsContainer');
+      container.innerHTML = '';
+      const subs = _subjectsData[cls];
+      if (!cls || !subs || !subs.length) {
+        container.innerHTML = '<span style="font-size:10px;color:rgba(255,255,255,0.2);grid-column:1/-1">No subjects configured for this class</span>';
+        return;
+      }
+      subs.forEach(function(sub) {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = sub;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(sub));
+        container.appendChild(label);
+      });
+    });
+
+    function renderTeacherSubjects() {
+      const container = document.getElementById('tSubjectsContainer');
+      container.innerHTML = '';
+      var seen = {};
+      for (var cls in _subjectsData) {
+        if (_subjectsData.hasOwnProperty(cls) && Array.isArray(_subjectsData[cls])) {
+          _subjectsData[cls].forEach(function(sub) {
+            if (sub && !seen[sub]) { seen[sub] = true;
+              var label = document.createElement('label');
+              var cb = document.createElement('input');
+              cb.type = 'checkbox'; cb.value = sub;
+              label.appendChild(cb);
+              label.appendChild(document.createTextNode(sub));
+              container.appendChild(label);
+            }
+          });
+        }
+      }
+      if (!container.children.length) {
+        container.innerHTML = '<span style="font-size:10px;color:rgba(255,255,255,0.2);grid-column:1/-1">No subjects configured</span>';
+      }
+    }
+
+    // ── Cropper ──
+    var _croppers = {};
+
+    function previewPhoto(e, prefix) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        document.getElementById(prefix + 'CropImage').src = ev.target.result;
+        document.getElementById(prefix + 'CropGroup').style.display = 'block';
+        document.getElementById(prefix + 'CropGroup').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (_croppers[prefix]) _croppers[prefix].destroy();
+        setTimeout(function() {
+          _croppers[prefix] = new Cropper(document.getElementById(prefix + 'CropImage'), {
+            aspectRatio: 1, viewMode: 1, dragMode: 'move',
+            background: false, autoCropArea: 0.9
+          });
+        }, 300);
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+
+    function cancelCrop(prefix) {
+      if (_croppers[prefix]) { _croppers[prefix].destroy(); delete _croppers[prefix]; }
+      document.getElementById(prefix + 'CropGroup').style.display = 'none';
+    }
+
+    function applyCrop(prefix) {
+      if (!_croppers[prefix]) return;
+      const canvas = _croppers[prefix].getCroppedCanvas({ width: 400, height: 400 });
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      document.getElementById(prefix + 'PhotoPreview').src = dataUrl;
+      document.getElementById(prefix + 'PhotoPreview').style.display = 'block';
+      document.getElementById(prefix + 'PhotoPlaceholder').style.display = 'none';
+      document.querySelector('#' + prefix + 'PhotoInput').closest('.photo-area').querySelector('.ph-label').style.display = 'none';
+      document.getElementById(prefix + 'PhotoCropData').value = dataUrl;
+      cancelCrop(prefix);
+    }
+
+    function showMsg(prefix, text, type) {
+      const el = document.getElementById(prefix + 'Message');
+      el.textContent = text;
+      el.className = 'message ' + type;
+    }
+
+    // ── Submit Student ──
+    function submitStudent() {
+      const name = document.getElementById('sName').value.trim();
+      const roll = document.getElementById('sRoll').value.trim();
+      const cls = document.getElementById('sClass').value;
+      const section = document.getElementById('sSection').value;
+      if (!name || !roll || !cls || !section) { showMsg('s', 'Please fill in all required fields.', 'error'); return; }
+
+      const subjects = [];
+      document.querySelectorAll('#sSubjectsContainer input[type=checkbox]:checked').forEach(function(cb) { subjects.push(cb.value); });
+      const croppedData = document.getElementById('sPhotoCropData').value;
+      const photoFile = document.getElementById('sPhotoInput').files[0];
+
+      document.getElementById('sSubmitBtn').disabled = true;
+      document.getElementById('sLoading').classList.add('active');
+      document.getElementById('sMessage').className = 'message';
+
+      function save(photoUrl) {
+        var pendingData = {
+          name: name, roll_no: roll, class: cls, section: section,
+          subjects: subjects, photo: photoUrl || '',
+          guardian: document.getElementById('sGuardian').value.trim(),
+          phone: document.getElementById('sPhone').value.trim(),
+          email: document.getElementById('sEmail').value.trim(),
+          created_at: new Date().toISOString(), status: 'pending',
+          school_id: SCHOOL_ID
+        };
+        db.ref(schoolPath('pending_registrations')).push(pendingData, function(err) {
+          document.getElementById('sLoading').classList.remove('active');
+          document.getElementById('sSubmitBtn').disabled = false;
+          if (err) { showMsg('s', 'Submission failed: ' + err.message, 'error'); }
+          else {
+            showMsg('s', '✓ Registration submitted! Admin will review and approve your ID card.', 'success');
+            document.getElementById('studentForm').reset();
+            document.getElementById('sSubjectsContainer').innerHTML = '<span style="font-size:10px;color:rgba(255,255,255,0.2);grid-column:1/-1">Select a class first</span>';
+            document.getElementById('sPhotoPreview').style.display = 'none';
+            document.getElementById('sPhotoPlaceholder').style.display = 'block';
+            var lbl = document.querySelector('#sPhotoInput').closest('.photo-area').querySelector('.ph-label');
+            if (lbl) lbl.style.display = '';
+            document.getElementById('sPhotoCropData').value = '';
+            if (_croppers['s']) { _croppers['s'].destroy(); delete _croppers['s']; }
+          }
+        });
+      }
+
+      if (croppedData) { save(croppedData); }
+      else if (photoFile) {
+        storage.ref('pending_photos/' + Date.now() + '_' + photoFile.name).put(photoFile)
+          .then(function(s) { return s.ref.getDownloadURL(); })
+          .then(function(url) { save(url); })
+          .catch(function() { save(''); });
+      } else { save(''); }
+    }
+
+    // ── Submit Teacher ──
+    function submitTeacher() {
+      const name = document.getElementById('tName').value.trim();
+      const email = document.getElementById('tEmail').value.trim();
+      const phone = document.getElementById('tPhone').value.trim();
+
+      if (!name || !email) { showMsg('t', 'Please fill in all required fields.', 'error'); return; }
+
+      const classes = [];
+      document.querySelectorAll('#tClassesContainer input[type=checkbox]:checked').forEach(function(cb) { classes.push(cb.value); });
+      const subjects = [];
+      document.querySelectorAll('#tSubjectsContainer input[type=checkbox]:checked').forEach(function(cb) { subjects.push(cb.value); });
+      const croppedData = document.getElementById('tPhotoCropData').value;
+      const photoFile = document.getElementById('tPhotoInput').files[0];
+
+      document.getElementById('tSubmitBtn').disabled = true;
+      document.getElementById('tLoading').classList.add('active');
+      document.getElementById('tMessage').className = 'message';
+
+      function save(photoUrl) {
+        var teacherData = {
+          name: name, email: email, phone: phone,
+          classes: classes, subjects: subjects,
+          photo: photoUrl || '',
+          created_at: new Date().toISOString(), status: 'pending',
+          school_id: SCHOOL_ID
+        };
+        db.ref(schoolPath('pending_teachers')).push(teacherData, function(err) {
+          document.getElementById('tLoading').classList.remove('active');
+          document.getElementById('tSubmitBtn').disabled = false;
+          if (err) { showMsg('t', 'Submission failed: ' + err.message, 'error'); }
+          else {
+            showMsg('t', '✓ Registration submitted! Admin will review and create your account.', 'success');
+            document.getElementById('teacherForm').reset();
+            document.getElementById('tPhotoPreview').style.display = 'none';
+            document.getElementById('tPhotoPlaceholder').style.display = 'block';
+            document.getElementById('tPhotoCropData').value = '';
+            if (_croppers['t']) { _croppers['t'].destroy(); delete _croppers['t']; }
+          }
+        });
+      }
+
+      if (croppedData) { save(croppedData); }
+      else if (photoFile) {
+        storage.ref('teacher_photos/' + Date.now() + '_' + photoFile.name).put(photoFile)
+          .then(function(s) { return s.ref.getDownloadURL(); })
+          .then(function(url) { save(url); })
+          .catch(function() { save(''); });
+      } else { save(''); }
+    }
+  </script>
+</body>
+</html>

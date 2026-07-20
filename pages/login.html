@@ -116,6 +116,10 @@
 
       <form class="login-form" id="loginForm" autocomplete="off">
         <div class="input-group">
+          <label>School ID</label>
+          <input type="text" class="input-field" id="schoolIdInput" placeholder="Enter school ID" required>
+        </div>
+        <div class="input-group">
           <label>Email Address</label>
           <input type="email" class="input-field" id="emailInput" placeholder="admin@edupulse.dev" required>
         </div>
@@ -145,14 +149,51 @@
       <div class="login-footer">
         <p>Demo: admin@edupulse.dev / admin123</p>
         <p style="margin-top:0.5rem"><a href="/">← Back to home</a></p>
+        <p style="margin-top:0.5rem"><a href="student/login.html">🎒 Student Portal →</a></p>
       </div>
     </div>
   </div>
 
-  <script src="../js/theme.js"></script>
   <script>
+    var BASE = window.location.origin;
+
+    // ── Login flow ──
+
+    // Auto-detect school ID from local server
+    fetch(BASE + '/api/school-info').then(function(r) { return r.json(); }).then(function(info) {
+      if (info.success && info.schoolId) {
+        document.getElementById('schoolIdInput').value = info.schoolId;
+        setSchoolId(info.schoolId);
+      }
+    }).catch(function() {});
+
+    function logStatus(msg) {
+      var el = document.getElementById('loginError');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function go(url) {
+      // Use replace to avoid back-button issues
+      window.location.replace(BASE + '/pages/' + url);
+    }
+
+    // If already signed in, redirect immediately
+    auth.onAuthStateChanged(function(user) {
+      if (!user) return;
+      // Already logged in — fetch role and redirect
+      dbGet('users/' + user.uid + '/role').then(function(role) {
+        if (role === 'admin') { go('admin/dashboard.html'); return; }
+        if (role === 'teacher') { go('teacher/dashboard.html'); return; }
+        return dbGet('teachers/' + user.uid).then(function(t) {
+          if (t && t.role === 'teacher') { go('teacher/dashboard.html'); }
+        });
+      }).catch(function() {});
+    });
+
     document.getElementById('loginForm').addEventListener('submit', function(e) {
       e.preventDefault();
+      var schoolId = document.getElementById('schoolIdInput').value.trim();
       var email = document.getElementById('emailInput').value.trim();
       var password = document.getElementById('passwordInput').value;
       var errorEl = document.getElementById('loginError');
@@ -160,30 +201,60 @@
 
       errorEl.style.display = 'none';
       btn.disabled = true;
-      btn.textContent = '⏳ SIGNING IN...';
+      btn.textContent = '⏳ VERIFYING SCHOOL...';
 
-      loginWithEmail(email, password)
-        .then(function(cred) {
-          var uid = cred.user.uid;
-          if (uid === 'demo-admin') {
-            window.location.href = 'admin/dashboard.html';
-            return;
-          }
-          dbGet('users/' + uid + '/role').then(function(role) {
-            if (role === 'admin') window.location.href = 'admin/dashboard.html';
-            else if (role === 'principal') window.location.href = 'principal/dashboard.html';
-            else if (role === 'teacher') window.location.href = 'teacher/scan.html';
-            else window.location.href = '../index.html';
-          }).catch(function() {
-            window.location.href = '../index.html';
-          });
-        })
-        .catch(function(err) {
-          errorEl.textContent = err.message;
+      // Validate school ID against local server (fallback: skip if unreachable)
+      fetch(BASE + '/api/school-info', {signal: AbortSignal.timeout(3000)}).then(function(r) { return r.json(); }).then(function(info) {
+        if (!info.success || !info.schoolId) {
+          btn.disabled = false; btn.textContent = '⚡ SIGN IN';
+          errorEl.textContent = 'Cannot verify school ID. Are you on the school network?';
           errorEl.style.display = 'block';
-          btn.disabled = false;
-          btn.textContent = '⚡ SIGN IN';
-        });
+          return;
+        }
+        if (info.schoolId !== schoolId) {
+          btn.disabled = false; btn.textContent = '⚡ SIGN IN';
+          errorEl.textContent = 'Invalid School ID. Check with your school admin.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        // School ID verified — proceed with Firebase login
+        doLogin();
+      }).catch(function() {
+        // Server unreachable — skip school validation, try Firebase login directly
+        console.warn('School server unreachable, skipping school ID validation');
+        doLogin();
+      });
+
+      function doLogin() {
+        btn.textContent = '⏳ SIGNING IN...';
+        setSchoolId(schoolId);
+        loginWithEmail(email, password)
+          .then(function(cred) {
+            var uid = cred.user.uid;
+            if (uid === 'demo-admin') { go('admin/dashboard.html'); return; }
+
+            dbGet('users/' + uid + '/role').then(function(role) {
+              if (role === 'admin') { go('admin/dashboard.html'); return; }
+              if (role === 'teacher') { go('teacher/dashboard.html'); return; }
+
+              return dbGet('teachers/' + uid).then(function(t) {
+                if (t && t.role === 'teacher') { go('teacher/dashboard.html'); return; }
+                btn.disabled = false; btn.textContent = '⚡ SIGN IN';
+                logStatus('Teacher record not found for this account.');
+              });
+            }).catch(function(err) {
+              btn.disabled = false; btn.textContent = '⚡ SIGN IN';
+              logStatus('Role lookup error: ' + (err.message || err));
+            });
+          })
+            .catch(function(err) {
+              errorEl.textContent = err.message;
+              errorEl.style.display = 'block';
+              btn.disabled = false;
+              btn.textContent = '⚡ SIGN IN';
+            });
+          }
     });
 
     document.getElementById('togglePassword').addEventListener('click', function() {
@@ -192,29 +263,21 @@
     });
 
     // ── Google Sign-In ──
-    function handleRedirect(cred) {
-      var uid = cred.user.uid;
-      dbGet('users/' + uid + '/role').then(function(role) {
-        if (role === 'admin') window.location.href = 'admin/dashboard.html';
-        else if (role === 'principal') window.location.href = 'principal/dashboard.html';
-        else if (role === 'teacher') window.location.href = 'teacher/scan.html';
-        else window.location.href = '../index.html';
-      }).catch(function() {
-        window.location.href = '../index.html';
-      });
-    }
-
-    // Check for pending redirect result on page load
     auth.getRedirectResult().then(function(result) {
-      if (result.user) handleRedirect(result);
+      if (!result.user) return;
+      var uid = result.user.uid;
+      dbGet('users/' + uid + '/role').then(function(role) {
+        if (role === 'admin') { go('admin/dashboard.html'); return; }
+        if (role === 'teacher') { go('teacher/dashboard.html'); return; }
+        return dbGet('teachers/' + uid).then(function(t) {
+          if (t && t.role === 'teacher') { go('teacher/dashboard.html'); }
+        });
+      });
     }).catch(function(err) {
-      var errorEl = document.getElementById('loginError');
       if (err.code === 'auth/unauthorized-interface' || err.code === 'auth/web-context-unauthorized') {
-        errorEl.textContent = 'Google sign-in not enabled. Use email/password or enable it in Firebase Console → Authentication → Sign-in method → Google.';
-      } else if (err.code !== 'auth/no-current-user') {
-        errorEl.textContent = err.message;
+        document.getElementById('loginError').textContent = 'Google sign-in not enabled. Use email/password or enable it in Firebase Console → Authentication → Sign-in method → Google.';
+        document.getElementById('loginError').style.display = 'block';
       }
-      if (errorEl.textContent) errorEl.style.display = 'block';
     });
 
     document.getElementById('googleBtn').addEventListener('click', function() {

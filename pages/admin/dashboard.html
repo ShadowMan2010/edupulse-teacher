@@ -13,6 +13,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
   <script src="../../js/firebase-config.js"></script>
+  <script src="../../js/auth-guard.js"></script>
   <style>
     .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
     .main-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.5rem; }
@@ -74,10 +75,17 @@
   </header>
 
   <main class="page-container">
+    <div id="networkBanner" style="display:none;margin-bottom:1rem;padding:12px 16px;background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:12px;font-size:12px">
+      <strong style="color:var(--accent)">📡 Network Access</strong><br>
+      <span style="color:var(--text-muted)">From other devices on your network, open:</span>
+      <code id="networkUrl" style="display:inline-block;margin:4px 0;padding:4px 10px;background:rgba(0,0,0,0.3);border-radius:4px;font-size:13px;color:var(--accent)"></code>
+      <span style="color:var(--text-muted)">(port 3000 must be reachable)</span>
+    </div>
+
     <div class="page-header">
       <div>
         <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Real-time attendance overview</p>
+        <p class="page-subtitle" id="schoolNameDisplay">Real-time attendance overview</p>
       </div>
       <div class="page-actions">
         <button class="btn btn-primary" onclick="window.location.href='students.html'">+ Add Student</button>
@@ -153,6 +161,10 @@
     function initPage(user) {
       if (document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
       if (document.getElementById('userName')) document.getElementById('userName').textContent = user.email.split('@')[0];
+      getSchoolInfo().then(function(d) {
+        if (d.school_name) document.getElementById('schoolNameDisplay').textContent = d.school_name;
+        if (d.schoolId && !localStorage.getItem('edupulse_school_id')) setSchoolId(d.schoolId);
+      });
       loadDashboard();
     }
 
@@ -166,6 +178,26 @@
       if (!user) return;
       initPage(user);
     });
+
+    // Show network access info if accessed from non-localhost
+    try {
+      var host = window.location.hostname;
+      if (host !== 'localhost' && host !== '127.0.0.1' && host !== 'edupulse-attendance-qr.web.app') {
+        document.getElementById('networkBanner').style.display = 'block';
+        document.getElementById('networkUrl').textContent = window.location.protocol + '//' + host + ':' + window.location.port;
+      }
+    } catch(e) {}
+
+    // Welcome back
+    try {
+      var lastUser = localStorage.getItem('edupulse_last_user');
+      var currentEmail = (auth.currentUser && auth.currentUser.email) || (sessionStorage.getItem('edupulse_demo') && JSON.parse(sessionStorage.getItem('edupulse_demo')).email) || '';
+      if (lastUser && lastUser === currentEmail) {
+        var name = currentEmail.split('@')[0];
+        showToast('Welcome back, ' + name + '!', 'success');
+      }
+      if (currentEmail) localStorage.setItem('edupulse_last_user', currentEmail);
+    } catch(e) {}
 
     document.getElementById('logoutBtn').addEventListener('click', function(e) {
       e.preventDefault();

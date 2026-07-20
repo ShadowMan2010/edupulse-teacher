@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -10,8 +11,8 @@ android {
         applicationId 'com.edupulse.teacher'
         minSdk 24
         targetSdk 34
-        versionCode 6002
-        versionName '6.2.0'
+        versionCode 7001
+        versionName '7.1.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
@@ -39,4 +40,5 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
     implementation 'androidx.biometric:biometric:1.1.0'
     implementation 'com.airbnb.android:lottie:6.3.0'
+    implementation 'com.google.firebase:firebase-messaging:24.0.0'
 }

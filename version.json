@@ -1,8 +1,11 @@
 {
-  "version": "6.0.0",
-  "versionCode": 6,
+  "version": "6.5.0",
+  "versionCode": 6005,
   "buildDate": "2026-07-09",
   "minApi": 24,
   "targetApi": 34,
-  "updateUrl": "https://api.github.com/repos/ShadowMan2010/edupulse-teacher/releases/latest"
+  "updateUrl": "https://api.github.com/repos/ShadowMan2010/edupulse-teacher/releases/latest",
+  "scanner_version": 1,
+  "scanner_version_name": "1.0.0",
+  "scanner_changelog": ""
 }

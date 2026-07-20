@@ -13,6 +13,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
   <script src="../../js/firebase-config.js"></script>
+  <script src="../../js/auth-guard.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <style>
     .photo-upload-area {
@@ -115,6 +118,7 @@
       <div class="page-actions">
         <button class="btn btn-secondary" onclick="openModal('bulkModal')">📁 Bulk Import</button>
         <button class="btn btn-primary" onclick="openStudentModal()">+ Add Student</button>
+        <button class="btn btn-secondary" id="pendingBtn" onclick="togglePendingView()" style="border-color:rgba(0,229,255,0.3)">⏳ Pending <span id="pendingCount" style="background:rgba(0,229,255,0.15);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.7rem;margin-left:4px">0</span></button>
       </div>
     </div>
 
@@ -126,6 +130,9 @@
         <option value="12">Class 12</option>
         <option value="9">Class 9</option>
         <option value="8">Class 8</option>
+      </select>
+      <select class="input-field" id="subjectFilter" onchange="loadStudents()" style="min-width:140px">
+        <option value="">All Subjects</option>
       </select>
       <button class="btn btn-secondary btn-sm" onclick="loadStudents()">⟳ Refresh</button>
       <span style="font-size:0.8rem;color:var(--text-muted)" id="studentCount"></span>
@@ -140,15 +147,77 @@
             <th>Roll No</th>
             <th>Class</th>
             <th>Section</th>
-            <th>Subjects</th>
             <th>QR Code</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentsTableBody">
-          <tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted)">Loading...</td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted)">Loading...</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pending Registrations Panel -->
+    <div id="pendingPanel" style="display:none">
+      <div class="page-header" style="margin-top:1rem">
+        <div>
+          <h2 class="page-title" style="font-size:1rem">Pending Registrations</h2>
+          <p class="page-subtitle">Students who submitted the online registration form</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" onclick="loadPending()">⟳ Refresh</button>
+          <button class="btn btn-secondary btn-sm" onclick="togglePendingView()">✕ Close</button>
+        </div>
+      </div>
+      <div class="table-wrapper" id="pendingTableWrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Roll No</th>
+              <th>Class</th>
+              <th>Section</th>
+              <th>Subjects</th>
+              <th>Guardian</th>
+              <th>Phone</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pendingTableBody">
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pending Teachers -->
+      <div class="page-header" style="margin-top:2rem">
+        <div>
+          <h2 class="page-title" style="font-size:1rem">Pending Teacher Registrations</h2>
+          <p class="page-subtitle">Teachers who requested an account</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" onclick="loadPendingTeachers()">⟳ Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Classes</th>
+              <th>Subjects</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pendingTeachersBody">
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 
@@ -200,11 +269,8 @@
         </div>
         <div class="input-group" id="subjectsGroup">
           <label>Subjects</label>
-          <div class="subjects-tag-input" style="display:flex;flex-wrap:wrap;gap:0.35rem;padding:0.4rem 0.5rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;min-height:2.2rem;align-items:center;cursor:text">
-            <div id="subjectTags" style="display:flex;flex-wrap:wrap;gap:0.3rem;align-items:center"></div>
-            <input type="text" id="subjectTagInput" placeholder="Type subject + Enter" style="border:none;background:none;color:var(--text-primary);font-size:0.82rem;min-width:80px;flex:1;outline:none;padding:2px 0">
-          </div>
-          <small style="color:var(--text-muted);font-size:0.7rem">Press Enter or comma to add</small>
+          <div id="sSubjectsCheckboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.5rem 0"></div>
+          <small style="color:var(--text-muted);font-size:0.7rem">Click to toggle subjects</small>
         </div>
         <div class="input-group">
           <label>Photo</label>
@@ -265,6 +331,53 @@
     </div>
   </div>
 
+  <!-- Student Attendance Modal -->
+  <div class="modal-overlay" id="attendanceModal">
+    <div class="modal" style="max-width:700px">
+      <div class="modal-header">
+        <h2 class="modal-title" id="attModalTitle">Attendance Report</h2>
+        <button class="modal-close" onclick="closeModal('attendanceModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row" style="margin-bottom:1rem">
+          <div class="input-group">
+            <label>From</label>
+            <input type="date" class="input-field" id="attFrom">
+          </div>
+          <div class="input-group">
+            <label>To</label>
+            <input type="date" class="input-field" id="attTo">
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn btn-primary btn-sm" onclick="refreshAttendanceReport()">⟳ Load</button>
+          </div>
+        </div>
+        <div id="attendanceReportContent" style="max-height:400px;overflow-y:auto">
+          <p style="color:var(--text-muted);text-align:center;padding:2rem">Select a student to view attendance</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crop Modal -->
+  <div class="modal-overlay" id="cropModal">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h2 class="modal-title">Crop Photo</h2>
+        <button class="modal-close" onclick="closeCrop()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="max-height:360px;overflow:auto;border-radius:8px">
+          <img id="cropImage" style="max-width:100%">
+        </div>
+        <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
+          <button class="btn btn-secondary btn-sm" onclick="closeCrop()">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="applyCrop()">✓ Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bulk Import Modal -->
   <div class="modal-overlay" id="bulkModal">
     <div class="modal" style="max-width:500px">
@@ -302,7 +415,10 @@
       if (document.getElementById('userName')) document.getElementById('userName').textContent = user.email.split('@')[0];
       loadStudents();
       // Preload subjects for class->subject dropdown
-      getSubjects().then(function(s) { window._subjectsCache = s || {}; });
+      getSubjects().then(function(s) {
+        window._subjectsCache = s || {};
+        populateSubjectFilter(s);
+      });
     }
 
     // Handle both real Firebase auth and demo mode
@@ -324,15 +440,36 @@
 
     var studentsData = [];
 
+    function populateSubjectFilter(subjects) {
+      var sel = document.getElementById('subjectFilter');
+      sel.innerHTML = '<option value="">All Subjects</option>';
+      var seen = {};
+      for (var cls in subjects) {
+        if (subjects.hasOwnProperty(cls) && Array.isArray(subjects[cls])) {
+          subjects[cls].forEach(function(sub) {
+            if (sub && !seen[sub]) {
+              seen[sub] = true;
+              var opt = document.createElement('option');
+              opt.value = sub;
+              opt.textContent = sub;
+              sel.appendChild(opt);
+            }
+          });
+        }
+      }
+    }
+
     function loadStudents() {
       var search = document.getElementById('searchInput').value.toLowerCase();
       var cls = document.getElementById('classFilter').value;
+      var subject = document.getElementById('subjectFilter').value;
 
       document.getElementById('studentsTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem"><div class="loading-spinner" style="margin:0 auto"></div></td></tr>';
 
       getStudents().then(function(data) {
         if (search) data = data.filter(function(s) { return s.name.toLowerCase().includes(search) || s.roll_no.toLowerCase().includes(search); });
         if (cls) data = data.filter(function(s) { return s.class === cls; });
+        if (subject) data = data.filter(function(s) { return s.subjects && s.subjects.indexOf(subject) !== -1; });
         studentsData = data;
         renderStudents(data);
       }).catch(function() {
@@ -354,11 +491,10 @@
           : '<div class="photo-thumb" style="background:rgba(0,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:0.8rem">' + s.name[0] + '</div>';
         html += '<tr>' +
           '<td>' + photoHtml + '</td>' +
-          '<td><strong>' + s.name + '</strong></td>' +
+          '<td><strong><a href="#" onclick="showStudentAttendance(\'' + s.id + '\');return false" style="color:var(--text-primary);text-decoration:none">' + s.name + '</a></strong></td>' +
           '<td>' + s.roll_no + '</td>' +
           '<td>' + s.class + '</td>' +
           '<td>' + (s.section || '-') + '</td>' +
-          '<td style="font-size:0.7rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + ((s.subjects || []).join(', ') || '-') + '</td>' +
           '<td><button class="btn btn-secondary btn-sm" onclick="showQR(\'' + s.id + '\')">◈ QR</button></td>' +
           '<td>' +
           '<div style="display:flex;gap:0.35rem">' +
@@ -372,61 +508,77 @@
       tbody.innerHTML = html;
     }
 
+    var _cropper = null;
+    var _cropCallback = null;
+
     function previewPhoto(e) {
       var file = e.target.files[0];
       if (!file) return;
       var reader = new FileReader();
       reader.onload = function(ev) {
-        var img = document.getElementById('photoPreview');
-        img.src = ev.target.result;
-        img.style.display = 'block';
-        document.getElementById('photoPlaceholder').style.display = 'none';
+        document.getElementById('cropImage').src = ev.target.result;
+        openModal('cropModal');
+        if (_cropper) _cropper.destroy();
+        setTimeout(function() {
+          _cropper = new Cropper(document.getElementById('cropImage'), {
+            aspectRatio: 1, viewMode: 1, dragMode: 'move',
+            background: false, autoCropArea: 0.9
+          });
+        }, 300);
       };
       reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+
+    function closeCrop() {
+      if (_cropper) { _cropper.destroy(); _cropper = null; }
+      closeModal('cropModal');
+    }
+
+    function applyCrop() {
+      if (!_cropper) return;
+      var canvas = _cropper.getCroppedCanvas({ width: 400, height: 400 });
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      var img = document.getElementById('photoPreview');
+      img.src = dataUrl;
+      img.style.display = 'block';
+      document.getElementById('photoPlaceholder').style.display = 'none';
+      document.getElementById('photoInput').dataset.cropped = dataUrl;
+      closeCrop();
     }
 
     // ── Subject Tag Input ──
     var _subjectTags = [];
 
-    function addSubjectTag(name) {
-      name = name.trim();
-      if (!name || _subjectTags.indexOf(name) !== -1) return;
-      _subjectTags.push(name);
-      renderSubjectTags();
-    }
-
-    function removeSubjectTag(name) {
-      _subjectTags = _subjectTags.filter(function(s) { return s !== name; });
-      renderSubjectTags();
-    }
-
-    function renderSubjectTags() {
-      var container = document.getElementById('subjectTags');
-      container.innerHTML = _subjectTags.map(function(s, i) {
-        return '<span style="display:inline-flex;align-items:center;gap:0.25rem;background:var(--accent);color:#000;padding:2px 8px;border-radius:4px;font-size:0.78rem">' +
-          s + '<span onclick="removeSubjectTagByIndex(' + i + ')" style="cursor:pointer;opacity:0.7;margin-left:2px">✕</span></span>';
-      }).join('');
-    }
-
-    function removeSubjectTagByIndex(i) {
-      _subjectTags.splice(i, 1);
-      renderSubjectTags();
+    function populateSubjectOptions(cls) {
+      var container = document.getElementById('sSubjectsCheckboxes');
+      container.innerHTML = '';
+      if (!cls) return;
+      var subjects = (window._subjectsCache || {})[cls];
+      if (!subjects || !subjects.length) return;
+      subjects.forEach(function(sub) {
+        var label = document.createElement('label');
+        label.style.cssText = 'display:inline-flex;align-items:center;gap:0.35rem;padding:0.3rem 0.75rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:6px;cursor:pointer;font-size:0.82rem;transition:all 0.2s';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = sub;
+        cb.style.cssText = 'accent-color:#00E5FF';
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(sub));
+        container.appendChild(label);
+      });
     }
 
     function getSelectedSubjects() {
-      return _subjectTags.slice();
+      var container = document.getElementById('sSubjectsCheckboxes');
+      var cbs = container.querySelectorAll('input[type=checkbox]');
+      var selected = [];
+      cbs.forEach(function(cb) { if (cb.checked) selected.push(cb.value); });
+      return selected;
     }
 
-    document.getElementById('subjectTagInput').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        addSubjectTag(this.value);
-        this.value = '';
-      }
-    });
-
-    document.getElementById('subjectTagInput').parentElement.addEventListener('click', function() {
-      document.getElementById('subjectTagInput').focus();
+    document.getElementById('sClass').addEventListener('change', function() {
+      populateSubjectOptions(this.value);
     });
 
     // Student form submit — uses Firebase RTDB
@@ -456,6 +608,8 @@
         var promise = id ? updateStudent(id, studentData) : addStudent(studentData);
         promise.then(function() {
           showToast(id ? 'Student updated' : 'Student added', 'success');
+          btn.disabled = false;
+          btn.textContent = '💾 Save Student';
           closeModal('studentModal');
           resetStudentForm();
           loadStudents();
@@ -466,7 +620,11 @@
         });
       }
 
-      if (photoFile) {
+      var croppedData = document.getElementById('photoInput').dataset.cropped;
+      if (croppedData) {
+        doSave(croppedData);
+        delete document.getElementById('photoInput').dataset.cropped;
+      } else if (photoFile) {
         var reader = new FileReader();
         reader.onload = function(ev) { doSave(ev.target.result); };
         reader.onerror = function() { showToast('Could not read photo file', 'warning'); doSave(null); };
@@ -477,6 +635,9 @@
     });
 
     function openStudentModal(data) {
+      var btn = document.getElementById('saveStudentBtn');
+      btn.disabled = false;
+      btn.textContent = data ? '💾 Save Student' : '💾 Save Student';
       document.getElementById('studentModalTitle').textContent = data ? 'Edit Student' : 'Add Student';
       if (data) {
         document.getElementById('editStudentId').value = data.id;
@@ -491,9 +652,13 @@
           document.getElementById('photoPreview').style.display = 'block';
           document.getElementById('photoPlaceholder').style.display = 'none';
         }
-        // Load subjects as tags
-        _subjectTags = (data.subjects || []).slice();
-        renderSubjectTags();
+        // Load subjects
+        populateSubjectOptions(data.class);
+        var container = document.getElementById('sSubjectsCheckboxes');
+        var studentSubs = (data.subjects || []).slice();
+        container.querySelectorAll('input[type=checkbox]').forEach(function(cb) {
+          cb.checked = studentSubs.indexOf(cb.value) !== -1;
+        });
       }
       openModal('studentModal');
     }
@@ -510,9 +675,7 @@
       document.getElementById('photoPlaceholder').style.display = 'block';
       document.getElementById('photoInput').value = '';
       document.getElementById('subjectsGroup') && (document.getElementById('subjectsGroup').style.display = 'block');
-      _subjectTags = [];
-      renderSubjectTags();
-      document.getElementById('subjectTagInput').value = '';
+      document.getElementById('sSubjectsCheckboxes').querySelectorAll('input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
     }
 
     function editStudent(id) {
@@ -570,6 +733,238 @@
       win.document.write('<div class="card" style="' + content.style.cssText + '">' + html + '</div></body></html>');
       win.document.close();
       setTimeout(function() { win.focus(); win.print(); }, 1000);
+    }
+
+    var _reportStudentId = '';
+
+    function showStudentAttendance(studentId) {
+      var s = studentsData.find(function(x) { return x.id === studentId; });
+      if (!s) return;
+      _reportStudentId = studentId;
+      document.getElementById('attModalTitle').textContent = s.name + ' — Attendance Report';
+      var today = getTodaysDate();
+      document.getElementById('attFrom').value = today;
+      document.getElementById('attTo').value = today;
+      openModal('attendanceModal');
+      refreshAttendanceReport();
+    }
+
+    function refreshAttendanceReport() {
+      var studentId = _reportStudentId;
+      if (!studentId) return;
+      var from = document.getElementById('attFrom').value;
+      var to = document.getElementById('attTo').value;
+      var el = document.getElementById('attendanceReportContent');
+      el.innerHTML = '<div class="loading-spinner" style="margin:1rem auto"></div>';
+
+      getAttendance({from: from, to: to, student_id: studentId}).then(function(data) {
+        data.sort(function(a, b) { return a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''); });
+
+        var byDate = {};
+        var subjects = {};
+        data.forEach(function(a) {
+          var d = a.date;
+          var sub = a.subject || 'General';
+          subjects[sub] = true;
+          if (!byDate[d]) byDate[d] = {};
+          byDate[d][sub] = a;
+        });
+        var dates = Object.keys(byDate).sort();
+        var subList = Object.keys(subjects).sort();
+
+        if (!dates.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem">No records for this period</p>';
+          return;
+        }
+
+        var html = '<div class="table-wrapper"><table class="data-table" style="font-size:0.8rem"><thead><tr><th>Date</th>';
+        subList.forEach(function(s) { html += '<th>' + s + '</th>'; });
+        html += '<th>Overall</th></tr></thead><tbody>';
+
+        dates.forEach(function(d) {
+          html += '<tr><td style="font-weight:600;white-space:nowrap">' + d + '</td>';
+          var dayStatuses = [];
+          subList.forEach(function(sub) {
+            var a = byDate[d][sub];
+            if (a) {
+              dayStatuses.push(a.status);
+              var cls = a.status === 'late' ? 'badge-warning' : a.status === 'present' ? 'badge-success' : 'badge-danger';
+              html += '<td><span class="badge ' + cls + '" style="font-size:9px">' + (a.status === 'present' ? '✓' : a.status.toUpperCase()) + '</span></td>';
+            } else {
+              html += '<td><span style="color:var(--text-muted)">—</span></td>';
+            }
+          });
+          var hasLate = dayStatuses.indexOf('late') !== -1;
+          var hasPresent = dayStatuses.indexOf('present') !== -1;
+          var dayOverall = hasLate ? 'late' : hasPresent ? 'present' : 'absent';
+          var cls = dayOverall === 'late' ? 'badge-warning' : dayOverall === 'present' ? 'badge-success' : 'badge-danger';
+          html += '<td><span class="badge ' + cls + '" style="font-size:9px">' + dayOverall.toUpperCase() + '</span></td>';
+          html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        // Summary
+        var totalDays = dates.length;
+        var presentDays = dates.filter(function(d) {
+          return subList.some(function(sub) { return byDate[d][sub] && byDate[d][sub].status === 'present'; });
+        }).length;
+
+        html += '<div style="margin-top:1rem;padding:0.75rem 1rem;background:rgba(0,0,0,0.2);border-radius:8px;display:flex;gap:2rem;flex-wrap:wrap">' +
+          '<div><span style="color:var(--text-muted)">Days present:</span> <strong style="color:var(--success)">' + presentDays + '/' + totalDays + '</strong></div>' +
+          '<div><span style="color:var(--text-muted)">Total scans:</span> <strong>' + data.length + '</strong></div>' +
+          '</div>';
+
+        el.innerHTML = html;
+      }).catch(function() {
+        el.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem">Could not load attendance data</p>';
+      });
+    }
+
+    // ── Pending Registrations ──
+    var _pendingVisible = false;
+
+    function togglePendingView() {
+      _pendingVisible = !_pendingVisible;
+      document.getElementById('pendingPanel').style.display = _pendingVisible ? 'block' : 'none';
+      if (_pendingVisible) { loadPending(); loadPendingTeachers(); }
+    }
+
+    function refreshPendingCount() {
+      var total = 0;
+      getPendingRegistrations().then(function(data) {
+        for (var k in data) { if (data.hasOwnProperty(k)) total++; }
+        return getPendingTeachers();
+      }).then(function(data) {
+        for (var k in data) { if (data.hasOwnProperty(k)) total++; }
+        document.getElementById('pendingCount').textContent = total;
+      }).catch(function() {});
+    }
+    setInterval(refreshPendingCount, 10000);
+    setTimeout(refreshPendingCount, 2000);
+
+    // ── Pending Teachers ──
+    function loadPendingTeachers() {
+      document.getElementById('pendingTeachersBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem"><div class="loading-spinner" style="margin:0 auto"></div></td></tr>';
+      getPendingTeachers().then(function(data) {
+        var list = [];
+        for (var k in data) {
+          if (data.hasOwnProperty(k)) list.push(Object.assign({id: k}, data[k]));
+        }
+        renderPendingTeachers(list);
+      }).catch(function(err) {
+        document.getElementById('pendingTeachersBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">Could not load: ' + (err.message || err) + '</td></tr>';
+      });
+    }
+
+    function renderPendingTeachers(list) {
+      var tbody = document.getElementById('pendingTeachersBody');
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">No pending teacher registrations</td></tr>';
+        return;
+      }
+      var html = '';
+      list.forEach(function(r) {
+        var cls = (r.classes || []).join(', ') || '-';
+        var subs = (r.subjects || []).join(', ') || '-';
+        var photoHtml = r.photo
+          ? '<img src="' + r.photo + '" style="width:36px;height:36px;border-radius:6px;object-fit:cover">'
+          : '<div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,255,255,0.2)">—</div>';
+        html += '<tr>' +
+          '<td>' + photoHtml + '</td>' +
+          '<td><strong>' + r.name + '</strong></td>' +
+          '<td>' + r.email + '</td>' +
+          '<td>' + (r.phone || '-') + '</td>' +
+          '<td style="font-size:0.75rem">' + cls + '</td>' +
+          '<td style="font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + subs + '</td>' +
+          '<td>' +
+          '<div style="display:flex;gap:0.35rem">' +
+          '<button class="btn btn-sm" onclick="approveTeacher(\'' + r.id + '\')" style="background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:#00FF88">✓ Approve</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="rejectTeacher(\'' + r.id + '\')">✕</button>' +
+          '</div>' +
+          '</td>' +
+          '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function approveTeacher(id) {
+      approvePendingTeacher(id).then(function(d) {
+        showToast(d.message || 'Teacher approved', 'success');
+        loadPendingTeachers();
+        refreshPendingCount();
+      }).catch(function(err) { showToast(err.message || 'Failed to approve teacher', 'error'); });
+    }
+
+    function rejectTeacher(id) {
+      if (!confirm('Reject this teacher registration?')) return;
+      rejectPendingTeacher(id).then(function() {
+        showToast('Teacher registration rejected', 'warning');
+        loadPendingTeachers();
+        refreshPendingCount();
+      }).catch(function(err) { showToast(err.message || 'Failed to reject', 'error'); });
+    }
+
+    function loadPending() {
+      document.getElementById('pendingTableBody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem"><div class="loading-spinner" style="margin:0 auto"></div></td></tr>';
+      getPendingRegistrations().then(function(data) {
+        var list = [];
+        for (var k in data) {
+          if (data.hasOwnProperty(k)) list.push(Object.assign({id: k}, data[k]));
+        }
+        document.getElementById('pendingCount').textContent = list.length;
+        renderPending(list);
+      }).catch(function(err) {
+        document.getElementById('pendingTableBody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted)">Could not load: ' + (err.message || err) + '</td></tr>';
+      });
+    }
+
+    function renderPending(list) {
+      var tbody = document.getElementById('pendingTableBody');
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted)">No pending registrations</td></tr>';
+        return;
+      }
+      var html = '';
+      list.forEach(function(r) {
+        var subs = (r.subjects || []).join(', ') || '-';
+        var photoHtml = r.photo
+          ? '<img src="' + r.photo + '" style="width:36px;height:36px;border-radius:6px;object-fit:cover">'
+          : '<div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(255,255,255,0.2)">—</div>';
+        html += '<tr>' +
+          '<td>' + photoHtml + '</td>' +
+          '<td><strong>' + r.name + '</strong></td>' +
+          '<td>' + r.roll_no + '</td>' +
+          '<td>' + r.class + '</td>' +
+          '<td>' + (r.section || '-') + '</td>' +
+          '<td style="font-size:0.75rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + subs + '</td>' +
+          '<td>' + (r.guardian || '-') + '</td>' +
+          '<td>' + (r.phone || '-') + '</td>' +
+          '<td>' +
+          '<div style="display:flex;gap:0.35rem">' +
+          '<button class="btn btn-sm" onclick="approvePending(\'' + r.id + '\')" style="background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:#00FF88">✓ Approve</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="rejectPending(\'' + r.id + '\')">✕</button>' +
+          '</div>' +
+          '</td>' +
+          '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function approvePending(id) {
+      approvePendingRegistration(id).then(function() {
+        showToast('Student approved', 'success');
+        loadPending();
+        loadStudents();
+      }).catch(function(err) { showToast(err.message || 'Failed to approve', 'error'); });
+    }
+
+    function rejectPending(id) {
+      if (!confirm('Reject this registration?')) return;
+      rejectPendingRegistration(id).then(function() {
+        showToast('Registration rejected', 'warning');
+        loadPending();
+      }).catch(function(err) { showToast(err.message || 'Failed to reject', 'error'); });
     }
 
     function handleBulkImport(event) {

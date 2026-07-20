@@ -15,6 +15,18 @@ const XLSX = require('xlsx');
 const PDFDocument = require('pdfkit');
 const initSqlJs = require('sql.js');
 
+let admin, getMessaging;
+const SA_PATH = path.join(__dirname, 'firebase-service-account.json');
+if (fs.existsSync(SA_PATH)) {
+  admin = require('firebase-admin');
+  const sa = JSON.parse(fs.readFileSync(SA_PATH, 'utf-8'));
+  admin.initializeApp({ credential: admin.cert(sa) });
+  getMessaging = require('firebase-admin/messaging').getMessaging;
+  console.log('✅ Firebase Admin initialized');
+} else {
+  console.warn('⚠️  firebase-service-account.json not found — FCM push disabled');
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'edupulse.db');
@@ -23,6 +35,57 @@ const QR_DIR = path.join(__dirname, 'qrcodes');
 
 // Ensure dirs exist
 [UPLOADS_DIR, QR_DIR].forEach(d => fs.mkdirSync(d, { recursive: true }));
+
+// ── School config (auto-generated on first start) ──
+const SCHOOL_FILE = path.join(__dirname, 'school.json');
+let schoolId, schoolName, setupComplete;
+if (fs.existsSync(SCHOOL_FILE)) {
+  const cfg = JSON.parse(fs.readFileSync(SCHOOL_FILE, 'utf-8'));
+  schoolId = cfg.schoolId;
+  schoolName = cfg.school_name || '';
+  setupComplete = cfg.setup_complete === true;
+  // Existing installs with schoolId but no setup_complete are treated as complete
+  if (!setupComplete && cfg.schoolId && !cfg.hasOwnProperty('setup_complete')) {
+    setupComplete = true;
+  }
+} else {
+  schoolId = uuidv4();
+  schoolName = '';
+  setupComplete = false;
+  fs.writeFileSync(SCHOOL_FILE, JSON.stringify({ schoolId, school_name: '', setup_complete: false }, null, 2));
+  console.log('🏫 Generated school ID:', schoolId);
+}
+
+function saveSchoolConfig() {
+  fs.writeFileSync(SCHOOL_FILE, JSON.stringify({ schoolId, school_name: schoolName, setup_complete: setupComplete }, null, 2));
+}
+
+app.get('/api/setup-status', (req, res) => {
+  res.json({ success: true, setup_needed: !setupComplete, schoolId, school_name: schoolName });
+});
+
+app.post('/api/setup', (req, res) => {
+  const { school_name } = req.body;
+  if (!school_name || !school_name.trim()) {
+    return res.json({ success: false, error: 'School name is required' });
+  }
+  schoolName = school_name.trim();
+  setupComplete = true;
+  saveSchoolConfig();
+  console.log('🏫 School configured:', schoolName);
+  // Sync school name to Firebase
+  syncToFirebase();
+  res.json({ success: true, schoolId, school_name: schoolName });
+});
+
+app.put('/api/school-info', (req, res) => {
+  const id = (req.body.schoolId || '').trim();
+  if (!id) return res.json({ success: false, error: 'School ID cannot be empty' });
+  schoolId = id;
+  schoolName = req.body.school_name || schoolName;
+  saveSchoolConfig();
+  res.json({ success: true, schoolId, school_name: schoolName });
+});
 
 // Middleware
 app.use(cors());
@@ -107,7 +170,29 @@ async function initDB() {
       time TEXT NOT NULL,
       status TEXT DEFAULT 'present',
       scanned_by TEXT DEFAULT 'kiosk',
+      subject TEXT DEFAULT '',
+      period TEXT DEFAULT '',
       FOREIGN KEY (student_id) REFERENCES students(id)
+    )
+  `);
+
+  // Migration: add subject/period columns if missing
+  try { runSql(`ALTER TABLE attendance ADD COLUMN subject TEXT DEFAULT ''`); } catch (e) {}
+  try { runSql(`ALTER TABLE attendance ADD COLUMN period TEXT DEFAULT ''`); } catch (e) {}
+  try { runSql(`ALTER TABLE students ADD COLUMN subjects TEXT DEFAULT ''`); } catch (e) {}
+
+  runSql(`
+    CREATE TABLE IF NOT EXISTS teachers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      classes TEXT,
+      subjects TEXT,
+      photo TEXT,
+      role TEXT DEFAULT 'teacher',
+      active INTEGER DEFAULT 1,
+      created_at TEXT
     )
   `);
 
@@ -132,6 +217,9 @@ async function initDB() {
 
   // Migration: add telegram_chat_id column if missing
   try { runSql(`ALTER TABLE students ADD COLUMN telegram_chat_id TEXT DEFAULT ''`); } catch (e) {}
+  try { runSql(`ALTER TABLE students ADD COLUMN guardian TEXT DEFAULT ''`); } catch (e) {}
+  try { runSql(`ALTER TABLE students ADD COLUMN guardian_phone TEXT DEFAULT ''`); } catch (e) {}
+  try { runSql(`ALTER TABLE students ADD COLUMN dob TEXT DEFAULT ''`); } catch (e) {}
 
   saveDB();
   console.log('✅ Database initialized');
@@ -187,7 +275,7 @@ app.get('/api/students/:id', (req, res) => {
 
 app.post('/api/students', async (req, res) => {
   try {
-    const { name, roll_no, class: cls, section, email, phone, telegram_chat_id } = req.body;
+    const { name, roll_no, class: cls, section, email, phone, telegram_chat_id, dob, guardian, guardian_phone } = req.body;
     if (!name || !roll_no || !cls) {
       return res.status(400).json({ success: false, error: 'name, roll_no, class required' });
     }
@@ -205,8 +293,8 @@ app.post('/api/students', async (req, res) => {
     const qrCode = `/qrcodes/${id}.png`;
 
     runSql(
-      `INSERT INTO students (id, name, roll_no, class, section, email, phone, telegram_chat_id, photo, qr_code, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [id, name, roll_no, cls, section || '', email || '', phone || '', telegram_chat_id || '', photo, qrCode]
+      `INSERT INTO students (id, name, roll_no, class, section, email, phone, telegram_chat_id, dob, guardian, guardian_phone, photo, qr_code, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [id, name, roll_no, cls, section || '', email || '', phone || '', telegram_chat_id || '', dob || '', guardian || '', guardian_phone || '', photo, qrCode]
     );
     saveDB();
 
@@ -222,17 +310,18 @@ app.post('/api/students', async (req, res) => {
 
 app.put('/api/students/:id', async (req, res) => {
   try {
-    const { name, roll_no, class: cls, section, email, phone, telegram_chat_id, active } = req.body;
+    const { name, roll_no, class: cls, section, email, phone, telegram_chat_id, dob, guardian, guardian_phone, active } = req.body;
     const existing = rowsToObjects(query(`SELECT * FROM students WHERE id = ?`, [req.params.id]));
     if (!existing.length) return res.status(404).json({ success: false, error: 'Not found' });
 
     const photo = req.body.photo && req.body.photo.startsWith('data:image') ? req.body.photo : existing[0].photo;
 
     runSql(
-      `UPDATE students SET name=?, roll_no=?, class=?, section=?, email=?, phone=?, telegram_chat_id=?, photo=?, active=? WHERE id=?`,
+      `UPDATE students SET name=?, roll_no=?, class=?, section=?, email=?, phone=?, telegram_chat_id=?, dob=?, guardian=?, guardian_phone=?, photo=?, active=? WHERE id=?`,
       [name || existing[0].name, roll_no || existing[0].roll_no, cls || existing[0].class,
        section ?? existing[0].section, email ?? existing[0].email, phone ?? existing[0].phone,
        telegram_chat_id ?? existing[0].telegram_chat_id,
+       dob ?? existing[0].dob, guardian ?? existing[0].guardian, guardian_phone ?? existing[0].guardian_phone,
        photo, active !== undefined ? (active === 'true' ? 1 : 0) : existing[0].active, req.params.id]
     );
     saveDB();
@@ -347,11 +436,81 @@ async function sendTelegramNotification(student, status, date, timeStr) {
   } catch {}
 }
 
+// ─── STUDENT LOGIN & PORTAL ────────────────────────────────────────────────────
+
+app.post('/api/student/login', (req, res) => {
+  try {
+    const { roll_no, dob } = req.body;
+    if (!roll_no || !dob) {
+      return res.status(400).json({ success: false, error: 'roll_no and dob required' });
+    }
+    const result = query(`SELECT * FROM students WHERE roll_no = ? AND dob = ? AND active = 1`, [roll_no, dob]);
+    const rows = rowsToObjects(result);
+    if (!rows.length) {
+      return res.status(401).json({ success: false, error: 'Invalid roll number or date of birth' });
+    }
+    const s = rows[0];
+    res.json({
+      success: true, data: {
+        id: s.id, name: s.name, roll_no: s.roll_no, class: s.class,
+        section: s.section, photo: s.photo, guardian: s.guardian,
+        guardian_phone: s.guardian_phone, dob: s.dob
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/student/:id/attendance', (req, res) => {
+  try {
+    const { from, to, limit } = req.query;
+    let sql = `SELECT a.* FROM attendance a WHERE a.student_id = ?`;
+    const params = [req.params.id];
+    if (from) { sql += ` AND a.date >= ?`; params.push(from); }
+    if (to) { sql += ` AND a.date <= ?`; params.push(to); }
+    sql += ` ORDER BY a.date DESC, a.time DESC`;
+    if (limit) sql += ` LIMIT ?`;
+    if (limit) params.push(parseInt(limit));
+    const result = query(sql, params);
+    res.json({ success: true, data: rowsToObjects(result) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/student/:id/stats', (req, res) => {
+  try {
+    const sid = req.params.id;
+    const total = query(`SELECT COUNT(*) as cnt FROM attendance WHERE student_id = ?`, [sid]);
+    const present = query(`SELECT COUNT(*) as cnt FROM attendance WHERE student_id = ? AND status = 'present'`, [sid]);
+    const late = query(`SELECT COUNT(*) as cnt FROM attendance WHERE student_id = ? AND status = 'late'`, [sid]);
+    const absent = query(`SELECT COUNT(*) as cnt FROM attendance WHERE student_id = ? AND status = 'absent'`, [sid]);
+    const halfDay = query(`SELECT COUNT(*) as cnt FROM attendance WHERE student_id = ? AND status = 'half-day'`, [sid]);
+    const recent = query(`SELECT a.date, a.time, a.status, a.subject FROM attendance a WHERE a.student_id = ? ORDER BY a.date DESC, a.time DESC LIMIT 5`, [sid]);
+
+    const t = total[0]?.cnt || 0;
+    res.json({
+      success: true, data: {
+        total: t,
+        present: present[0]?.cnt || 0,
+        late: late[0]?.cnt || 0,
+        absent: absent[0]?.cnt || 0,
+        half_day: halfDay[0]?.cnt || 0,
+        percentage: t > 0 ? Math.round(((present[0]?.cnt || 0) / t) * 100) : 0,
+        recent: rowsToObjects(recent)
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ─── ATTENDANCE ROUTES ────────────────────────────────────────────────────────
 
 app.post('/api/attendance/scan', (req, res) => {
   try {
-    const { student_id, qr_data } = req.body;
+    const { student_id, qr_data, subject, period } = req.body;
     let sid = student_id;
 
     // Parse QR if raw data given
@@ -424,8 +583,8 @@ app.post('/api/attendance/scan', (req, res) => {
     const id = uuidv4();
     const time = now.format('HH:mm:ss');
     runSql(
-      `INSERT INTO attendance (id, student_id, date, time, status) VALUES (?, ?, ?, ?, ?)`,
-      [id, sid, today, time, status]
+      `INSERT INTO attendance (id, student_id, date, time, status, subject, period) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, sid, today, time, status, subject || '', period || '']
     );
     saveDB();
 
@@ -451,7 +610,7 @@ app.post('/api/attendance/scan', (req, res) => {
 
 app.get('/api/attendance', (req, res) => {
   try {
-    const { date, class: cls, student_id, from, to } = req.query;
+    const { date, class: cls, student_id, from, to, subject, period } = req.query;
     let sql = `
       SELECT a.*, s.name, s.roll_no, s.class, s.section, s.photo
       FROM attendance a JOIN students s ON a.student_id = s.id
@@ -464,6 +623,8 @@ app.get('/api/attendance', (req, res) => {
     if (to) { sql += ` AND a.date <= ?`; params.push(to); }
     if (cls) { sql += ` AND s.class = ?`; params.push(cls); }
     if (student_id) { sql += ` AND a.student_id = ?`; params.push(student_id); }
+    if (subject) { sql += ` AND a.subject = ?`; params.push(subject); }
+    if (period) { sql += ` AND a.period = ?`; params.push(period); }
 
     sql += ` ORDER BY a.date DESC, a.time DESC`;
 
@@ -634,6 +795,11 @@ app.put('/api/settings', (req, res) => {
     Object.entries(req.body).forEach(([key, value]) => {
       runSql(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
     });
+    // Keep school.json in sync
+    if (req.body.school_name) {
+      schoolName = req.body.school_name;
+      saveSchoolConfig();
+    }
     saveDB();
     res.json({ success: true, message: 'Settings updated' });
   } catch (e) {
@@ -664,15 +830,398 @@ app.put('/api/subjects', (req, res) => {
   }
 });
 
-// ─── HEALTH ───────────────────────────────────────────────────────────────────
+// ─── FCM PUSH ────────────────────────────────────────────────────────────────
+
+app.post('/api/fcm/token', (req, res) => {
+  try {
+    const { token, teacher_id, device } = req.body;
+    if (!token) return res.status(400).json({ success: false, error: 'token required' });
+    runSql(
+      `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+      [`fcm_token_${teacher_id || 'default'}`, token]
+    );
+    if (device) {
+      runSql(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+        [`fcm_device_${teacher_id || 'default'}`, device]);
+    }
+    saveDB();
+    res.json({ success: true, message: 'FCM token registered' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/fcm/send', async (req, res) => {
+  try {
+    if (!admin) return res.status(503).json({ success: false, error: 'FCM not configured — missing firebase-service-account.json' });
+
+    const { token, teacher_id, title, body, data } = req.body;
+
+    let targetToken = token;
+    if (!targetToken && teacher_id) {
+      const rows = query(`SELECT value FROM settings WHERE key = ?`, [`fcm_token_${teacher_id}`]);
+      targetToken = rows[0]?.value;
+    }
+    if (!targetToken) return res.status(400).json({ success: false, error: 'No FCM token provided or registered' });
+
+    const message = {
+      token: targetToken,
+      notification: { title: title || 'EduPulse', body: body || '' },
+      data: data || {},
+    };
+
+    const response = await getMessaging().send(message);
+    res.json({ success: true, message: 'Notification sent', fcm_response: response });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/fcm/tokens', (req, res) => {
+  try {
+    const rows = query(`SELECT key, value FROM settings WHERE key LIKE 'fcm_token_%'`);
+    const tokens = {};
+    rows.forEach(r => tokens[r.key.replace('fcm_token_', '')] = r.value);
+    res.json({ success: true, data: tokens });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ─── PENDING REGISTRATIONS (Firebase RTDB) ────────────────────────────────────
+
+const FB_DB_URL = 'https://edupulse-attendance-qr-default-rtdb.asia-southeast1.firebasedatabase.app';
+const FB_API_KEY = 'AIzaSyDPYjylSBhng6CRL77P0MXTUcuq7jBFnnA';
+
+// ─── SYNC LOCAL SQLite → FIREBASE RTDB (school-partitioned) ─────────────────
+const SYNC_INTERVAL = 30000; // 30 seconds
+
+async function syncToFirebase() {
+  if (!schoolId) return;
+  try {
+    const base = `schools/${schoolId}`;
+
+    // Sync students
+    const students = query(`SELECT id, name, roll_no, class, section, subjects, photo, active, created_at FROM students WHERE active = 1`);
+    const studentMap = {};
+    for (const s of students) {
+      studentMap[s.id] = { name: s.name, roll_no: s.roll_no, class: s.class, section: s.section || '', subjects: s.subjects || '', photo: s.photo || null, active: true, created_at: s.created_at || new Date().toISOString() };
+    }
+    await fetch(`${FB_DB_URL}/${base}/students.json`, {
+      method: 'PUT',
+      body: JSON.stringify(studentMap),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    // Sync attendance
+    const attRows = query(`SELECT id, student_id, date, time, status, subject, period, scanned_by FROM attendance ORDER BY date DESC, time DESC LIMIT 5000`);
+    const attMap = {};
+    for (const a of attRows) {
+      attMap[a.id] = { student_id: a.student_id, date: a.date, time: a.time, status: a.status, subject: a.subject || '', period: a.period || '', scanned_by: a.scanned_by || 'kiosk' };
+    }
+    if (Object.keys(attMap).length) {
+      await fetch(`${FB_DB_URL}/${base}/attendance.json`, {
+        method: 'PUT',
+        body: JSON.stringify(attMap),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Sync settings
+    const settings = query(`SELECT key, value FROM settings`);
+    const settingsMap = {};
+    for (const s of settings) settingsMap[s.key] = s.value;
+    if (Object.keys(settingsMap).length) {
+      await fetch(`${FB_DB_URL}/${base}/settings.json`, {
+        method: 'PUT',
+        body: JSON.stringify(settingsMap),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Sync subjects
+    const subjectsRow = query(`SELECT value FROM settings WHERE key = 'subjects'`);
+    if (subjectsRow.length && subjectsRow[0].value) {
+      try {
+        const subData = JSON.parse(subjectsRow[0].value);
+        await fetch(`${FB_DB_URL}/${base}/subjects.json`, {
+          method: 'PUT',
+          body: JSON.stringify(subData),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (e) {
+        console.error('❌ Subjects sync parse error:', e.message);
+      }
+    }
+
+    // Sync teachers
+    const teachers = query(`SELECT id, name, email, phone, classes, subjects, photo, role, active, created_at FROM teachers WHERE active = 1`);
+    const teacherMap = {};
+    for (const t of teachers) {
+      let cls = [];
+      try { cls = t.classes ? JSON.parse(t.classes) : []; } catch(e) { cls = (t.classes || '').split(',').filter(Boolean); }
+      let subs = [];
+      try { subs = t.subjects ? JSON.parse(t.subjects) : []; } catch(e) { subs = (t.subjects || '').split(',').filter(Boolean); }
+      teacherMap[t.id] = {
+        name: t.name, email: t.email || '', phone: t.phone || '',
+        classes: cls, subjects: subs,
+        photo: t.photo || '', role: t.role || 'teacher',
+        active: true, uid: t.id,
+        created_at: t.created_at || new Date().toISOString()
+      };
+    }
+    if (Object.keys(teacherMap).length) {
+      await fetch(`${FB_DB_URL}/${base}/teachers.json`, {
+        method: 'PUT',
+        body: JSON.stringify(teacherMap),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Sync school config
+    await fetch(`${FB_DB_URL}/schoolId.json`, {
+      method: 'PUT',
+      body: JSON.stringify(schoolId),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    await fetch(`${FB_DB_URL}/${base}/settings/school_name.json`, {
+      method: 'PUT',
+      body: JSON.stringify(schoolName || ''),
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (e) {
+    console.error('❌ Sync error:', e.message);
+  }
+}
+
+function scheduleSync() {
+  setInterval(syncToFirebase, SYNC_INTERVAL);
+}
+
+// ─── PENDING REGISTRATIONS (school-partitioned Firebase RTDB) ───────────────
+
+app.get('/api/pending', async (req, res) => {
+  try {
+    const base = `schools/${schoolId}`;
+    const r = await fetch(`${FB_DB_URL}/${base}/pending_registrations.json`);
+    if (!r.ok) return res.status(502).json({ success: false, error: 'Failed to fetch from Firebase' });
+    const data = await r.json();
+    const list = [];
+    for (const id in data) {
+      if (data[id] && data[id].status !== 'approved') {
+        list.push({ id, ...data[id] });
+      }
+    }
+    list.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+    res.json({ success: true, data: list });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/pending/:id/approve', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const base = `schools/${schoolId}`;
+    const r = await fetch(`${FB_DB_URL}/${base}/pending_registrations/${id}.json`);
+    if (!r.ok) return res.status(404).json({ success: false, error: 'Not found in Firebase' });
+    const entry = await r.json();
+    if (!entry) return res.status(404).json({ success: false, error: 'Registration not found' });
+
+    const studentId = uuidv4();
+    const subjects = (entry.subjects || []).join(',');
+    runSql(
+      `INSERT INTO students (id, name, roll_no, class, section, subjects, photo, email, phone, guardian, guardian_phone, dob, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [studentId, entry.name, entry.roll_no, entry.class, entry.section || '', subjects, entry.photo || '', entry.email || '', entry.phone || '', entry.guardian || '', entry.guardian_phone || '', entry.dob || '']
+    );
+    saveDB();
+
+    // Mark as approved on Firebase
+    await fetch(`${FB_DB_URL}/${base}/pending_registrations/${id}.json`, {
+      method: 'DELETE'
+    });
+
+    // Sync new student to Firebase
+    syncToFirebase();
+
+    res.json({ success: true, message: 'Student approved', student_id: studentId });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/pending/:id/reject', async (req, res) => {
+  try {
+    const base = `schools/${schoolId}`;
+    await fetch(`${FB_DB_URL}/${base}/pending_registrations/${req.params.id}.json`, {
+      method: 'DELETE'
+    });
+    res.json({ success: true, message: 'Registration rejected' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ─── PENDING TEACHERS ─────────────────────────────────────────────────────────
+
+app.get('/api/pending-teachers', async (req, res) => {
+  try {
+    const base = `schools/${schoolId}`;
+    const r = await fetch(`${FB_DB_URL}/${base}/pending_teachers.json`);
+    if (!r.ok) return res.status(502).json({ success: false, error: 'Failed to fetch from Firebase' });
+    const data = await r.json();
+    const list = [];
+    for (const id in data) {
+      if (data[id] && data[id].status !== 'approved') {
+        list.push({ id, ...data[id] });
+      }
+    }
+    list.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+    res.json({ success: true, data: list });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/pending-teachers/:id/approve', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const base = `schools/${schoolId}`;
+    const r = await fetch(`${FB_DB_URL}/${base}/pending_teachers/${id}.json`);
+    if (!r.ok) return res.status(404).json({ success: false, error: 'Not found in Firebase' });
+    const entry = await r.json();
+    if (!entry) return res.status(404).json({ success: false, error: 'Teacher registration not found' });
+
+    // Create Firebase Auth account via REST API
+    const signUpRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: entry.email,
+        password: entry.password || 'edupulse123',
+        returnSecureToken: true
+      })
+    });
+    const signUpData = await signUpRes.json();
+    if (!signUpRes.ok) {
+      // If already exists, try to get the user
+      if (signUpData.error && signUpData.error.message === 'EMAIL_EXISTS') {
+        // Use signInWithPassword to get the uid
+        const signInRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FB_API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: entry.email, password: entry.password || 'edupulse123' })
+        });
+        const signInData = await signInRes.json();
+        if (!signInRes.ok) throw new Error('Could not create or find auth user');
+        entry.uid = signInData.localId;
+      } else {
+        throw new Error(signUpData.error ? signUpData.error.message : 'Failed to create auth user');
+      }
+    } else {
+      entry.uid = signUpData.localId;
+    }
+
+    const teacherId = entry.uid || uuidv4();
+    const classes = (entry.classes || []).join(',');
+    const subjects = (entry.subjects || []).join(',');
+
+    // Store teacher in local SQLite
+    runSql(
+      `CREATE TABLE IF NOT EXISTS teachers (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT,
+        phone TEXT, classes TEXT, subjects TEXT, photo TEXT,
+        role TEXT DEFAULT 'teacher', active INTEGER DEFAULT 1,
+        created_at TEXT
+      )`
+    );
+    runSql(
+      `INSERT OR REPLACE INTO teachers (id, name, email, phone, classes, subjects, photo, role, active, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'teacher', 1, ?)`,
+      [teacherId, entry.name, entry.email, entry.phone || '',
+       classes, subjects, entry.photo || '', new Date().toISOString()]
+    );
+    saveDB();
+
+    // Store under school path in Firebase
+    const teacherData = {
+      name: entry.name, email: entry.email, phone: entry.phone || '',
+      classes: entry.classes || [], subjects: entry.subjects || [],
+      photo: entry.photo || '', role: 'teacher', active: true,
+      uid: teacherId, created_at: new Date().toISOString()
+    };
+    await fetch(`${FB_DB_URL}/${base}/teachers/${teacherId}.json`, {
+      method: 'PUT',
+      body: JSON.stringify(teacherData),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    // Remove pending
+    await fetch(`${FB_DB_URL}/${base}/pending_teachers/${id}.json`, {
+      method: 'DELETE'
+    });
+
+    res.json({ success: true, message: 'Teacher approved', teacher_id: teacherId });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/pending-teachers/:id/reject', async (req, res) => {
+  try {
+    const base = `schools/${schoolId}`;
+    await fetch(`${FB_DB_URL}/${base}/pending_teachers/${req.params.id}.json`, {
+      method: 'DELETE'
+    });
+    res.json({ success: true, message: 'Teacher registration rejected' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ─── HEALTH & SCHOOL INFO ─────────────────────────────────────────────────────
 
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'EduPulse API running', timestamp: new Date().toISOString() });
+  res.json({ success: true, message: 'EduPulse API running', schoolId, school_name: schoolName, timestamp: new Date().toISOString() });
 });
+
+app.get('/api/school-info', (req, res) => {
+  res.json({ success: true, schoolId, school_name: schoolName, setup_needed: !setupComplete });
+});
+
+
 
 // Start server
 initDB().then(() => {
+  // Load school name from SQLite if not in school.json
+  if (!schoolName) {
+    const rows = query(`SELECT value FROM settings WHERE key = 'school_name'`);
+    if (rows.length && rows[0].value) {
+      schoolName = rows[0].value;
+      saveSchoolConfig();
+    }
+  }
   app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🏫 School ID: ${schoolId}`);
+    console.log(`🏫 School Name: ${schoolName || '(not set)'}`);
     console.log(`🚀 EduPulse API running on http://localhost:${PORT}`);
+    if (!setupComplete) {
+      const { networkInterfaces } = require('os');
+      const nets = networkInterfaces();
+      const ips = [];
+      for (const name in nets) {
+        for (const net of nets[name]) {
+          if (net.family === 'IPv4' && !net.internal) ips.push(net.address);
+        }
+      }
+      console.log(`⚙️  First run! Set up your school at:`);
+      console.log(`   http://localhost:${PORT}/setup.html`);
+      ips.forEach(ip => console.log(`   http://${ip}:${PORT}/setup.html`));
+    }
+    // Sync local data to Firebase RTDB
+    syncToFirebase().then(() => {
+      console.log('✅ Initial sync to Firebase complete');
+      scheduleSync();
+    });
   });
 }).catch(console.error);

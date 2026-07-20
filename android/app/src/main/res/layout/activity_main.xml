@@ -17,15 +17,15 @@
 
         <com.edupulse.teacher.GlassCardView
             android:id="@+id/splashCard"
-            android:layout_width="200dp"
-            android:layout_height="200dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:padding="24dp"
             android:elevation="20dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center">
 
@@ -58,6 +58,12 @@
                     android:textSize="12sp"
                     android:fontFamily="monospace"
                     android:letterSpacing="0.15" />
+
+                <ProgressBar
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginTop="16dp" />
             </LinearLayout>
         </com.edupulse.teacher.GlassCardView>
     </FrameLayout>
@@ -123,79 +129,181 @@
                         android:orientation="vertical"
                         android:gravity="center">
 
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/emailInput"
+                        <!-- Teacher login fields -->
+                        <LinearLayout
+                            android:id="@+id/teacherLoginFields"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="12dp"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                            app:boxBackgroundColor="#0AFFFFFF"
-                            app:boxStrokeColor="#14FFFFFF"
-                            app:boxStrokeWidth="1dp"
-                            app:boxStrokeWidthFocused="2dp"
-                            app:hintTextColor="#66FFFFFF"
-                            app:endIconMode="none">
+                            android:orientation="vertical"
+                            android:gravity="center">
 
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/emailField"
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/emailInput"
                                 android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:hint="@string/email"
-                                android:textColor="#FFFFFF"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="12dp"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                                app:boxBackgroundColor="#0AFFFFFF"
+                                app:boxStrokeColor="#14FFFFFF"
+                                app:boxStrokeWidth="1dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:hintTextColor="#66FFFFFF"
+                                app:endIconMode="none">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/emailField"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="48dp"
+                                    android:hint="@string/email"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp"
+                                    android:inputType="textEmailAddress"
+                                    android:fontFamily="monospace"
+                                    android:backgroundTint="@android:color/transparent" />
+
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/passwordInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="16dp"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                                app:boxBackgroundColor="#0AFFFFFF"
+                                app:boxStrokeColor="#14FFFFFF"
+                                app:boxStrokeWidth="1dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:hintTextColor="#66FFFFFF"
+                                app:passwordToggleEnabled="true"
+                                app:passwordToggleTint="#00E5FF">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/passwordField"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="48dp"
+                                    android:hint="@string/password"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp"
+                                    android:inputType="textPassword"
+                                    android:fontFamily="monospace"
+                                    android:backgroundTint="@android:color/transparent" />
+
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <Button
+                                android:id="@+id/signInButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="52dp"
+                                android:text="@string/sign_in"
+                                android:textColor="#000000"
                                 android:textSize="14sp"
-                                android:inputType="textEmailAddress"
+                                android:textAllCaps="true"
                                 android:fontFamily="monospace"
-                                android:backgroundTint="@android:color/transparent" />
+                                android:letterSpacing="0.12"
+                                android:background="@drawable/btn_gradient"
+                                android:stateListAnimator="@null"
+                                android:elevation="4dp"
+                                android:layout_marginBottom="12dp" />
 
-                        </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.gms.common.SignInButton
+                                android:id="@+id/googleSignInButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="52dp"
+                                android:layout_marginBottom="12dp" />
 
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/passwordInput"
+                        </LinearLayout>
+
+                        <!-- Student login fields (initially hidden) -->
+                        <LinearLayout
+                            android:id="@+id/studentLoginFields"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="16dp"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                            app:boxBackgroundColor="#0AFFFFFF"
-                            app:boxStrokeColor="#14FFFFFF"
-                            app:boxStrokeWidth="1dp"
-                            app:boxStrokeWidthFocused="2dp"
-                            app:hintTextColor="#66FFFFFF"
-                            app:passwordToggleEnabled="true"
-                            app:passwordToggleTint="#00E5FF">
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:visibility="gone">
 
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/passwordField"
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/rollInput"
                                 android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:hint="@string/password"
-                                android:textColor="#FFFFFF"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="12dp"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                                app:boxBackgroundColor="#0AFFFFFF"
+                                app:boxStrokeColor="#14FFFFFF"
+                                app:boxStrokeWidth="1dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:hintTextColor="#66FFFFFF"
+                                app:endIconMode="none">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/rollField"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="48dp"
+                                    android:hint="@string/roll_number"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp"
+                                    android:inputType="number"
+                                    android:fontFamily="monospace"
+                                    android:backgroundTint="@android:color/transparent" />
+
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/dobInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="16dp"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                                app:boxBackgroundColor="#0AFFFFFF"
+                                app:boxStrokeColor="#14FFFFFF"
+                                app:boxStrokeWidth="1dp"
+                                app:boxStrokeWidthFocused="2dp"
+                                app:hintTextColor="#66FFFFFF"
+                                app:endIconMode="none">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/dobField"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="48dp"
+                                    android:hint="@string/date_of_birth"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp"
+                                    android:inputType="datetime"
+                                    android:fontFamily="monospace"
+                                    android:backgroundTint="@android:color/transparent" />
+
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <Button
+                                android:id="@+id/studentSignInButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="52dp"
+                                android:text="@string/student_login"
+                                android:textColor="#000000"
                                 android:textSize="14sp"
-                                android:inputType="textPassword"
+                                android:textAllCaps="true"
                                 android:fontFamily="monospace"
-                                android:backgroundTint="@android:color/transparent" />
+                                android:letterSpacing="0.12"
+                                android:background="@drawable/btn_gradient"
+                                android:stateListAnimator="@null"
+                                android:elevation="4dp"
+                                android:layout_marginBottom="12dp" />
 
-                        </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
 
+                        <!-- Mode toggle -->
                         <Button
-                            android:id="@+id/signInButton"
+                            android:id="@+id/studentModeToggle"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:text="@string/sign_in"
-                            android:textColor="#000000"
-                            android:textSize="14sp"
+                            android:layout_height="40dp"
+                            android:text="@string/student_portal"
+                            android:textColor="#00E5FF"
+                            android:textSize="11sp"
                             android:textAllCaps="true"
                             android:fontFamily="monospace"
-                            android:letterSpacing="0.12"
-                            android:background="@drawable/btn_gradient"
+                            android:background="@null"
                             android:stateListAnimator="@null"
-                            android:elevation="4dp"
-                            android:layout_marginBottom="12dp" />
-
-                        <com.google.android.gms.common.SignInButton
-                            android:id="@+id/googleSignInButton"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:layout_marginBottom="12dp" />
+                            android:padding="8dp" />
 
                         <TextView
                             android:id="@+id/loginError"
@@ -210,6 +318,226 @@
             </LinearLayout>
         </ScrollView>
     </FrameLayout>
+
+    <!-- === STUDENT DASHBOARD === -->
+    <LinearLayout
+        android:id="@+id/studentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#000000"
+        android:visibility="gone">
+
+        <com.edupulse.teacher.GlassCardView
+            android:id="@+id/studentTopBar"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:paddingHorizontal="16dp"
+            app:showTopBarAccent="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🎒"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/student_portal"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif"
+                    android:layout_marginStart="8sp"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/studentLogoutButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:text="@string/exit"
+                    android:textColor="#FF3B3B"
+                    android:textSize="10sp"
+                    android:textAllCaps="true"
+                    android:fontFamily="monospace"
+                    android:background="@drawable/btn_outline"
+                    android:stateListAnimator="@null"
+                    android:paddingHorizontal="12dp" />
+            </LinearLayout>
+        </com.edupulse.teacher.GlassCardView>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingBottom="20dp">
+
+                <!-- Student info -->
+                <com.edupulse.teacher.GlassCardView
+                    android:id="@+id/studentInfoCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/studentNameDisplay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#FFFFFF"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/studentDetailDisplay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#8CFFFFFF"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:layout_marginTop="4dp" />
+                    </LinearLayout>
+                </com.edupulse.teacher.GlassCardView>
+
+                <!-- Stats grid -->
+                <LinearLayout
+                    android:id="@+id/studentStatsGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:weightSum="4">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="8dp"
+                        android:background="#0AFFFFFF"
+                        android:layout_marginEnd="4dp">
+                        <TextView
+                            android:id="@+id/statTotal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#00E5FF"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"
+                            android:text="-" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="8dp"
+                        android:background="#0AFFFFFF"
+                        android:layout_marginHorizontal="4dp">
+                        <TextView
+                            android:id="@+id/statPresent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#00FF88"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"
+                            android:text="-" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="8dp"
+                        android:background="#0AFFFFFF"
+                        android:layout_marginHorizontal="4dp">
+                        <TextView
+                            android:id="@+id/statLate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#F59E0B"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"
+                            android:text="-" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="8dp"
+                        android:background="#0AFFFFFF"
+                        android:layout_marginStart="4dp">
+                        <TextView
+                            android:id="@+id/statAbsent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#FF3B3B"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"
+                            android:text="-" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Attendance records -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/attendance_records"
+                    android:textColor="#8CFFFFFF"
+                    android:textSize="10sp"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.12"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/studentAttendanceList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
+
+                <TextView
+                    android:id="@+id/noRecordsText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/no_records"
+                    android:textColor="#66FFFFFF"
+                    android:textSize="12sp"
+                    android:layout_marginTop="24dp"
+                    android:layout_gravity="center"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
 
     <!-- === CONNECT SCREEN === -->
     <ScrollView
@@ -307,6 +635,31 @@
 
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/schoolIdInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        app:boxBackgroundColor="#0AFFFFFF"
+                        app:boxStrokeColor="#14FFFFFF"
+                        app:boxStrokeWidth="1dp"
+                        app:boxStrokeWidthFocused="2dp"
+                        app:hintTextColor="#66FFFFFF">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/schoolIdField"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:hint="School ID"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp"
+                            android:inputType="text"
+                            android:fontFamily="monospace"
+                            android:backgroundTint="@android:color/transparent" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
                     <Button
                         android:id="@+id/connectButton"
                         android:layout_width="match_parent"
@@ -328,6 +681,16 @@
                         android:layout_marginTop="12dp"
                         android:textColor="#8CFFFFFF"
                         android:textSize="12sp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/schoolIdDisplay"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="#668CFF"
+                        android:textSize="11sp"
+                        android:fontFamily="monospace"
                         android:visibility="gone" />
 
                 </LinearLayout>
@@ -408,6 +771,47 @@
             </LinearLayout>
         </com.edupulse.teacher.GlassCardView>
 
+        <!-- Update notification banner -->
+        <FrameLayout
+            android:id="@+id/updateNotification"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="#1AFFFFFF"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="#00E5FF"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.08"
+                    android:text="Update available — tap to view" />
+
+                <TextView
+                    android:id="@+id/updateNotifyClose"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✕"
+                    android:textColor="#8CFFFFFF"
+                    android:textSize="14sp"
+                    android:padding="6dp"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+        </FrameLayout>
+
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -472,12 +876,13 @@
                 </com.edupulse.teacher.GlassCardView>
 
                 <!-- Class & Subject section -->
-                <com.edupulse.teacher.GlassCardView
+                <FrameLayout
                     android:id="@+id/classSectionCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/bg_card_glass">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -500,35 +905,47 @@
                             android:orientation="horizontal"
                             android:gravity="center_vertical">
 
-                            <Spinner
-                                android:id="@+id/classSpinner"
+                            <Button
+                                android:id="@+id/classSelectButton"
                                 android:layout_width="0dp"
                                 android:layout_height="44dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_field_glass"
-                                android:paddingHorizontal="12dp"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp"
+                                android:fontFamily="monospace"
+                                android:text="Select Class"
+                                android:stateListAnimator="@null"
                                 android:layout_marginEnd="6dp" />
 
-                            <Spinner
-                                android:id="@+id/sectionSpinner"
+                            <Button
+                                android:id="@+id/sectionSelectButton"
                                 android:layout_width="56dp"
                                 android:layout_height="44dp"
                                 android:background="@drawable/bg_field_glass"
-                                android:paddingHorizontal="12dp"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp"
+                                android:fontFamily="monospace"
+                                android:text="A"
+                                android:stateListAnimator="@null"
                                 android:layout_marginStart="6dp"
                                 android:layout_marginEnd="6dp" />
 
                         </LinearLayout>
 
-                        <Spinner
-                            android:id="@+id/subjectSpinner"
+                        <Button
+                            android:id="@+id/subjectSelectButton"
                             android:layout_width="match_parent"
                             android:layout_height="44dp"
                             android:layout_marginTop="8dp"
                             android:background="@drawable/bg_field_glass"
-                            android:paddingHorizontal="12dp" />
+                            android:textColor="#FFFFFF"
+                            android:textSize="13sp"
+                            android:fontFamily="monospace"
+                            android:text="Select Subject"
+                            android:stateListAnimator="@null" />
                     </LinearLayout>
-                </com.edupulse.teacher.GlassCardView>
+                </FrameLayout>
 
                 <!-- Scan button area -->
                 <FrameLayout
@@ -790,14 +1207,12 @@
                 android:orientation="vertical"
                 android:gravity="center">
 
-                <com.airbnb.lottie.LottieAnimationView
+                <ImageView
                     android:id="@+id/successAnimation"
                     android:layout_width="100dp"
                     android:layout_height="100dp"
                     android:layout_marginBottom="16dp"
-                    app:lottie_rawRes="@raw/check"
-                    app:lottie_autoPlay="true"
-                    app:lottie_loop="false" />
+                    android:src="@drawable/ic_check" />
 
                 <TextView
                     android:id="@+id/successTitle"

@@ -87,15 +87,15 @@ function openModal(id) { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
 
 // ── API HELPERS ──
-const API_BASE = 'http://localhost:3000/api';
+// API_BASE is defined in firebase-config.js
 
 async function apiGet(path) {
-  const res = await fetch(`${API_BASE}${path}`);
+  const res = await fetch(`${window.API_BASE}${path}`);
   return res.json();
 }
 
 async function apiPost(path, body) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${window.API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -104,7 +104,7 @@ async function apiPost(path, body) {
 }
 
 async function apiPut(path, body) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${window.API_BASE}${path}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -134,23 +134,41 @@ function setActiveNav() {
 // Content is hidden by an inline <script> in each page's <head>.
 // This function reveals it after successful auth verification.
 
-function requireAuth(redirectTo = '/pages/login.html') {
+function showAuthOverlay() {
+  var o = document.getElementById('authOverlay');
+  if (o) return o;
+  o = document.createElement('div');
+  o.id = 'authOverlay';
+  o.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#0a0a0b;z-index:99999;color:#f8fafc';
+  o.innerHTML = '<div style="font-size:1.5rem;font-weight:700;font-family:Orbitron,monospace;letter-spacing:0.1em">EDUPULSE</div><div style="margin-top:1rem;width:32px;height:32px;border:2px solid rgba(255,255,255,0.1);border-top-color:#00E5FF;border-radius:50%;animation:spin 0.8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+  document.body.appendChild(o);
+  return o;
+}
+function hideAuthOverlay() {
+  var o = document.getElementById('authOverlay');
+  if (o) o.remove();
+}
+
+function requireAuth(redirectTo) {
+  redirectTo = redirectTo || '/pages/login.html';
+  // Unhide page so overlay is visible (inline script set visibility=hidden as FOUC guard)
+  document.documentElement.style.visibility = 'visible';
+  showAuthOverlay();
+
   var demo = sessionStorage.getItem('edupulse_demo');
-  if (demo) {
-    document.documentElement.style.visibility = 'visible';
-    return;
-  }
-  // Check currentUser synchronously first (fast path for cached sessions)
+  if (demo) { hideAuthOverlay(); return; }
+
+  // Fast path: check currentUser synchronously
   try {
     if (firebase.auth().currentUser) {
-      document.documentElement.style.visibility = 'visible';
+      hideAuthOverlay();
       return;
     }
   } catch(e) {
     window.location.href = redirectTo;
     return;
   }
-  // No cached session — wait for onAuthStateChanged with a timeout
+  // Wait for onAuthStateChanged with timeout
   var timer = setTimeout(function() {
     window.location.href = redirectTo;
   }, 4000);
@@ -158,7 +176,7 @@ function requireAuth(redirectTo = '/pages/login.html') {
     firebase.auth().onAuthStateChanged(function(user) {
       clearTimeout(timer);
       if (user) {
-        document.documentElement.style.visibility = 'visible';
+        hideAuthOverlay();
       } else {
         window.location.href = redirectTo;
       }
@@ -173,15 +191,18 @@ function getUserRole(uid) {
   return firebase.database().ref(`users/${uid}/role`).once('value').then(s => s.val());
 }
 
-function requireRole(allowedRoles, redirectTo = '/pages/login.html') {
+function requireRole(allowedRoles, redirectTo) {
+  redirectTo = redirectTo || '/pages/login.html';
+  document.documentElement.style.visibility = 'visible';
+  showAuthOverlay();
+
   function checkAndShow(user) {
     if (!user) { window.location.href = redirectTo; return; }
     getUserRole(user.uid).then(function(role) {
       if (!allowedRoles.includes(role)) window.location.href = redirectTo;
-      else document.documentElement.style.visibility = 'visible';
+      else hideAuthOverlay();
     });
   }
-  // Fast path: check currentUser synchronously
   try {
     if (firebase.auth().currentUser) {
       checkAndShow(firebase.auth().currentUser);

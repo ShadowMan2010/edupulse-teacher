@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>document.documentElement.style.background='#0a0a0b';document.documentElement.style.visibility='hidden'</script>
+  <noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0a0b;color:#f8fafc;font-family:sans-serif;font-size:1.2rem;z-index:99999">EduPulse requires JavaScript to be enabled.</div></noscript>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal — EduPulse</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <style>
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-card { width: 100%; max-width: 400px; padding: 2.5rem; }
+    .login-card h1 { text-align: center; font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .login-card .subtitle { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 2rem; font-family: var(--font-mono); }
+    .login-card .logo-area { text-align: center; margin-bottom: 1.5rem; }
+    .login-card .logo-area .icon { font-size: 2.5rem; }
+    .login-card .logo-area .brand { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.15em; background: linear-gradient(135deg,var(--accent),var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.4rem; font-family: var(--font-mono); }
+    .form-group input { width: 100%; padding: 0.75rem 1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: var(--text); font-size: 0.95rem; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+    .form-group input:focus { border-color: var(--accent); }
+    .form-group .hint { font-size: 0.7rem; color: rgba(255,255,255,0.25); margin-top: 0.3rem; font-family: var(--font-mono); }
+    .btn-primary { width: 100%; padding: 0.85rem; border: none; border-radius: 12px; background: linear-gradient(135deg,var(--accent),var(--accent-purple)); color: #000; font-weight: 700; font-size: 0.9rem; cursor: pointer; letter-spacing: 0.05em; transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .error-msg { color: var(--danger); font-size: 0.8rem; text-align: center; margin-top: 1rem; display: none; }
+    .footer-links { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; }
+    .footer-links a { color: var(--text-muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--accent); }
+    .loading { display: none; text-align: center; margin-top: 1rem; }
+    .loading span { display: inline-block; width: 8px; height: 8px; margin: 0 3px; border-radius: 50%; background: var(--accent); animation: dotPulse 1.2s infinite; }
+    .loading span:nth-child(2) { animation-delay: 0.2s; }
+    .loading span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotPulse { 0%,80%,100% { transform: scale(0.5); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div id="toastContainer"></div>
+
+  <div class="glass-panel-strong login-card">
+    <div class="logo-area">
+      <div class="icon">⚡</div>
+      <div class="brand">EDUPULSE</div>
+    </div>
+    <h1>Student Portal</h1>
+    <p class="subtitle">Sign in to view attendance</p>
+
+    <div class="form-group">
+      <label>Roll Number</label>
+      <input type="text" id="rollNo" placeholder="e.g. 101" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label>Date of Birth</label>
+      <input type="date" id="dob">
+      <div class="hint">Use your registered date of birth</div>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="loading" id="loading">
+      <span></span><span></span><span></span>
+    </div>
+
+    <button class="btn-primary" id="loginBtn" onclick="login()">SIGN IN</button>
+
+    <div class="footer-links">
+      <a href="../login.html">Teacher / Admin Login</a> &middot;
+      <a href="../../register.html">New Registration</a>
+    </div>
+  </div>
+
+  <script>
+    document.documentElement.style.visibility = '';
+    const API = window.location.origin + '/api';
+
+    document.getElementById('rollNo').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    document.getElementById('dob').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+    async function login() {
+      const roll_no = document.getElementById('rollNo').value.trim();
+      const dob = document.getElementById('dob').value;
+      if (!roll_no || !dob) { showError('Please enter roll number and date of birth'); return; }
+
+      const btn = document.getElementById('loginBtn');
+      const loading = document.getElementById('loading');
+      const err = document.getElementById('errorMsg');
+      btn.disabled = true;
+      loading.style.display = 'block';
+      err.style.display = 'none';
+
+      try {
+        const r = await fetch(API + '/student/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roll_no, dob })
+        });
+        const d = await r.json();
+        if (d.success) {
+          sessionStorage.setItem('student_session', JSON.stringify(d.data));
+          window.location.href = 'dashboard.html';
+        } else {
+          showError(d.error || 'Invalid credentials');
+        }
+      } catch (e) {
+        showError('Network error. Check connection.');
+      }
+      btn.disabled = false;
+      loading.style.display = 'none';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

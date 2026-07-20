@@ -17,13 +17,9 @@ app.use(express.json());
 
 // ── Helpers ──
 
-function getVal(arr, key) {
-  if (!arr || !arr.length) return 0;
-  return arr[0][key] !== undefined ? arr[0][key] : 0;
-}
-
 function toList(snapshot) {
   const data = snapshot.val();
+  if (!data) return [];
   const arr = [];
   for (const k in data) {
     if (data.hasOwnProperty(k)) arr.push({ id: k, ...data[k] });
@@ -36,10 +32,58 @@ async function getSetting(key) {
   return snap.val();
 }
 
+function getVal(arr, key) {
+  if (!arr || !arr.length) return 0;
+  return arr[0][key] !== undefined ? arr[0][key] : 0;
+}
+
+// ── School Info ──
+
+async function getSchoolId() {
+  let snap = await db.ref('schoolId').once('value');
+  let id = snap.val();
+  if (!id) {
+    id = uuidv4();
+    await db.ref('schoolId').set(id);
+  }
+  return id;
+}
+
+app.get('/api/school-info', async (req, res) => {
+  try {
+    const schoolId = await getSchoolId();
+    const settingsSnap = await db.ref('settings').once('value');
+    const settings = settingsSnap.val() || {};
+    res.json({ success: true, schoolId, ...settings });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/school-info', async (req, res) => {
+  try {
+    const { schoolId } = req.body;
+    if (schoolId && schoolId.trim()) {
+      await db.ref('schoolId').set(schoolId.trim());
+    }
+    if (req.body.school_name) await db.ref('settings/school_name').set(req.body.school_name);
+    if (req.body.school_start_time) await db.ref('settings/school_start_time').set(req.body.school_start_time);
+    if (req.body.school_end_time) await db.ref('settings/school_end_time').set(req.body.school_end_time);
+    if (req.body.half_day_cutoff) await db.ref('settings/half_day_cutoff').set(req.body.half_day_cutoff);
+    if (req.body.late_threshold_minutes) await db.ref('settings/late_threshold_minutes').set(req.body.late_threshold_minutes);
+    if (req.body.duplicate_window_minutes) await db.ref('settings/duplicate_window_minutes').set(req.body.duplicate_window_minutes);
+    const updatedId = await getSchoolId();
+    res.json({ success: true, schoolId: updatedId });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── Health ──
 
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'EduPulse API running', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  const schoolId = await getSchoolId();
+  res.json({ success: true, message: 'EduPulse API running', schoolId, timestamp: new Date().toISOString() });
 });
 
 // ── Students ──
@@ -72,11 +116,88 @@ app.get('/api/students/:id', async (req, res) => {
   }
 });
 
+app.post('/api/students', async (req, res) => {
+  try {
+    const { name, roll_no, class: cls, section, photo } = req.body;
+    if (!name || !cls) return res.status(400).json({ success: false, error: 'name and class required' });
+    const id = uuidv4();
+    const student = {
+      name, roll_no: roll_no || '', class: cls, section: section || '',
+      photo: photo || null, active: true, created_at: dayjs().toISOString()
+    };
+    await db.ref('students/' + id).set(student);
+    const qrData = JSON.stringify({ student_id: id, name, class: cls });
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrData);
+    res.json({ success: true, data: { id, ...student }, qr_data: qrData, qr_url: qrUrl });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/students/:id', async (req, res) => {
+  try {
+    const updates = {};
+    const fields = ['name', 'roll_no', 'class', 'section', 'photo', 'active'];
+    fields.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+    if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, error: 'No fields to update' });
+    await db.ref('students/' + req.params.id).update(updates);
+    const snap = await db.ref('students/' + req.params.id).once('value');
+    res.json({ success: true, data: { id: req.params.id, ...snap.val() } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.delete('/api/students/:id', async (req, res) => {
+  try {
+    await db.ref('students/' + req.params.id).update({ active: false });
+    res.json({ success: true, message: 'Student deactivated' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/students/bulk', async (req, res) => {
+  try {
+    const students = req.body.students || req.body;
+    if (!Array.isArray(students) || !students.length) {
+      return res.status(400).json({ success: false, error: 'Array of students required' });
+    }
+    const results = [];
+    for (const s of students) {
+      if (!s.name || !s.class) continue;
+      const id = uuidv4();
+      const student = {
+        name: s.name, roll_no: s.roll_no || '', class: s.class, section: s.section || '',
+        photo: null, active: true, created_at: dayjs().toISOString()
+      };
+      await db.ref('students/' + id).set(student);
+      results.push({ id, ...student });
+    }
+    res.json({ success: true, data: results, count: results.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/students/:id/qr', async (req, res) => {
+  try {
+    const snap = await db.ref('students/' + req.params.id).once('value');
+    const s = snap.val();
+    if (!s || s.active === false) return res.status(404).json({ success: false, error: 'Not found' });
+    const qrData = JSON.stringify({ student_id: req.params.id, name: s.name, class: s.class });
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrData);
+    res.json({ success: true, qr_data: qrData, qr_url: qrUrl });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── Attendance ──
 
 app.post('/api/attendance/scan', async (req, res) => {
   try {
-    const { student_id, qr_data } = req.body;
+    const { student_id, qr_data, class: cls, section, subject, scanned_by } = req.body;
     let sid = student_id;
 
     if (!sid && qr_data) {
@@ -94,7 +215,6 @@ app.post('/api/attendance/scan', async (req, res) => {
     const student = studentSnap.val();
     if (!student || student.active === false) return res.status(404).json({ success: false, error: 'Student not found or inactive' });
 
-    // Settings
     const settingsSnap = await db.ref('settings').once('value');
     const settings = settingsSnap.val() || {};
     const windowMins = parseInt(settings.duplicate_window_minutes) || 60;
@@ -120,21 +240,23 @@ app.post('/api/attendance/scan', async (req, res) => {
       });
     }
 
-    // Status
     const [sh, sm] = startTime.split(':').map(Number);
     const schoolStart = now.hour(sh).minute(sm).second(0);
     const status = now.diff(schoolStart, 'minute') > lateThreshold ? 'late' : 'present';
 
     const id = uuidv4();
     const time = now.format('HH:mm:ss');
-    await db.ref('attendance/' + id).set({
-      student_id: sid, date: today, time, status, scanned_by: 'kiosk'
-    });
+    const record = {
+      student_id: sid, date: today, time, status,
+      class: cls || student.class, section: section || student.section || '',
+      subject: subject || '', scanned_by: scanned_by || 'kiosk'
+    };
+    await db.ref('attendance/' + id).set(record);
 
     res.json({
       success: true, message: 'Attendance marked: ' + status,
       student: { id: sid, ...student },
-      attendance: { id, student_id: sid, date: today, time, status }
+      attendance: { id, ...record }
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -145,16 +267,17 @@ app.get('/api/attendance', async (req, res) => {
   try {
     const snap = await db.ref('attendance').once('value');
     let list = toList(snap);
-    const { date, student_id, from, to } = req.query;
+    const { date, student_id, from, to, class: cls, subject } = req.query;
 
     if (date) list = list.filter(a => a.date === date);
     if (student_id) list = list.filter(a => a.student_id === student_id);
     if (from) list = list.filter(a => a.date >= from);
     if (to) list = list.filter(a => a.date <= to);
+    if (cls) list = list.filter(a => a.class === cls);
+    if (subject) list = list.filter(a => a.subject === subject);
 
     list.sort((a, b) => b.date?.localeCompare(a.date) || b.time?.localeCompare(a.time));
 
-    // Join student names
     const studentsSnap = await db.ref('students').once('value');
     const students = toList(studentsSnap);
     const studentMap = {};
@@ -164,7 +287,7 @@ app.get('/api/attendance', async (req, res) => {
       ...a,
       name: studentMap[a.student_id]?.name || 'Unknown',
       roll_no: studentMap[a.student_id]?.roll_no || '',
-      class: studentMap[a.student_id]?.class || '',
+      class: studentMap[a.student_id]?.class || a.class,
       photo: studentMap[a.student_id]?.photo || null
     }));
 
@@ -357,6 +480,98 @@ app.put('/api/settings', async (req, res) => {
   }
 });
 
-// ── Export Cloud Function ──
+// ── Subjects ──
+
+app.get('/api/subjects', async (req, res) => {
+  try {
+    const snap = await db.ref('subjects').once('value');
+    res.json({ success: true, data: snap.val() || {} });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/subjects', async (req, res) => {
+  try {
+    await db.ref('subjects').set(req.body);
+    res.json({ success: true, message: 'Subjects saved' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── Pending Registrations ──
+
+app.get('/api/pending', async (req, res) => {
+  try {
+    const snap = await db.ref('pending_registrations').once('value');
+    res.json({ success: true, data: snap.val() || {} });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/pending/:id/approve', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const snap = await db.ref('pending_registrations/' + id).once('value');
+    const pending = snap.val();
+    if (!pending) return res.status(404).json({ success: false, error: 'Pending registration not found' });
+
+    // Create student
+    const studentId = uuidv4();
+    const student = {
+      name: pending.name,
+      roll_no: pending.roll_no || '',
+      class: pending.class,
+      section: pending.section || '',
+      photo: pending.photo || null,
+      active: true,
+      created_at: dayjs().toISOString()
+    };
+    await db.ref('students/' + studentId).set(student);
+
+    // Remove pending
+    await db.ref('pending_registrations/' + id).remove();
+
+    res.json({ success: true, data: { id: studentId, ...student } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/pending/:id/reject', async (req, res) => {
+  try {
+    await db.ref('pending_registrations/' + req.params.id).remove();
+    res.json({ success: true, message: 'Registration rejected' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── FCM ──
+
+app.post('/api/fcm/token', async (req, res) => {
+  try {
+    const { token, email } = req.body;
+    if (!token) return res.status(400).json({ success: false, error: 'token required' });
+    const entry = { token, email: email || '', device: 'android', updated_at: dayjs().toISOString() };
+    await db.ref('fcm_tokens/' + token.replace(/[.#$/\[\]]/g, '_')).set(entry);
+    res.json({ success: true, message: 'Token registered' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/fcm/tokens', async (req, res) => {
+  try {
+    const snap = await db.ref('fcm_tokens').once('value');
+    res.json({ success: true, data: toList(snap) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── Export ──
 
 exports.api = functions.https.onRequest(app);

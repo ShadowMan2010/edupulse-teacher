@@ -35,4 +35,17 @@
     <string name="network_error">Network error. Check connection.</string>
     <string name="connection_success">Connection successful</string>
     <string name="connection_failed">Connection failed</string>
+    <string name="student_portal">Student Portal</string>
+    <string name="student_login">🎒 Student Login</string>
+    <string name="switch_to_teacher">← Teacher Login</string>
+    <string name="roll_number">Roll Number</string>
+    <string name="date_of_birth">Date of Birth</string>
+    <string name="invalid_credentials">Invalid roll number or date of birth</string>
+    <string name="total_days">TOTAL DAYS</string>
+    <string name="present">PRESENT</string>
+    <string name="late">LATE</string>
+    <string name="absent">ABSENT</string>
+    <string name="attendance_records">ATTENDANCE RECORDS</string>
+    <string name="student_dashboard">Student Dashboard</string>
+    <string name="no_records">No attendance records found</string>
 </resources>

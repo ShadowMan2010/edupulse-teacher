@@ -256,13 +256,13 @@ class ScannerOverlay(QWidget):
         scan_rect = QRectF(cx - half, cy - half, scan_size, scan_size)
         path = QPainterPath()
         path.addRoundedRect(scan_rect, 16, 16)
-        painter.setPen(QPen(QColor(0, 255, 255, 40), 1))
-        painter.setBrush(QColor(0, 255, 255, 8))
+        painter.setPen(QPen(QColor(0, 229, 255, 40), 1))
+        painter.setBrush(QColor(0, 229, 255, 8))
         painter.drawPath(path)
 
         # Corner brackets
         bracket_len = 30
-        bracket_color = QColor(0, 255, 255, 200)
+        bracket_color = QColor(0, 229, 255, 200)
         pen = QPen(bracket_color, 3)
         painter.setPen(pen)
 
@@ -282,17 +282,17 @@ class ScannerOverlay(QWidget):
         # Scanning beam
         beam_y = int(cy - half + (scan_size * self.scan_progress / 100))
         beam_grad = QLinearGradient(0, beam_y - 15, 0, beam_y + 15)
-        beam_grad.setColorAt(0, QColor(0, 255, 255, 0))
-        beam_grad.setColorAt(0.4, QColor(0, 255, 255, 120))
-        beam_grad.setColorAt(0.5, QColor(0, 255, 255, 180))
-        beam_grad.setColorAt(0.6, QColor(0, 255, 255, 120))
-        beam_grad.setColorAt(1, QColor(0, 255, 255, 0))
+        beam_grad.setColorAt(0, QColor(0, 229, 255, 0))
+        beam_grad.setColorAt(0.4, QColor(0, 229, 255, 120))
+        beam_grad.setColorAt(0.5, QColor(0, 229, 255, 180))
+        beam_grad.setColorAt(0.6, QColor(0, 229, 255, 120))
+        beam_grad.setColorAt(1, QColor(0, 229, 255, 0))
         painter.fillRect(int(cx - half), beam_y - 15, int(scan_size), 30, beam_grad)
 
         # Particles
         for p in self.particles:
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(0, 255, 255, int(p.alpha * 255)))
+            painter.setBrush(QColor(0, 229, 255, int(p.alpha * 255)))
             painter.drawEllipse(QPointF(p.x, p.y), p.size, p.size)
 
         painter.end()
@@ -389,14 +389,14 @@ class Card3DWidget(QWidget):
         # Glow burst
         if self.glow_intensity > 0:
             g = QRadialGradient(cx + w//2, cy + h//2, w * 0.7)
-            g.setColorAt(0, QColor(0, 255, 255, int(self.glow_intensity * 60)))
+            g.setColorAt(0, QColor(0, 229, 255, int(self.glow_intensity * 60)))
             g.setColorAt(1, Qt.transparent)
             painter.fillRect(self.rect(), g)
 
         # Particles
         for p in self.particles:
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(0, 255, 255, int(p['alpha'] * 220)))
+            painter.setBrush(QColor(0, 229, 255, int(p['alpha'] * 220)))
             painter.drawEllipse(QPointF(p['x'], p['y']), p['size'], p['size'])
 
         # 3D flip
@@ -424,9 +424,9 @@ class Card3DWidget(QWidget):
             sy = int(cy + h * progress)
             grad = QLinearGradient(0, sy-10, 0, sy+10)
             grad.setColorAt(0, Qt.transparent)
-            grad.setColorAt(0.4, QColor(0, 255, 255, 60))
-            grad.setColorAt(0.5, QColor(0, 255, 255, 100))
-            grad.setColorAt(0.6, QColor(0, 255, 255, 60))
+            grad.setColorAt(0.4, QColor(0, 229, 255, 60))
+            grad.setColorAt(0.5, QColor(0, 229, 255, 100))
+            grad.setColorAt(0.6, QColor(0, 229, 255, 60))
             grad.setColorAt(1, Qt.transparent)
             painter.fillRect(int(cx + off), sy-10, int(w * scale), 20, grad)
 
@@ -444,20 +444,22 @@ class Card3DWidget(QWidget):
         bg.setColorAt(0.8, QColor(10, 10, 12))
         bg.setColorAt(1, QColor(5, 5, 8))
         fp.setBrush(bg)
-        fp.setPen(QPen(QColor(0, 255, 255, 180), 2))
+        fp.setPen(QPen(QColor(0, 229, 255, 180), 2))
         fp.drawRoundedRect(1, 1, w-2, h-2, 18, 18)
 
-        # Neon top accent
+        # Neon top accent — cyan to purple
         ac = QLinearGradient(0, 0, w, 0)
-        ac.setColorAt(0, QColor(0, 255, 255, 0))
-        ac.setColorAt(0.5, QColor(0, 255, 255, 120))
-        ac.setColorAt(1, QColor(0, 255, 255, 0))
+        ac.setColorAt(0, QColor(187, 0, 255, 0))
+        ac.setColorAt(0.3, QColor(187, 0, 255, 80))
+        ac.setColorAt(0.5, QColor(0, 229, 255, 120))
+        ac.setColorAt(0.7, QColor(187, 0, 255, 80))
+        ac.setColorAt(1, QColor(187, 0, 255, 0))
         fp.setBrush(ac)
         fp.setPen(Qt.NoPen)
         fp.drawRoundedRect(10, 1, w-20, 3, 2, 2)
 
         # Title
-        fp.setPen(QColor(0, 255, 255, 160))
+        fp.setPen(QColor(187, 0, 255, 160))
         f = QFont("Orbitron", 10, QFont.Bold)
         fp.setFont(f)
         fp.drawText(QRect(0, 18, w, 24), Qt.AlignCenter, "⚡ EDUPULSE")
@@ -475,15 +477,15 @@ class Card3DWidget(QWidget):
             mp.end()
             pp.setMask(m.mask())
             fp.drawPixmap((w-130)//2, 50, 130, 130, pp)
-            fp.setPen(QPen(QColor(0, 255, 255, 80), 2))
+            fp.setPen(QPen(QColor(0, 229, 255, 80), 2))
             fp.setBrush(Qt.NoBrush)
             fp.drawEllipse((w-130)//2, 50, 130, 130)
         else:
-            fp.setBrush(QColor(0, 255, 255, 20))
-            fp.setPen(QPen(QColor(0, 255, 255, 60), 2))
+            fp.setBrush(QColor(0, 229, 255, 20))
+            fp.setPen(QPen(QColor(0, 229, 255, 60), 2))
             fp.drawEllipse((w-130)//2, 50, 130, 130)
             nm = self.student.get('name', '?')
-            fp.setPen(QColor(0, 255, 255, 120))
+            fp.setPen(QColor(0, 229, 255, 120))
             f2 = QFont("Orbitron", 40, QFont.Bold)
             fp.setFont(f2)
             fp.drawText(QRect((w-130)//2, 50, 130, 130), Qt.AlignCenter, nm[0].upper() if nm else '?')
@@ -537,7 +539,7 @@ class Card3DWidget(QWidget):
             fp.drawText(QRect(60, 350, w-120, 18), Qt.AlignCenter, timing_msg)
 
         # Footer
-        fp.setPen(QColor(0, 255, 255, 40))
+        fp.setPen(QColor(0, 229, 255, 40))
         fp.drawLine(60, h-50, w-60, h-50)
         f8 = QFont("Orbitron", 7)
         fp.setFont(f8)
@@ -558,15 +560,15 @@ class Card3DWidget(QWidget):
         bg.setColorAt(0.8, QColor(5, 5, 8))
         bg.setColorAt(1, QColor(2, 2, 5))
         fp.setBrush(bg)
-        fp.setPen(QPen(QColor(0, 255, 255, 120), 2))
+        fp.setPen(QPen(QColor(0, 229, 255, 120), 2))
         fp.drawRoundedRect(1, 1, w-2, h-2, 18, 18)
 
         # Center logo
-        fp.setPen(QColor(0, 255, 255, 80))
+        fp.setPen(QColor(0, 229, 255, 80))
         f = QFont("Orbitron", 28, QFont.Bold)
         fp.setFont(f)
         fp.drawText(QRect(0, h//2 - 60, w, 50), Qt.AlignCenter, "⚡")
-        fp.setPen(QColor(0, 255, 255, 60))
+        fp.setPen(QColor(0, 229, 255, 60))
         f2 = QFont("Orbitron", 14, QFont.Bold)
         fp.setFont(f2)
         fp.drawText(QRect(0, h//2 - 10, w, 30), Qt.AlignCenter, "EDUPULSE")
@@ -619,22 +621,22 @@ class BootScreen(QWidget):
         painter.setPen(Qt.NoPen)
         for x in range(0, w, 40):
             for y in range(0, h, 40):
-                painter.setBrush(QColor(0, 255, 255, 15))
+                painter.setBrush(QColor(0, 229, 255, 15))
                 painter.drawEllipse(x, y, 2, 2)
 
         # Scan beam
         grad = QLinearGradient(0, self.beam_y - 30, 0, self.beam_y + 30)
         grad.setColorAt(0, Qt.transparent)
-        grad.setColorAt(0.4, QColor(0, 255, 255, 40))
-        grad.setColorAt(0.5, QColor(0, 255, 255, 80))
-        grad.setColorAt(0.6, QColor(0, 255, 255, 40))
+        grad.setColorAt(0.4, QColor(0, 229, 255, 40))
+        grad.setColorAt(0.5, QColor(0, 229, 255, 80))
+        grad.setColorAt(0.6, QColor(0, 229, 255, 40))
         grad.setColorAt(1, Qt.transparent)
         painter.fillRect(0, self.beam_y - 30, w, 60, grad)
 
         # Glow blob behind logo
         glow = QRadialGradient(w//2, h//2 - 60, 300)
-        glow.setColorAt(0, QColor(0, 255, 255, 30))
-        glow.setColorAt(0.5, QColor(0, 255, 255, 8))
+        glow.setColorAt(0, QColor(0, 229, 255, 30))
+        glow.setColorAt(0.5, QColor(0, 229, 255, 8))
         glow.setColorAt(1, Qt.transparent)
         painter.fillRect(0, 0, w, h, glow)
 
@@ -670,15 +672,15 @@ class BootScreen(QWidget):
         # Loading bar
         bar_w, bar_h = 300, 3
         bx, by = (w - bar_w) // 2, h//2 + 40
-        painter.setBrush(QColor(0, 255, 255, 30))
+        painter.setBrush(QColor(0, 229, 255, 30))
         painter.setPen(Qt.NoPen)
         painter.drawRoundedRect(bx, by, bar_w, bar_h, 2, 2)
         fill_w = int(bar_w * self.progress / 100)
         if fill_w > 0:
             grad2 = QLinearGradient(bx, 0, bx + bar_w, 0)
-            grad2.setColorAt(0, QColor(0, 255, 255, 60))
-            grad2.setColorAt(0.5, QColor(0, 255, 255, 200))
-            grad2.setColorAt(1, QColor(0, 255, 255, 60))
+            grad2.setColorAt(0, QColor(0, 229, 255, 60))
+            grad2.setColorAt(0.5, QColor(0, 229, 255, 200))
+            grad2.setColorAt(1, QColor(0, 229, 255, 60))
             painter.setBrush(grad2)
             painter.drawRoundedRect(bx, by, fill_w, bar_h, 2, 2)
 
@@ -696,7 +698,7 @@ class BootScreen(QWidget):
         painter.drawText(QRect(0, h - 40, w, 20), Qt.AlignCenter, "v1.0.0  ·  CYBERPUNK EDITION")
 
         # Corner brackets
-        pen = QPen(QColor(0, 255, 255, 60), 2)
+        pen = QPen(QColor(0, 229, 255, 60), 2)
         painter.setPen(pen)
         bracket = 30
         m = 20
@@ -718,11 +720,11 @@ def _check_update(self):
     try:
         r = requests.get(VERSION_URL, timeout=5)
         d = r.json()
-        if d.get('version', 0) > SCANNER_VERSION:
+        if d.get('scanner_version', 0) > SCANNER_VERSION:
             from PyQt5.QtWidgets import QMessageBox
             msg = QMessageBox()
             msg.setWindowTitle("Update Available")
-            msg.setText(f"Version {d['version_name']} available\n\n{d.get('changelog', '')}\n\nRun: sudo bash os/ota-update.sh")
+            msg.setText(f"Version {d.get('scanner_version_name', '?')} available\n\n{d.get('scanner_changelog', '')}\n\nRun: sudo bash os/ota-update.sh")
             msg.setStyleSheet("background:#111113; color:#f8fafc; font-size:14px")
             msg.exec_()
     except Exception:
@@ -793,13 +795,13 @@ class Desktop(QWidget):
         # ── Taskbar ──
         taskbar = QWidget()
         taskbar.setFixedHeight(44)
-        taskbar.setStyleSheet("background: rgba(8, 8, 10, 0.92); border-bottom: 1px solid rgba(0, 255, 255, 0.12);")
+        taskbar.setStyleSheet("background: rgba(8, 8, 10, 0.92); border-bottom: 1px solid rgba(0, 229, 255, 0.12);")
         tb = QHBoxLayout(taskbar)
         tb.setContentsMargins(16, 0, 16, 0)
 
         # Left: brand
         brand = QLabel("EduPulse")
-        brand.setStyleSheet("font-size: 15px; font-weight: 700; color: #00ffff; font-family: Orbitron; letter-spacing: 3px;")
+        brand.setStyleSheet("font-size: 15px; font-weight: 700; color: #00E5FF; font-family: Orbitron; letter-spacing: 3px;")
         tb.addWidget(brand)
 
         # Center: clock
@@ -817,7 +819,7 @@ class Desktop(QWidget):
         tb.addWidget(self.api_status, alignment=Qt.AlignRight)
 
         self.scan_count_label = QLabel("SCANS: 0")
-        self.scan_count_label.setStyleSheet("font-size: 10px; font-family: monospace; color: #00ffff; padding: 0 12px;")
+        self.scan_count_label.setStyleSheet("font-size: 10px; font-family: monospace; color: #00E5FF; padding: 0 12px;")
         tb.addWidget(self.scan_count_label, alignment=Qt.AlignRight)
 
         main.addWidget(taskbar)
@@ -849,7 +851,7 @@ class Desktop(QWidget):
         # ── Dock (bottom) ──
         dock = QWidget()
         dock.setFixedHeight(48)
-        dock.setStyleSheet("background: rgba(8, 8, 10, 0.92); border-top: 1px solid rgba(0, 255, 255, 0.12);")
+        dock.setStyleSheet("background: rgba(8, 8, 10, 0.92); border-top: 1px solid rgba(0, 229, 255, 0.12);")
         dk = QHBoxLayout(dock)
         dk.setContentsMargins(16, 0, 16, 0)
 
@@ -881,7 +883,7 @@ class Desktop(QWidget):
         self.scan_timer.start(SCAN_INTERVAL_MS)
 
         # Desktop particles
-        self.desk_particles = [Particle(self.width(), self.height()) for _ in range(25)]
+        self.desk_particles = [Particle(self.width(), self.height()) for _ in range(30)]
         self.desk_part_timer = QTimer(self)
         self.desk_part_timer.timeout.connect(self._animate_desk)
         self.desk_part_timer.start(50)
@@ -1195,8 +1197,11 @@ class Desktop(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(Qt.NoPen)
-        for p in self.desk_particles:
-            painter.setBrush(QColor(0, 255, 255, int(p.alpha * 255)))
+        for i, p in enumerate(self.desk_particles):
+            if i % 3 == 0:
+                painter.setBrush(QColor(187, 0, 255, int(p.alpha * 200)))
+            else:
+                painter.setBrush(QColor(0, 229, 255, int(p.alpha * 255)))
             painter.drawEllipse(QPointF(p.x, p.y), p.size, p.size)
         painter.end()
 

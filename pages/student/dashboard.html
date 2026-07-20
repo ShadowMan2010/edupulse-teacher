@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>document.documentElement.style.background='#0a0a0b';document.documentElement.style.visibility='hidden'</script>
+  <noscript><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0a0b;color:#f8fafc;font-family:sans-serif;font-size:1.2rem;z-index:99999">EduPulse requires JavaScript to be enabled.</div></noscript>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal — EduPulse</title>
+  <link rel="stylesheet" href="../../css/theme.css">
+  <style>
+    body { min-height: 100vh; }
+    .portal-container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .portal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+    .portal-header .brand { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.15em; background: linear-gradient(135deg,var(--accent),var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .portal-header .user-badge { display: flex; align-items: center; gap: 0.75rem; }
+    .portal-header .user-badge .avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
+    .portal-header .user-badge .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .portal-header .user-badge .info { text-align: right; }
+    .portal-header .user-badge .info .name { font-size: 0.9rem; font-weight: 600; }
+    .portal-header .user-badge .info .detail { font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { padding: 1.25rem; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); text-align: center; }
+    .stat-card .stat-value { font-size: 1.8rem; font-weight: 700; font-family: var(--font-mono); line-height: 1.2; }
+    .stat-card .stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-top: 0.3rem; font-family: var(--font-mono); }
+    .stat-card.present .stat-value { color: var(--success); }
+    .stat-card.late .stat-value { color: var(--warning); }
+    .stat-card.absent .stat-value { color: var(--danger); }
+    .stat-card.total .stat-value { color: var(--accent); }
+    .section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin-bottom: 1rem; font-family: var(--font-mono); }
+    .attendance-table { width: 100%; border-collapse: collapse; }
+    .attendance-table th { text-align: left; padding: 0.6rem 0.8rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-family: var(--font-mono); border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .attendance-table td { padding: 0.6rem 0.8rem; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; font-family: var(--font-mono); text-transform: uppercase; }
+    .badge.present { background: rgba(0,255,136,0.1); color: var(--success); }
+    .badge.late { background: rgba(245,158,11,0.1); color: var(--warning); }
+    .badge.absent { background: rgba(255,59,59,0.1); color: var(--danger); }
+    .badge.half-day { background: rgba(187,0,255,0.1); color: var(--accent-purple); }
+    .action-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .action-buttons .btn { padding: 0.65rem 1.25rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: var(--text); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-family: var(--font-mono); text-decoration: none; }
+    .action-buttons .btn:hover { background: rgba(255,255,255,0.06); border-color: var(--accent); }
+    .action-buttons .btn.primary { background: linear-gradient(135deg,var(--accent),var(--accent-purple)); color: #000; border: none; font-weight: 600; }
+    .id-card { max-width: 340px; margin: 1rem auto; padding: 1.5rem; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); position: relative; overflow: hidden; }
+    .id-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-purple)); }
+    .id-card .school-name { font-size: 0.85rem; font-weight: 700; text-align: center; margin-bottom: 1rem; letter-spacing: 0.05em; }
+    .id-card .photo-area { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 1rem; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--accent); }
+    .id-card .photo-area img { width: 100%; height: 100%; object-fit: cover; }
+    .id-card .details { font-size: 0.8rem; }
+    .id-card .details .row { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .id-card .details .row .label { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.65rem; text-transform: uppercase; }
+    .id-card .details .row .value { font-weight: 500; }
+    .id-card .qr-area { margin-top: 1rem; text-align: center; }
+    .id-card .qr-area img { width: 100px; height: 100px; border-radius: 8px; }
+    .id-card .print-btn { display: block; margin-top: 1rem; padding: 0.6rem; border: none; border-radius: 8px; background: var(--accent); color: #000; font-weight: 600; font-size: 0.8rem; cursor: pointer; width: 100%; font-family: var(--font-mono); }
+    .tab-bar { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0; }
+    .tab-bar .tab { padding: 0.6rem 1.2rem; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab-bar .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .guardian-info { background: rgba(255,255,255,0.02); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
+    .guardian-info .row { display: flex; justify-content: space-between; padding: 0.3rem 0; font-size: 0.8rem; }
+    .guardian-info .row .label { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.7rem; }
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      .bg-grid, .portal-header, .action-buttons, .stats-grid, .tab-bar, .guardian-info, #attendanceTabContent { display: none !important; }
+      .id-card { box-shadow: none; border: 2px solid #000; background: #fff !important; color: #000 !important; }
+      .id-card .details .row .label { color: #666 !important; }
+      .id-card::before { display: none; }
+      .portal-container { padding: 0; }
+      .id-card .print-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div id="toastContainer"></div>
+
+  <div class="portal-container">
+    <div class="glass-panel-strong" style="padding:1.5rem">
+      <div class="portal-header">
+        <div class="brand">⚡ EDUPULSE</div>
+        <div class="user-badge">
+          <div class="info">
+            <div class="name" id="studentName">-</div>
+            <div class="detail" id="studentDetail">-</div>
+          </div>
+          <div class="avatar" id="avatarEl"><span id="avatarLetter">?</span></div>
+        </div>
+      </div>
+
+      <div class="guardian-info">
+        <div class="row"><span class="label">Guardian</span><span id="guardianName">-</span></div>
+        <div class="row"><span class="label">Phone</span><span id="guardianPhone">-</span></div>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn primary" onclick="window.print()">🖨 Print ID Card</button>
+        <button class="btn" onclick="document.getElementById('idCardTab').click()">🪪 View ID Card</button>
+        <button class="btn" onclick="refreshData()">↻ Refresh</button>
+        <button class="btn" onclick="logout()" style="margin-left:auto;border-color:rgba(255,59,59,0.3);color:var(--danger)">Sign Out</button>
+      </div>
+
+      <div class="tab-bar">
+        <span class="tab active" onclick="switchTab('stats',this)" id="statsTab">📊 Attendance</span>
+        <span class="tab" onclick="switchTab('idcard',this)" id="idCardTab">🪪 ID Card</span>
+      </div>
+
+      <div class="tab-content active" id="statsTabContent">
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card total"><div class="stat-value" id="statTotal">-</div><div class="stat-label">Total Days</div></div>
+          <div class="stat-card present"><div class="stat-value" id="statPresent">-</div><div class="stat-label">Present</div></div>
+          <div class="stat-card late"><div class="stat-value" id="statLate">-</div><div class="stat-label">Late</div></div>
+          <div class="stat-card absent"><div class="stat-value" id="statAbsent">-</div><div class="stat-label">Absent</div></div>
+        </div>
+
+        <div class="section-title">Attendance Record</div>
+        <div style="overflow-x:auto">
+          <table class="attendance-table" id="attendanceTable">
+            <thead><tr><th>Date</th><th>Time</th><th>Status</th><th>Subject</th></tr></thead>
+            <tbody id="attendanceBody"></tbody>
+          </table>
+        </div>
+        <p id="noRecords" style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:2rem 0;display:none">No attendance records found.</p>
+      </div>
+
+      <div class="tab-content" id="idCardTabContent">
+        <div class="id-card" id="idCard">
+          <div class="school-name" id="schoolNameOnCard">Ghasiara Vidyapith (HS)</div>
+          <div class="photo-area"><img id="studentPhotoOnCard" src="" alt="Photo" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=font-size:1.5rem>👤</span>'"></div>
+          <div class="details">
+            <div class="row"><span class="label">Name</span><span class="value" id="cardName">-</span></div>
+            <div class="row"><span class="label">Roll No</span><span class="value" id="cardRoll">-</span></div>
+            <div class="row"><span class="label">Class</span><span class="value" id="cardClass">-</span></div>
+            <div class="row"><span class="label">Section</span><span class="value" id="cardSection">-</span></div>
+          </div>
+          <div class="qr-area"><img id="cardQr" src="" alt="QR"></div>
+          <button class="print-btn" onclick="window.print()">🖨 Print ID Card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin + '/api';
+    let studentData = null;
+
+    function getSession() {
+      try { return JSON.parse(sessionStorage.getItem('student_session')); } catch { return null; }
+    }
+
+    function requireAuth() {
+      const s = getSession();
+      if (!s) { window.location.href = 'login.html'; }
+      return s;
+    }
+
+    async function loadStats(id) {
+      try {
+        const r = await fetch(API + '/student/' + id + '/stats');
+        const d = await r.json();
+        if (!d.success) return;
+        const st = d.data;
+        document.getElementById('statTotal').textContent = st.total;
+        document.getElementById('statPresent').textContent = st.present;
+        document.getElementById('statLate').textContent = st.late;
+        document.getElementById('statAbsent').textContent = st.absent;
+      } catch {}
+    }
+
+    async function loadAttendance(id) {
+      try {
+        const r = await fetch(API + '/student/' + id + '/attendance?limit=50');
+        const d = await r.json();
+        if (!d.success) return;
+        const records = d.data;
+        const tbody = document.getElementById('attendanceBody');
+        const noRec = document.getElementById('noRecords');
+        tbody.innerHTML = '';
+        if (!records.length) { noRec.style.display = 'block'; return; }
+        noRec.style.display = 'none';
+        records.forEach(a => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td>' + a.date + '</td><td style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted)">' + (a.time||'') + '</td><td><span class="badge ' + a.status + '">' + a.status + '</span></td><td style="color:var(--text-muted);font-size:0.75rem">' + (a.subject||'-') + '</td>';
+          tbody.appendChild(tr);
+        });
+      } catch {}
+    }
+
+    function setupCard(s) {
+      document.getElementById('schoolNameOnCard').textContent = 'Ghasiara Vidyapith (HS)';
+      document.getElementById('cardName').textContent = s.name;
+      document.getElementById('cardRoll').textContent = s.roll_no;
+      document.getElementById('cardClass').textContent = s.class;
+      document.getElementById('cardSection').textContent = s.section || '-';
+      document.getElementById('cardQr').src = '/qrcodes/' + s.id + '.png?' + Date.now();
+      if (s.photo) { document.getElementById('studentPhotoOnCard').src = s.photo; }
+    }
+
+    function refreshData() {
+      const s = requireAuth();
+      if (!s) return;
+      loadStats(s.id);
+      loadAttendance(s.id);
+    }
+
+    function logout() {
+      sessionStorage.removeItem('student_session');
+      window.location.href = 'login.html';
+    }
+
+    function switchTab(name, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById(name + 'TabContent').classList.add('active');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const s = requireAuth();
+      if (!s) return;
+      document.getElementById('studentName').textContent = s.name;
+      document.getElementById('studentDetail').textContent = 'Roll ' + s.roll_no + ' · Class ' + s.class + (s.section ? ' ' + s.section : '');
+      document.getElementById('avatarLetter').textContent = s.name.charAt(0).toUpperCase();
+      document.getElementById('guardianName').textContent = s.guardian || '-';
+      document.getElementById('guardianPhone').textContent = s.guardian_phone || '-';
+      setupCard(s);
+      loadStats(s.id);
+      loadAttendance(s.id);
+      document.documentElement.style.visibility = '';
+    });
+  </script>
+</body>
+</html>

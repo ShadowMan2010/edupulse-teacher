@@ -13,6 +13,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
   <script src="../../js/firebase-config.js"></script>
+  <script src="../../js/auth-guard.js"></script>
 </head>
 <body>
   <div class="bg-grid"></div>
@@ -79,6 +80,17 @@
         <option value="11">Class 11</option>
         <option value="12">Class 12</option>
       </select>
+      <select class="input-field" id="filterPeriod" onchange="loadAttendance()" style="min-width:100px">
+        <option value="">All Periods</option>
+        <option value="0">Entry</option>
+        <option value="1">P1</option><option value="2">P2</option>
+        <option value="3">P3</option><option value="4">P4</option>
+        <option value="5">P5</option><option value="6">P6</option>
+        <option value="7">P7</option><option value="8">P8</option>
+      </select>
+      <select class="input-field" id="filterSubject" onchange="loadAttendance()" style="min-width:140px">
+        <option value="">All Subjects</option>
+      </select>
       <select class="input-field" id="filterStatus" onchange="loadAttendance()" style="min-width:120px">
         <option value="">All Status</option>
         <option value="present">Present</option>
@@ -89,6 +101,8 @@
       <button class="btn btn-outline btn-sm" onclick="markAbsentees()">✕ Mark Absent</button>
     </div>
 
+    <div id="subjectSummary" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+
     <div class="table-wrapper">
       <table class="data-table">
         <thead>
@@ -98,11 +112,13 @@
             <th>Class</th>
             <th>Date</th>
             <th>Time</th>
+            <th>Period</th>
+            <th>Subject</th>
             <th>Status</th>
           </tr>
         </thead>
         <tbody id="attendanceBody">
-          <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted)">Loading...</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted)">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -117,7 +133,28 @@
     function initPage(user) {
       if (document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = user.email[0].toUpperCase();
       if (document.getElementById('userName')) document.getElementById('userName').textContent = user.email.split('@')[0];
+      loadSubjects();
       loadAttendance();
+    }
+
+    function loadSubjects() {
+      getSubjects().then(function(data) {
+        var sel = document.getElementById('filterSubject');
+        var seen = {};
+        for (var cls in data) {
+          if (data.hasOwnProperty(cls) && Array.isArray(data[cls])) {
+            data[cls].forEach(function(sub) {
+              if (sub && !seen[sub]) {
+                seen[sub] = true;
+                var opt = document.createElement('option');
+                opt.value = sub;
+                opt.textContent = sub;
+                sel.appendChild(opt);
+              }
+            });
+          }
+        }
+      }).catch(function() {});
     }
 
     // Handle both real Firebase auth and demo mode
@@ -141,11 +178,15 @@
       var date = document.getElementById('filterDate').value;
       var cls = document.getElementById('filterClass').value;
       var status = document.getElementById('filterStatus').value;
+      var subject = document.getElementById('filterSubject').value;
+      var period = document.getElementById('filterPeriod').value;
 
-      document.getElementById('attendanceBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem"><div class="loading-spinner" style="margin:0 auto"></div></td></tr>';
+      document.getElementById('attendanceBody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem"><div class="loading-spinner" style="margin:0 auto"></div></td></tr>';
 
       getAttendance({date: date}).then(function(data) {
         if (status) data = data.filter(function(a) { return a.status === status; });
+        if (subject) data = data.filter(function(a) { return a.subject === subject; });
+        if (period) data = data.filter(function(a) { return String(a.period) === period; });
         // Attach student info
         return getStudents().then(function(students) {
           var studentMap = {};
@@ -158,31 +199,64 @@
           if (cls) data = data.filter(function(a) { return a.class_name === cls; });
           document.getElementById('recordCount').textContent = data.length;
           renderAttendance(data);
+          renderSubjectSummary(data);
         });
       }).catch(function() {
-        document.getElementById('attendanceBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted)">Could not load records</td></tr>';
+        document.getElementById('attendanceBody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted)">Could not load records</td></tr>';
       });
     }
 
     function renderAttendance(data) {
       var tbody = document.getElementById('attendanceBody');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--text-muted)">No attendance records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted)">No attendance records found</td></tr>';
         return;
       }
       var html = '';
       data.forEach(function(a) {
         var badge = a.status === 'late' ? 'badge-warning' : a.status === 'present' ? 'badge-success' : 'badge-danger';
+        var periodLabel = a.period ? 'P' + a.period : '-';
+        if (a.period === '0') periodLabel = 'Entry';
         html += '<tr>' +
           '<td><strong>' + (a.student_name || 'Unknown') + '</strong></td>' +
           '<td>' + (a.roll_no || '') + '</td>' +
           '<td>' + (a.class_name || '') + '</td>' +
           '<td>' + a.date + '</td>' +
           '<td>' + (a.time ? a.time.slice(0,5) : '-') + '</td>' +
+          '<td><span style="color:var(--accent-purple, #BB00FF)">' + periodLabel + '</span></td>' +
+          '<td><span style="color:var(--accent)">' + (a.subject || '-') + '</span></td>' +
           '<td><span class="badge ' + badge + '">' + a.status + '</span></td>' +
           '</tr>';
       });
       tbody.innerHTML = html;
+    }
+
+    function renderSubjectSummary(data) {
+      var container = document.getElementById('subjectSummary');
+      var counts = {};
+      data.forEach(function(a) {
+        var sub = a.subject || 'Unspecified';
+        if (!counts[sub]) counts[sub] = { total: 0, present: 0, late: 0 };
+        counts[sub].total++;
+        if (a.status === 'present' || a.status === 'late') counts[sub][a.status]++;
+      });
+      var keys = Object.keys(counts);
+      if (!keys.length || (keys.length === 1 && keys[0] === 'Unspecified' && counts['Unspecified'].total === data.length)) {
+        container.innerHTML = '';
+        return;
+      }
+      var html = '';
+      for (var sub in counts) {
+        if (!counts.hasOwnProperty(sub)) continue;
+        var c = counts[sub];
+        var pct = c.total > 0 ? Math.round((c.present / c.total) * 100) : 0;
+        html += '<div class="glass-panel-strong" style="padding:10px 16px;min-width:160px;flex:1">' +
+          '<div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:4px">' + sub + '</div>' +
+          '<div style="font-size:20px;color:var(--accent);font-weight:700">' + c.present + '/' + c.total + '</div>' +
+          '<div style="font-size:11px;color:var(--text-muted)">' + pct + '% present · ' + c.late + ' late</div>' +
+          '</div>';
+      }
+      container.innerHTML = html;
     }
 
     function markAbsentees() {

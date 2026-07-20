@@ -1,6 +1,6 @@
 const CACHE = 'edupulse-v1';
 const CACHE_URLS = [
-  '/pages/teacher/scan.html',
+  '/pages/teacher/dashboard.html',
   '/pages/login.html',
   '/css/theme.css',
   '/js/theme.js',

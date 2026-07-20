@@ -28,6 +28,9 @@
 -keep class com.airbnb.lottie.** { *; }
 -dontwarn com.airbnb.lottie.**
 
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
 -keepclassmembers class * implements android.os.Parcelable {
     public static final android.os.Parcelable$Creator CREATOR;
 }
